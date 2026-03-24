@@ -1,0 +1,220 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import { Search, Plus, Calendar, Mail, MessageSquare, Video, Link as LinkIcon, CheckCircle2, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+
+const INTEGRATIONS = [
+  {
+    id: 1,
+    name: "Google Calendar",
+    description: "Sync your wellness events and challenges directly to your Google Calendar.",
+    icon: <Calendar className="w-6 h-6 text-blue-500" />,
+    iconBg: "bg-blue-50",
+    status: "connected",
+    enabled: true,
+  },
+  {
+    id: 2,
+    name: "Slack",
+    description: "Get notifications about team wellness challenges and updates in your Slack channels.",
+    icon: <MessageSquare className="w-6 h-6 text-purple-500" />,
+    iconBg: "bg-purple-50",
+    status: "disconnected",
+    enabled: false,
+  },
+  {
+    id: 3,
+    name: "Zoom",
+    description: "Automatically generate Zoom links for your virtual wellness sessions.",
+    icon: <Video className="w-6 h-6 text-blue-400" />,
+    iconBg: "bg-blue-50",
+    status: "connected",
+    enabled: false,
+  },
+  {
+    id: 4,
+    name: "Microsoft Outlook",
+    description: "Sync events and get email reminders through your Outlook account.",
+    icon: <Mail className="w-6 h-6 text-blue-600" />,
+    iconBg: "bg-blue-50",
+    status: "disconnected",
+    enabled: false,
+  }
+];
+
+export default function IntegrationsPage() {
+  const [integrations, setIntegrations] = useState(INTEGRATIONS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [integrationToDisconnect, setIntegrationToDisconnect] = useState<number | null>(null);
+
+  const filteredIntegrations = integrations.filter(i => 
+    i.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    i.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleToggle = (id: number) => {
+    setIntegrations(integrations.map(i => {
+      if (i.id === id) {
+        const newEnabled = !i.enabled;
+        if (newEnabled) {
+          toast.success(`${i.name} integration enabled`);
+        } else {
+          toast.info(`${i.name} integration disabled`);
+        }
+        return { ...i, enabled: newEnabled };
+      }
+      return i;
+    }));
+  };
+
+  const handleConnect = (id: number) => {
+    const integration = integrations.find(i => i.id === id);
+    if (!integration) return;
+
+    if (integration.status === "connected") {
+      setIntegrationToDisconnect(id);
+    } else {
+      setIntegrations(integrations.map(i => {
+        if (i.id === id) {
+          toast.success(`Successfully connected to ${i.name}`);
+          return { ...i, status: "connected", enabled: true };
+        }
+        return i;
+      }));
+    }
+  };
+
+  const confirmDisconnect = () => {
+    if (integrationToDisconnect !== null) {
+      const integration = integrations.find(i => i.id === integrationToDisconnect);
+      setIntegrations(integrations.map(i => {
+        if (i.id === integrationToDisconnect) {
+          toast.success(`Disconnected from ${i?.name}`);
+          return { ...i, status: "disconnected", enabled: false };
+        }
+        return i;
+      }));
+      setIntegrationToDisconnect(null);
+    }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto flex flex-col gap-[20px] pb-12">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-0">
+        <div>
+          <h1 className="text-[20px] font-medium text-grey-1 pb-[6px] leading-[30px]">Integrations</h1>
+          <p className="text-sm text-grey-2">Connect your favorite tools to streamline your wellness journey.</p>
+        </div>
+        <button className="px-4 py-2 bg-[#E65100] text-white font-medium text-sm rounded-lg hover:bg-[#E65100]/90 transition-colors flex items-center gap-2">
+          <Plus className="w-4 h-4" />
+          Add Integration
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <div className="bg-white rounded-[12px] p-6 flex flex-col gap-[20px] border border-grey-4">
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="relative w-full sm:w-[320px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
+            <input 
+              type="text" 
+              placeholder="Search integrations..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 pl-9 pr-4 w-full rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
+            />
+          </div>
+        </div>
+
+        {/* Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {filteredIntegrations.map((integration) => (
+            <div key={integration.id} className="bg-[#FAFAFA] rounded-xl border border-grey-4 p-5 flex flex-col gap-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${integration.iconBg}`}>
+                    {integration.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-grey-1 text-base">{integration.name}</h3>
+                    <div className="flex items-center gap-1 mt-1">
+                      {integration.status === "connected" ? (
+                        <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                          <CheckCircle2 className="w-3 h-3" /> Connected
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs font-medium text-grey-3 bg-grey-5 px-2 py-0.5 rounded-full">
+                          <XCircle className="w-3 h-3" /> Disconnected
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Toggle Switch (only show if connected) */}
+                {integration.status === "connected" && (
+                  <button 
+                    onClick={() => handleToggle(integration.id)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-1 focus:ring-offset-2 ${
+                      integration.enabled ? 'bg-primary-1' : 'bg-grey-4'
+                    }`}
+                  >
+                    <span className="sr-only">Enable {integration.name}</span>
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        integration.enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                )}
+              </div>
+              
+              <p className="text-sm text-grey-2 leading-relaxed">
+                {integration.description}
+              </p>
+              
+              <div className="mt-auto pt-4 border-t border-grey-4 flex items-center justify-end">
+                <button 
+                  onClick={() => handleConnect(integration.id)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                    integration.status === "connected" 
+                      ? "bg-white border border-grey-4 text-grey-1 hover:bg-grey-5 hover:text-red-600" 
+                      : "bg-primary-1 text-white hover:bg-primary-1/90"
+                  }`}
+                >
+                  <LinkIcon className="w-4 h-4" />
+                  {integration.status === "connected" ? "Disconnect" : "Connect"}
+                </button>
+              </div>
+            </div>
+          ))}
+          
+          {filteredIntegrations.length === 0 && (
+            <div className="col-span-1 md:col-span-2 py-12 text-center flex flex-col items-center justify-center">
+              <div className="w-16 h-16 bg-grey-5 rounded-full flex items-center justify-center mb-4">
+                <Search className="w-8 h-8 text-grey-3" />
+              </div>
+              <h3 className="text-lg font-bold text-grey-1 mb-1">No integrations found</h3>
+              <p className="text-sm text-grey-2">We couldn't find any integrations matching your search.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ConfirmModal
+        isOpen={integrationToDisconnect !== null}
+        onClose={() => setIntegrationToDisconnect(null)}
+        onConfirm={confirmDisconnect}
+        title="Disconnect Integration"
+        description={`Are you sure you want to disconnect ${integrations.find(i => i.id === integrationToDisconnect)?.name}? This will stop syncing data between the platforms.`}
+        confirmText="Disconnect"
+        isDestructive={true}
+      />
+    </div>
+  );
+}
