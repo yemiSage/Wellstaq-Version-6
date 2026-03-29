@@ -33,9 +33,6 @@ export function Step1Email({ data, updateData, onNext, isLoading }: Step1Props) 
           />
           <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-grey-3" />
         </div>
-        <p className="text-[12px] text-grey-3">
-          personal email e.g @gmail.com is not allowed
-        </p>
       </div>
 
       <Button 

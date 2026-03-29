@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
   User, 
   Shield, 
@@ -25,11 +26,11 @@ const NAV_ITEMS = [
   { id: "notifications", label: "Notifications", sublabel: "Alerts & reminders", icon: <Bell className="w-5 h-5" /> },
   { id: "privacy", label: "Privacy", sublabel: "Data & visibility", icon: <Lock className="w-5 h-5" /> },
   { id: "appearance", label: "Appearance", sublabel: "Theme & display", icon: <Palette className="w-5 h-5" /> },
-  { id: "integrations", label: "Integrations", sublabel: "Connected apps", icon: <LinkIcon className="w-5 h-5" /> },
   { id: "billing", label: "Billing", sublabel: "Plan & payments", icon: <CreditCard className="w-5 h-5" /> },
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("profile");
   const [formData, setFormData] = useState({
     firstName: "Opeyemi",
@@ -45,54 +46,49 @@ export default function SettingsPage() {
     toast.success("Settings saved successfully");
   };
 
+  const handleLogout = () => {
+    localStorage.clear();
+    router.push("/");
+  };
+
   return (
     <div className="max-w-7xl mx-auto pb-12">
       <div className="mb-[24px]">
         <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Settings</h1>
-        <p className="text-sm text-grey-2">Manage your account, preferences, and integrations.</p>
+        <p className="text-sm text-grey-2">Manage your account and preferences.</p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 p-5 bg-white rounded-[12px]">
+      <div className="flex flex-col lg:flex-row gap-[12px] p-5 bg-white rounded-[12px]">
         {/* Left Sidebar */}
         <div className="w-full lg:w-[280px] flex flex-col gap-2 p-3 border border-grey-4 rounded-[8px] bg-white">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${
+              className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all border-[1.5px] ${
                 activeTab === item.id 
-                  ? "bg-[#F27D26]/10 text-[#F27D26]" 
-                  : "text-grey-2 hover:bg-grey-5"
+                  ? "bg-white border-[#F27D26] shadow-sm" 
+                  : "bg-white border-[#E6E6E6] hover:bg-grey-5"
               }`}
             >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                activeTab === item.id ? "bg-[#F27D26] text-white" : "bg-grey-5 text-grey-2"
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center border-[1.5px] ${
+                activeTab === item.id ? "bg-white border-[#F27D26] text-[#F27D26]" : "bg-grey-5 border-transparent text-grey-2"
               }`}>
                 {item.icon}
               </div>
               <div>
-                <div className="text-sm font-bold">{item.label}</div>
-                <div className="text-[12px] opacity-70">{item.sublabel}</div>
+                <div className={`text-sm font-bold ${activeTab === item.id ? "text-grey-1" : "text-grey-2"}`}>{item.label}</div>
+                <div className={`text-[12px] ${activeTab === item.id ? "text-grey-2" : "text-grey-3"}`}>{item.sublabel}</div>
               </div>
             </button>
           ))}
 
           <div className="h-px bg-grey-4 my-2" />
 
-          <Link 
-            href="/dashboard/contact"
-            className="flex items-center gap-3 p-3 rounded-xl text-left text-grey-2 hover:bg-grey-5 transition-colors"
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 p-3 rounded-xl text-left text-red-500 hover:bg-red-50 transition-all border-[1.5px] border-transparent"
           >
-            <div className="w-10 h-10 rounded-lg bg-grey-5 flex items-center justify-center">
-              <HelpCircle className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-sm font-bold">Help Center</div>
-              <div className="text-[12px] opacity-70">Support & docs</div>
-            </div>
-          </Link>
-
-          <button className="flex items-center gap-3 p-3 rounded-xl text-left text-red-500 hover:bg-red-50">
             <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
               <LogOut className="w-5 h-5" />
             </div>
@@ -107,7 +103,8 @@ export default function SettingsPage() {
         <div className="flex-1 bg-white rounded-[8px] border border-grey-4 p-5">
           {activeTab === "profile" && (
             <>
-              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[22px] pb-[12px]">Profile Information</h2>
+              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[32px]">Profile Information</h2>
+              <p className="text-[14px] text-grey-2 pb-[12px]">Update your personal details here.</p>
 
               <div className="flex items-center gap-6 mb-8">
                 <div className="relative">
@@ -196,7 +193,8 @@ export default function SettingsPage() {
 
           {activeTab === "account" && (
             <>
-              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[22px] pb-[12px]">Account Security</h2>
+              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[32px]">Account Security</h2>
+              <p className="text-[14px] text-grey-2 pb-[12px]">Manage your password and security settings.</p>
               <div className="space-y-6">
                 <div className="p-4 rounded-xl border border-grey-4 flex items-center justify-between">
                   <div>
@@ -225,7 +223,8 @@ export default function SettingsPage() {
 
           {activeTab === "notifications" && (
             <>
-              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[22px] pb-[12px]">Notification Preferences</h2>
+              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[32px]">Notification Preferences</h2>
+              <p className="text-[14px] text-grey-2 pb-[12px]">Choose what updates you want to receive.</p>
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -260,7 +259,8 @@ export default function SettingsPage() {
 
           {activeTab === "privacy" && (
             <>
-              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[22px] pb-[12px]">Privacy Settings</h2>
+              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[32px]">Privacy Settings</h2>
+              <p className="text-[14px] text-grey-2 pb-[12px]">Control who can see your activity and profile.</p>
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -286,7 +286,8 @@ export default function SettingsPage() {
 
           {activeTab === "appearance" && (
             <>
-              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[22px] pb-[12px]">Appearance</h2>
+              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[32px]">Appearance</h2>
+              <p className="text-[14px] text-grey-2 pb-[12px]">Customize how WellStaq looks on your device.</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl border-2 border-[#F27D26] bg-white flex flex-col gap-3 cursor-pointer">
                   <div className="w-full h-20 bg-grey-5 rounded-lg border border-grey-4" />
@@ -300,41 +301,10 @@ export default function SettingsPage() {
             </>
           )}
 
-          {activeTab === "integrations" && (
-            <>
-              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[22px] pb-[12px]">Connected Apps</h2>
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl border border-grey-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                      <Image src="https://picsum.photos/seed/google/40/40" alt="Google" width={24} height={24} className="rounded" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-grey-1">Google Fit</div>
-                      <div className="text-xs text-grey-2">Sync steps and activity</div>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">Connect</Button>
-                </div>
-                <div className="p-4 rounded-xl border border-grey-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
-                      <Image src="https://picsum.photos/seed/strava/40/40" alt="Strava" width={24} height={24} className="rounded" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-grey-1">Strava</div>
-                      <div className="text-xs text-grey-2">Sync runs and cycles</div>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="text-red-500 border-red-100 hover:bg-red-50">Disconnect</Button>
-                </div>
-              </div>
-            </>
-          )}
-
           {activeTab === "billing" && (
             <>
-              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[22px] pb-[12px]">Billing & Subscription</h2>
+              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[32px]">Billing & Subscription</h2>
+              <p className="text-[14px] text-grey-2 pb-[12px]">Manage your subscription plan and billing details.</p>
               <div className="p-6 rounded-xl bg-[#F27D26]/5 border border-[#F27D26]/20 mb-8">
                 <div className="flex items-center justify-between mb-4">
                   <div>

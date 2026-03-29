@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { ChevronDown, Plus, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { ChevronDown, Plus, ArrowUpRight, ArrowDownRight, Smile, Heart, MousePointerClick } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -85,12 +85,12 @@ export function DepartmentPerformanceRadar() {
 export function EngagementChart() {
   const [engagementFilter, setEngagementFilter] = useState("Last week");
   const [isEngagementFilterOpen, setIsEngagementFilterOpen] = useState(false);
-  const [engagementMetric, setEngagementMetric] = useState("Steps");
+  const [engagementMetric, setEngagementMetric] = useState("Participation");
 
   return (
     <div className="bg-white p-[14px] rounded-[12px]">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-[16px] font-bold font-sans text-grey-1">Employee Engagement</h3>
+        <h3 className="text-[16px] font-bold font-sans text-grey-1">Engagement & Wellbeing Trends</h3>
         <div className="relative">
           <button 
             onClick={() => setIsEngagementFilterOpen(!isEngagementFilterOpen)}
@@ -119,12 +119,10 @@ export function EngagementChart() {
       
       <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
         {[
-          { name: "Steps", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m13 14 6.7-2.3c.8-.3 1.3.4 1 1.1l-4.6 9.2"/><path d="M6 14.5 4 17"/><path d="M6 14.5 8 12l2.5 1.5"/><path d="m10.5 13.5 2-2.5-1-2.5"/><path d="M13 14v4l-2.5 1.5"/><path d="M14 6.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg> },
-          { name: "Distance", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M6 8v8"/><path d="M10 10v4"/><path d="M14 10v4"/><path d="M18 8v8"/></svg> },
-          { name: "Squat", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
-          { name: "Run", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m13 14 6.7-2.3c.8-.3 1.3.4 1 1.1l-4.6 9.2"/><path d="M6 14.5 4 17"/><path d="M6 14.5 8 12l2.5 1.5"/><path d="m10.5 13.5 2-2.5-1-2.5"/><path d="M13 14v4l-2.5 1.5"/><path d="M14 6.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg> },
-          { name: "7 Minutes workout", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 16 14"/></svg> },
-          { name: "Log Activity", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> }
+          { name: "Participation", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m13 14 6.7-2.3c.8-.3 1.3.4 1 1.1l-4.6 9.2"/><path d="M6 14.5 4 17"/><path d="M6 14.5 8 12l2.5 1.5"/><path d="m10.5 13.5 2-2.5-1-2.5"/><path d="M13 14v4l-2.5 1.5"/><path d="M14 6.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg> },
+          { name: "Check-ins", icon: <Smile className="w-4 h-4" /> },
+          { name: "Social", icon: <Heart className="w-4 h-4" /> },
+          { name: "Productivity", icon: <MousePointerClick className="w-4 h-4" /> }
         ].map((metric) => (
           <button
             key={metric.name}
@@ -143,10 +141,10 @@ export function EngagementChart() {
 
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={engagementData.map(d => ({ ...d, value: engagementMetric === 'Steps' ? d.value : engagementMetric === 'Distance' ? d.value * 0.005 : d.value * 0.1 }))} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+          <LineChart data={engagementData.map(d => ({ ...d, value: engagementMetric === 'Participation' ? d.value : engagementMetric === 'Check-ins' ? d.value * 0.005 : d.value * 0.1 }))} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} dy={10} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => engagementMetric === 'Steps' ? `${val / 1000}k` : val} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => engagementMetric === 'Participation' ? `${val / 1000}k` : val} />
             <Tooltip />
             <Line type="monotone" dataKey="value" stroke="#F27D26" strokeWidth={2} dot={false} />
           </LineChart>

@@ -82,11 +82,16 @@ export function Sidebar() {
           </div>
           {!isCollapsed && (
             <div className="space-y-0.5">
-              {['Step Up for Health', 'Green Fitness Initiative', 'Healthy Habits Month', 'Mindful Movement Week'].map(challenge => (
-                <div key={challenge} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+              {[
+                { id: "1", name: "Step Up for Health" },
+                { id: "2", name: "Green Fitness Initiative" },
+                { id: "3", name: "Healthy Habits Month" },
+                { id: "4", name: "Mindful Movement Week" }
+              ].map(challenge => (
+                <Link href={`/dashboard/challenges/${challenge.id}`} key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
                   <div className="w-3 h-3 rounded-full border border-grey-3 flex-shrink-0" />
-                  <span className="truncate">{challenge}</span>
-                </div>
+                  <span className="truncate">{challenge.name}</span>
+                </Link>
               ))}
               <Link href="/dashboard/challenges" className="flex items-center justify-between px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
                 <div className="flex items-center gap-3">

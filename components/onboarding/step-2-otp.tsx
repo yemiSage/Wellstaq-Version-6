@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { OnboardingData } from "@/types";
 
@@ -12,6 +12,15 @@ interface Step2Props {
 export function Step2OTP({ data, updateData, onNext, isLoading }: Step2Props) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [timeLeft, setTimeLeft] = useState(59);
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft]);
 
   const handleChange = (index: number, value: string) => {
     if (value.length > 1) return;
@@ -29,6 +38,11 @@ export function Step2OTP({ data, updateData, onNext, isLoading }: Step2Props) {
     if (e.key === "Backspace" && otp[index] === "" && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
+  };
+
+  const handleResend = () => {
+    setTimeLeft(59);
+    // Add any logic to trigger resend API here if needed
   };
 
   const isValid = otp.every((digit) => digit !== "");
@@ -56,9 +70,19 @@ export function Step2OTP({ data, updateData, onNext, isLoading }: Step2Props) {
         ))}
       </div>
       
-      <p className="text-[12px] text-grey-3 mb-12">
-        Didn&apos;t receive the code? 0:59
-      </p>
+      <div className="text-[12px] text-grey-3 mb-12 flex items-center gap-1">
+        Didn&apos;t receive the code? 
+        {timeLeft > 0 ? (
+          <span>0:{timeLeft.toString().padStart(2, '0')}</span>
+        ) : (
+          <button 
+            onClick={handleResend}
+            className="text-primary-1 font-medium hover:underline focus:outline-none"
+          >
+            Resend
+          </button>
+        )}
+      </div>
 
       <Button 
         onClick={onNext} 

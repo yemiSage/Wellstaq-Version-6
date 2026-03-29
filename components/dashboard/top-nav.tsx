@@ -7,6 +7,10 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { generateChatResponse } from "@/app/actions/chat";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Modal } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -15,6 +19,8 @@ export function TopNav() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isOrgSwitcherOpen, setIsOrgSwitcherOpen] = useState(false);
+  const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
+  const [newBranchData, setNewBranchData] = useState({ name: "", employees: "" });
   const [showHistory, setShowHistory] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const orgSwitcherRef = useRef<HTMLDivElement>(null);
@@ -57,6 +63,16 @@ export function TopNav() {
     setIsLogoutModalOpen(false);
     toast.success("Logged out successfully");
     router.push("/");
+  };
+
+  const handleAddBranch = () => {
+    if (!newBranchData.name || !newBranchData.employees) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    toast.success("Branch added successfully!");
+    setIsAddBranchModalOpen(false);
+    setNewBranchData({ name: "", employees: "" });
   };
 
   const startNewChat = () => {
@@ -124,7 +140,13 @@ export function TopNav() {
                 </div>
                 <div className="h-px bg-grey-4 my-1"></div>
                 <div className="p-1">
-                  <button className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-grey-1 hover:bg-grey-5 rounded-md transition-colors">
+                  <button 
+                    onClick={() => {
+                      setIsOrgSwitcherOpen(false);
+                      setIsAddBranchModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-grey-1 hover:bg-grey-5 rounded-md transition-colors"
+                  >
                     <Plus className="w-4 h-4 text-grey-2" />
                     Add new branch
                   </button>
@@ -366,6 +388,43 @@ export function TopNav() {
         cancelText="Cancel"
         isDestructive={true}
       />
+
+      <Modal
+        isOpen={isAddBranchModalOpen}
+        onClose={() => setIsAddBranchModalOpen(false)}
+        title="Add New Branch"
+        subtitle="Create a new branch for your organization."
+      >
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="branchName">Branch Name</Label>
+            <Input
+              id="branchName"
+              placeholder="e.g. London Office"
+              value={newBranchData.name}
+              onChange={(e) => setNewBranchData({ ...newBranchData, name: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="employees">Number of Employees</Label>
+            <Input
+              id="employees"
+              type="number"
+              placeholder="e.g. 50"
+              value={newBranchData.employees}
+              onChange={(e) => setNewBranchData({ ...newBranchData, employees: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 pt-4 border-t border-grey-4">
+          <Button variant="outline" onClick={() => setIsAddBranchModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleAddBranch}>
+            Add Branch
+          </Button>
+        </div>
+      </Modal>
     </>
   );
 }
