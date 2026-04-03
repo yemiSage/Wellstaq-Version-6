@@ -1,20 +1,37 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 
 export function DashboardHeader() {
   const [timeFilter, setTimeFilter] = useState("Last 9 Months");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [firstName, setFirstName] = useState("Opeyemi");
   const filterRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(filterRef, () => setIsFilterOpen(false));
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedData = localStorage.getItem('onboardingData');
+      if (storedData) {
+        try {
+          const parsed = JSON.parse(storedData);
+          if (parsed.firstName) {
+            setFirstName(parsed.firstName);
+          }
+        } catch (e) {
+          console.error("Failed to parse onboarding data", e);
+        }
+      }
+    }
+  }, []);
+
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Good afternoon, Opeyemi 👋</h1>
+        <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Good afternoon, {firstName} 👋</h1>
         <p className="text-grey-2">Here is how your team is doing today.</p>
       </div>
       <div className="relative" ref={filterRef}>

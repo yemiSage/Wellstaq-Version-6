@@ -40,6 +40,8 @@ export function TopNav() {
     email: "adegboyeopeyemi065@gmail.com",
     businessName: "Yemi Inc lokoja"
   });
+  const [branches, setBranches] = useState<{name: string, employees: string}[]>([]);
+  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -70,6 +72,16 @@ export function TopNav() {
       toast.error("Please fill in all fields");
       return;
     }
+    
+    const updatedBranches = [...branches, newBranchData];
+    setBranches(updatedBranches);
+    setActiveBranch(newBranchData.name);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('branches', JSON.stringify(updatedBranches));
+      localStorage.setItem('activeBranch', newBranchData.name);
+    }
+    
     toast.success("Branch added successfully!");
     setIsAddBranchModalOpen(false);
     setNewBranchData({ name: "", employees: "" });
@@ -93,8 +105,36 @@ export function TopNav() {
             email: parsed.email || "adegboyeopeyemi065@gmail.com",
             businessName: parsed.businessName || "Yemi Inc lokoja"
           });
+          
+          const storedBranches = localStorage.getItem('branches');
+          if (storedBranches) {
+            setBranches(JSON.parse(storedBranches));
+          } else {
+            setBranches([{ name: parsed.businessName || "Yemi Inc lokoja", employees: "10" }]);
+          }
+          
+          const storedActiveBranch = localStorage.getItem('activeBranch');
+          if (storedActiveBranch) {
+            setActiveBranch(storedActiveBranch);
+          } else {
+            setActiveBranch(parsed.businessName || "Yemi Inc lokoja");
+          }
         } catch (e) {
           console.error("Failed to parse onboarding data", e);
+        }
+      } else {
+        const storedBranches = localStorage.getItem('branches');
+        if (storedBranches) {
+          setBranches(JSON.parse(storedBranches));
+        } else {
+          setBranches([{ name: "Yemi Inc lokoja", employees: "10" }]);
+        }
+        
+        const storedActiveBranch = localStorage.getItem('activeBranch');
+        if (storedActiveBranch) {
+          setActiveBranch(storedActiveBranch);
+        } else {
+          setActiveBranch("Yemi Inc lokoja");
         }
       }
     }
@@ -114,9 +154,9 @@ export function TopNav() {
               className="flex items-center gap-2 px-3 py-2 rounded-lg border border-grey-4 hover:bg-grey-5 transition-colors"
             >
               <div className="w-6 h-6 rounded bg-primary-1 text-white flex items-center justify-center text-xs font-bold">
-                {userData.businessName.charAt(0).toUpperCase()}
+                {activeBranch.charAt(0).toUpperCase()}
               </div>
-              <span className="text-sm font-medium text-grey-1">{userData.businessName}</span>
+              <span className="text-sm font-medium text-grey-1">{activeBranch}</span>
               <ChevronDown className="w-4 h-4 text-grey-3" />
             </button>
 
@@ -130,12 +170,26 @@ export function TopNav() {
                 className="absolute left-0 mt-2 w-[240px] bg-white border border-grey-4 rounded-lg shadow-lg z-50 p-2 origin-top-left"
               >
                 <div className="px-3 py-2">
-                  <p className="text-xs font-semibold text-grey-3 uppercase tracking-wider mb-2">Current Organization</p>
-                  <div className="flex items-center gap-3 p-2 rounded-md bg-grey-5">
-                    <div className="w-8 h-8 rounded bg-primary-1 text-white flex items-center justify-center text-sm font-bold">
-                      {userData.businessName.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-sm font-medium text-grey-1">{userData.businessName}</span>
+                  <p className="text-xs font-semibold text-grey-3 uppercase tracking-wider mb-2">Organizations</p>
+                  <div className="space-y-1">
+                    {branches.map((branch, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setActiveBranch(branch.name);
+                          if (typeof window !== 'undefined') {
+                            localStorage.setItem('activeBranch', branch.name);
+                          }
+                          setIsOrgSwitcherOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 p-2 rounded-md transition-colors ${activeBranch === branch.name ? 'bg-grey-5' : 'hover:bg-grey-5'}`}
+                      >
+                        <div className="w-8 h-8 rounded bg-primary-1 text-white flex items-center justify-center text-sm font-bold">
+                          {branch.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-sm font-medium text-grey-1">{branch.name}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="h-px bg-grey-4 my-1"></div>

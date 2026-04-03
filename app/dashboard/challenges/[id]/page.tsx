@@ -2,15 +2,17 @@ import { ArrowLeft, Calendar, Users, Target, Trophy, CheckCircle2, Clock } from 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export default function ChallengeDetailPage({ params }: { params: { id: string } }) {
+export default async function ChallengeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  
   // Mock data for the challenge
   const challenge = {
-    id: params.id,
-    name: params.id === "1" ? "Step Up for Health" : 
-          params.id === "2" ? "Green Fitness Initiative" : 
-          params.id === "3" ? "Healthy Habits Month" : "Mindful Movement Week",
+    id: id,
+    name: id === "1" ? "Step Up for Health" : 
+          id === "2" ? "Green Fitness Initiative" : 
+          id === "3" ? "Healthy Habits Month" : "Mindful Movement Week",
     description: "Join us for a month-long challenge to improve our daily step counts and overall cardiovascular health. Track your steps daily and compete with colleagues for the top spot on the leaderboard!",
-    status: params.id === "3" ? "Upcoming" : "Active",
+    status: id === "3" ? "Upcoming" : "Active",
     startDate: "Oct 1, 2023",
     endDate: "Oct 31, 2023",
     participants: 124,

@@ -285,7 +285,7 @@ export default function DepartmentsPage() {
               <div className="m-[12px] bg-[#FAFAFA] rounded-[12px] p-[12px]">
                 <div className="flex items-start justify-between mb-8">
                   <div className="flex items-start gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-grey-5 flex items-center justify-center text-2xl font-bold text-grey-2">
+                    <div className="w-16 h-16 rounded-xl bg-orange-50 flex items-center justify-center text-2xl font-bold text-orange-500">
                       {selectedDepartment.name.charAt(0)}
                     </div>
                     <div>
