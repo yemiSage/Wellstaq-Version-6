@@ -109,7 +109,6 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
 
   const filteredEmployees = INITIAL_MEMBERS.filter(emp => 
     emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
     emp.department.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -404,7 +403,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                         </div>
                         <div>
                           <p className="text-sm font-bold text-grey-1">{emp.name}</p>
-                          <p className="text-xs text-grey-2">{emp.role} • {emp.department}</p>
+                          <p className="text-xs text-grey-2">{emp.department}</p>
                         </div>
                       </div>
                       <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
