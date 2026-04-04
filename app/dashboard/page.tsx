@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -7,8 +9,62 @@ import {
   EngagementChart, 
   Leaderboard 
 } from "@/components/dashboard/dashboard-charts-dynamic";
+import { INITIAL_MEMBERS, MOCK_DEPARTMENTS, EVENTS, CHALLENGES } from "@/lib/mock-data";
 
 export default function DashboardPage() {
+  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
+  const [stats, setStats] = useState({
+    staff: 0,
+    staffActive: 0,
+    activity: 0,
+    events: 0,
+    departments: 0,
+    staffGrowth: "+0",
+    activityGrowth: "+0%",
+    eventsGrowth: "+0",
+    departmentsGrowth: "+0"
+  });
+
+  useEffect(() => {
+    const calculateStats = (branch: string) => {
+      const branchMembers = INITIAL_MEMBERS.filter(m => m.branch === branch);
+      const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === branch);
+      const branchEvents = EVENTS.filter(e => e.branch === branch);
+      
+      const totalActivity = branchDepts.reduce((acc, dept) => acc + dept.activities, 0);
+      const activeStaff = branchMembers.filter(m => m.status === 'Excellent' || m.status === 'Good').length;
+
+      return {
+        staff: branchMembers.length,
+        staffActive: activeStaff,
+        activity: totalActivity,
+        events: branchEvents.length,
+        departments: branchDepts.length,
+        staffGrowth: branchMembers.length > 0 ? "+4" : "+0", // Mock growth for now
+        activityGrowth: totalActivity > 0 ? "+21%" : "+0%",
+        eventsGrowth: branchEvents.length > 0 ? "12" : "0",
+        departmentsGrowth: branchDepts.length > 0 ? "8" : "0"
+      };
+    };
+
+    const storedBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
+    setActiveBranch(storedBranch);
+    setStats(calculateStats(storedBranch));
+
+    const handleBranchChange = () => {
+      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
+      setActiveBranch(newBranch);
+      setStats(calculateStats(newBranch));
+    };
+
+    window.addEventListener('branchChange', handleBranchChange);
+    window.addEventListener('storage', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChange', handleBranchChange);
+      window.removeEventListener('storage', handleBranchChange);
+    };
+  }, []);
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
@@ -22,12 +78,12 @@ export default function DashboardPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
             <span className="flex items-center text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> +4 this month
+              <ArrowUpRight className="w-3 h-3 mr-1" /> {stats.staffGrowth} this month
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Total Staff</p>
-          <h3 className="text-2xl font-bold text-[#373737] mb-1">52</h3>
-          <p className="text-xs text-grey-3">32 currently active</p>
+          <h3 className="text-2xl font-bold text-[#373737] mb-1">{stats.staff}</h3>
+          <p className="text-xs text-grey-3">{stats.staffActive} currently active</p>
         </div>
 
         <div className="bg-white p-[14px] rounded-[12px]">
@@ -36,11 +92,11 @@ export default function DashboardPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
             </div>
             <span className="flex items-center text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> +21%
+              <ArrowUpRight className="w-3 h-3 mr-1" /> {stats.activityGrowth}
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Total Activity</p>
-          <h3 className="text-2xl font-bold text-[#373737] mb-1">12,342</h3>
+          <h3 className="text-2xl font-bold text-[#373737] mb-1">{stats.activity.toLocaleString()}</h3>
           <p className="text-xs text-grey-3">From last week</p>
         </div>
 
@@ -50,11 +106,11 @@ export default function DashboardPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
             </div>
             <span className="flex items-center text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> +12
+              <ArrowUpRight className="w-3 h-3 mr-1" /> +{stats.eventsGrowth}
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Events Created</p>
-          <h3 className="text-2xl font-bold text-[#373737] mb-1">231</h3>
+          <h3 className="text-2xl font-bold text-[#373737] mb-1">{stats.events}</h3>
           <p className="text-xs text-grey-3">Scheduled events</p>
         </div>
 
@@ -64,11 +120,11 @@ export default function DashboardPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/></svg>
             </div>
             <span className="flex items-center text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> +8
+              <ArrowUpRight className="w-3 h-3 mr-1" /> +{stats.departmentsGrowth}
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Total Departments</p>
-          <h3 className="text-2xl font-bold text-[#373737] mb-1">100</h3>
+          <h3 className="text-2xl font-bold text-[#373737] mb-1">{stats.departments}</h3>
           <p className="text-xs text-grey-3">Wellness departments</p>
         </div>
       </div>

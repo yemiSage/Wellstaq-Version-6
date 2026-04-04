@@ -8,13 +8,13 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 // Mock Data
 const stories = [
-  { id: 1, name: "Your Story", image: "https://picsum.photos/seed/opeyemi/100/100", isUser: true },
-  { id: 2, name: "Ibukun", image: "https://picsum.photos/seed/ibukun/100/100" },
-  { id: 3, name: "Amaka", image: "https://picsum.photos/seed/amaka/100/100" },
-  { id: 4, name: "Chidi", image: "https://picsum.photos/seed/chidi/100/100" },
-  { id: 5, name: "Segun", image: "https://picsum.photos/seed/segun/100/100" },
-  { id: 6, name: "Tunde", image: "https://picsum.photos/seed/tunde/100/100" },
-  { id: 7, name: "Ngozi", image: "https://picsum.photos/seed/ngozi/100/100" },
+  { id: 1, name: "Your Story", image: "https://picsum.photos/seed/opeyemi/100/100", isUser: true, branch: "Yemi Inc lokoja" },
+  { id: 2, name: "Ibukun", image: "https://picsum.photos/seed/ibukun/100/100", branch: "Yemi Inc lokoja" },
+  { id: 3, name: "Amaka", image: "https://picsum.photos/seed/amaka/100/100", branch: "Lagos Branch" },
+  { id: 4, name: "Chidi", image: "https://picsum.photos/seed/chidi/100/100", branch: "Lagos Branch" },
+  { id: 5, name: "Segun", image: "https://picsum.photos/seed/segun/100/100", branch: "Abuja Branch" },
+  { id: 6, name: "Tunde", image: "https://picsum.photos/seed/tunde/100/100", branch: "Abuja Branch" },
+  { id: 7, name: "Ngozi", image: "https://picsum.photos/seed/ngozi/100/100", branch: "Yemi Inc lokoja" },
 ];
 
 const trendingTopics = [
@@ -32,6 +32,7 @@ const suggestedClubs = [
     category: "Team Bonding",
     description: "Innovative coders collaborating on projects and skills.",
     members: 30,
+    branch: "Yemi Inc lokoja",
     image: "https://picsum.photos/seed/yogo/100/100"
   },
   {
@@ -40,7 +41,17 @@ const suggestedClubs = [
     category: "Creativity",
     description: "A community of designers sharing insights and trends.",
     members: 25,
+    branch: "Lagos Branch",
     image: "https://picsum.photos/seed/design/100/100"
+  },
+  {
+    id: 3,
+    name: "Abuja Runners",
+    category: "Fitness",
+    description: "Running club for Abuja branch members.",
+    members: 45,
+    branch: "Abuja Branch",
+    image: "https://picsum.photos/seed/abuja/100/100"
   }
 ];
 
@@ -149,6 +160,7 @@ const initialPosts = [
 ];
 
 export default function SpacePage() {
+  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
   const [activeTab, setActiveTab] = useState<"Other Clubs" | "My Clubs">("Other Clubs");
   const [selectedClub, setSelectedClub] = useState<number | null>(null);
   const [suggested, setSuggested] = useState(suggestedClubs);
@@ -168,6 +180,29 @@ export default function SpacePage() {
   const [chatInput, setChatInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleBranchChange = () => {
+      const storedBranch = localStorage.getItem('activeBranch');
+      if (storedBranch) {
+        setActiveBranch(storedBranch);
+        setSelectedClub(null);
+      }
+    };
+
+    handleBranchChange();
+    window.addEventListener('branchChange', handleBranchChange);
+    window.addEventListener('storage', handleBranchChange);
+
+    return () => {
+      window.removeEventListener('branchChange', handleBranchChange);
+      window.removeEventListener('storage', handleBranchChange);
+    };
+  }, []);
+
+  const filteredStories = stories.filter(s => s.branch === activeBranch || s.isUser);
+  const filteredClubs = suggested.filter(c => c.branch === activeBranch);
+  const filteredMyClubs = myClubsList.filter(c => c.branch === activeBranch);
 
   useEffect(() => {
     const savedMessages = localStorage.getItem('chatMessages');
@@ -384,7 +419,7 @@ export default function SpacePage() {
       <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
         {activeTab === "Other Clubs" ? (
           <div className="space-y-4">
-            {suggested.map(club => (
+            {filteredClubs.map(club => (
               <div key={club.id} className="p-4 border border-grey-4 rounded-xl hover:border-primary-1 cursor-pointer transition-colors" onClick={() => setSelectedClub(club.id)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -411,9 +446,9 @@ export default function SpacePage() {
               </div>
             ))}
           </div>
-        ) : myClubsList.length > 0 ? (
+        ) : filteredMyClubs.length > 0 ? (
           <div className="space-y-4">
-            {myClubsList.map(club => (
+            {filteredMyClubs.map(club => (
               <div key={club.id} className="p-4 border border-grey-4 rounded-xl hover:border-primary-1 cursor-pointer transition-colors" onClick={() => setSelectedClub(club.id)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -474,6 +509,20 @@ export default function SpacePage() {
       
       <div className="flex-1 overflow-y-auto no-scrollbar p-6">
         <div className="max-w-[600px] mx-auto space-y-6">
+          {/* Stories */}
+          <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+            {filteredStories.map((story) => (
+              <div key={story.id} className="flex-shrink-0 flex flex-col items-center gap-1">
+                <div className={`w-14 h-14 rounded-full p-0.5 border-2 ${story.isUser ? 'border-grey-4' : 'border-primary-1'}`}>
+                  <div className="w-full h-full rounded-full overflow-hidden relative">
+                    <Image src={story.image} alt={story.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                </div>
+                <span className="text-[10px] font-medium text-grey-2 truncate w-14 text-center">{story.name}</span>
+              </div>
+            ))}
+          </div>
+
           {/* Create Post */}
           <div className="bg-white p-4 rounded-xl border border-grey-4">
             <div className="flex gap-3 mb-4">

@@ -71,18 +71,9 @@ export default function ContactPage() {
 
   return (
     <div className="max-w-7xl mx-auto pb-12">
-      <div className="mb-[24px] flex items-center justify-between">
-        <div>
-          <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Contact Support</h1>
-          <p className="text-sm text-grey-2">Have questions about WellStaq? Our team is here to help you build a healthier workplace.</p>
-        </div>
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-500 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </button>
+      <div className="mb-[24px]">
+        <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Contact Support</h1>
+        <p className="text-sm text-grey-2">Have questions about WellStaq? Our team is here to help you build a healthier workplace.</p>
       </div>
 
       <div className="flex flex-col gap-[12px] p-5 bg-white rounded-[12px]">

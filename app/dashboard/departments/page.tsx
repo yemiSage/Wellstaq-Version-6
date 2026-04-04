@@ -1,68 +1,16 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Search, Plus, X, Users, Activity, Calendar, Award, ChevronDown, Check, UserPlus, Edit2, Trash2, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import Image from "next/image";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { toast } from "sonner";
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip
 } from "recharts";
-
-const STATS = [
-  {
-    title: "Total Staff",
-    value: "52",
-    subtitle: "32 currently active",
-    trend: "+4 this month",
-    icon: Users,
-    color: "text-red-500",
-    bg: "bg-red-100",
-    trendColor: "text-green-600"
-  },
-  {
-    title: "Total Activity",
-    value: "12,342",
-    subtitle: "From last week",
-    trend: "+21%",
-    icon: Activity,
-    color: "text-purple-500",
-    bg: "bg-purple-100",
-    trendColor: "text-green-600"
-  },
-  {
-    title: "Events Created",
-    value: "231",
-    subtitle: "Scheduled events",
-    trend: "+12",
-    icon: Calendar,
-    color: "text-blue-500",
-    bg: "bg-blue-100",
-    trendColor: "text-green-600"
-  },
-  {
-    title: "Total Departments",
-    value: "100",
-    subtitle: "Wellness departments",
-    trend: "+8",
-    icon: Users,
-    color: "text-lime-600",
-    bg: "bg-lime-100",
-    trendColor: "text-green-600"
-  }
-];
-
-const MOCK_DEPARTMENTS: any[] = [];
-
-const MOCK_MEMBERS = [
-  { id: 1, name: "Toby Forge", role: "Designer | Engineering", steps: 19875, rank: 1, trend: "up", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334436/sports-men-standing-white-wall_mz07zp.jpg" },
-  { id: 2, name: "Luna Rivers", role: "Marketer | Sales", steps: 18450, rank: 2, trend: "down", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334554/diverse-young-people-holding-hands_z0tupa.jpg" },
-  { id: 3, name: "Milo Sparks", role: "Manager | Operations", steps: 15030, rank: 3, trend: "down", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1772170726/wellstaq_onboarding_image_les0xq.png" },
-  { id: 4, name: "Ava Quinn", role: "Developer | Engineering", steps: 14200, rank: 4, trend: "up", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334436/sports-men-standing-white-wall_mz07zp.jpg" },
-  { id: 5, name: "Jasper Moon", role: "Designer | Engineering", steps: 12000, rank: 5, trend: "up", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334554/diverse-young-people-holding-hands_z0tupa.jpg" },
-  { id: 6, name: "Ella Stone", role: "Marketer | Sales", steps: 11500, rank: 6, trend: "down", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1772170726/wellstaq_onboarding_image_les0xq.png" },
-  { id: 7, name: "Finn Wilder", role: "Manager | Operations", steps: 10000, rank: 7, trend: "down", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334436/sports-men-standing-white-wall_mz07zp.jpg" },
-];
+import { MOCK_DEPARTMENTS, MOCK_MEMBERS, INITIAL_MEMBERS, EVENTS } from "@/lib/mock-data";
 
 const radarData = [
   { subject: 'Distance', A: 120, fullMark: 150 },
@@ -90,12 +38,102 @@ const monthlyStepsData = [
 ];
 
 export default function DepartmentsPage() {
+  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
   const [departments, setDepartments] = useState<any[]>(MOCK_DEPARTMENTS);
+  const [stats, setStats] = useState({
+    totalStaff: 0,
+    activeStaff: 0,
+    totalActivity: 0,
+    eventsCreated: 0,
+    totalDepartments: 0
+  });
+
+  useEffect(() => {
+    const storedBranch = localStorage.getItem('activeBranch');
+    const branch = storedBranch || "Yemi Inc lokoja";
+    setActiveBranch(branch);
+    updateStats(branch);
+
+    const handleBranchChange = () => {
+      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
+      setActiveBranch(newBranch);
+      setSelectedDepartment(null);
+      updateStats(newBranch);
+    };
+
+    window.addEventListener('branchChange', handleBranchChange);
+    window.addEventListener('storage', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChange', handleBranchChange);
+      window.removeEventListener('storage', handleBranchChange);
+    };
+  }, []);
+
+  const updateStats = (branch: string) => {
+    const branchMembers = INITIAL_MEMBERS.filter(m => m.branch === branch);
+    const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === branch);
+    const branchEvents = EVENTS.filter(e => e.branch === branch);
+    
+    const totalActivity = branchDepts.reduce((acc, dept) => acc + dept.activities, 0);
+
+    setStats({
+      totalStaff: branchMembers.length,
+      activeStaff: Math.round(branchMembers.length * 0.6), // Mocking active staff
+      totalActivity: totalActivity,
+      eventsCreated: branchEvents.length,
+      totalDepartments: branchDepts.length
+    });
+  };
+
+  const dashboardStats = [
+    {
+      title: "Total Staff",
+      value: stats.totalStaff.toString(),
+      subtitle: `${stats.activeStaff} currently active`,
+      trend: "+4 this month",
+      icon: Users,
+      color: "text-red-500",
+      bg: "bg-red-100",
+      trendColor: "text-green-600"
+    },
+    {
+      title: "Total Activity",
+      value: stats.totalActivity.toLocaleString(),
+      subtitle: "From last week",
+      trend: "+21%",
+      icon: Activity,
+      color: "text-purple-500",
+      bg: "bg-purple-100",
+      trendColor: "text-green-600"
+    },
+    {
+      title: "Events Created",
+      value: stats.eventsCreated.toString(),
+      subtitle: "Scheduled events",
+      trend: "+12",
+      icon: Calendar,
+      color: "text-blue-500",
+      bg: "bg-blue-100",
+      trendColor: "text-green-600"
+    },
+    {
+      title: "Total Departments",
+      value: stats.totalDepartments.toString(),
+      subtitle: "Wellness departments",
+      trend: "+8",
+      icon: Users,
+      color: "text-lime-600",
+      bg: "bg-lime-100",
+      trendColor: "text-green-600"
+    }
+  ];
+
+  const filteredDepartments = departments.filter(d => d.branch === activeBranch);
+  const filteredMembers = MOCK_MEMBERS.filter(m => m.branch === activeBranch);
+
   const [selectedDepartment, setSelectedDepartment] = useState<any | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-  const [isAddMemberSuccessModalOpen, setIsAddMemberSuccessModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -125,11 +163,12 @@ export default function DepartmentsPage() {
       members: selectedMembers.length,
       activities: 0,
       rank: departments.length + 1,
+      branch: activeBranch,
       avatars: selectedMembers.map(id => MOCK_MEMBERS.find(m => m.id === id)?.avatar).filter(Boolean)
     };
     setDepartments([newDepartment, ...departments]);
     setIsCreateModalOpen(false);
-    setIsSuccessModalOpen(true);
+    toast.success("Department created successfully!");
     
     // Reset form
     setNewDepartmentName("");
@@ -138,7 +177,7 @@ export default function DepartmentsPage() {
 
   const handleAddMembers = () => {
     setIsAddMemberModalOpen(false);
-    setIsAddMemberSuccessModalOpen(true);
+    toast.success("Members added successfully!");
     setSelectedMembers([]);
   };
 
@@ -150,15 +189,16 @@ export default function DepartmentsPage() {
     setDepartments(updatedDepartments);
     setSelectedDepartment({ ...selectedDepartment, name: editDepartmentName });
     setIsEditModalOpen(false);
+    toast.success("Department updated successfully!");
   };
 
   const handleDeleteDepartment = () => {
-    if (!selectedDepartment || deleteConfirmText !== "delete") return;
+    if (!selectedDepartment) return;
     const updatedDepartments = departments.filter(dept => dept.id !== selectedDepartment.id);
     setDepartments(updatedDepartments);
     setSelectedDepartment(null);
     setIsDeleteModalOpen(false);
-    setDeleteConfirmText("");
+    toast.success("Department deleted successfully!");
   };
 
   const toggleMemberSelection = (id: number) => {
@@ -188,7 +228,7 @@ export default function DepartmentsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[12px]">
-        {STATS.map((stat, i) => (
+        {dashboardStats.map((stat, i) => (
           <div key={i} className="bg-white p-[14px] rounded-[12px]">
             <div className="flex items-start justify-between mb-4">
               <div className={`w-10 h-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
@@ -218,7 +258,7 @@ export default function DepartmentsPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 no-scrollbar">
-            {departments.length === 0 ? (
+            {filteredDepartments.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white rounded-[12px]">
                 <h3 className="text-lg font-bold text-grey-1 mb-2">No Departments Available</h3>
                 <p className="text-sm text-grey-2 mb-6">You haven&apos;t created any departments yet. Start by creating departments and adding team members!</p>
@@ -231,7 +271,7 @@ export default function DepartmentsPage() {
                 </button>
               </div>
             ) : (
-              departments.map((department) => (
+              filteredDepartments.map((department) => (
                 <div 
                   key={department.id}
                   onClick={() => setSelectedDepartment(department)}
@@ -507,6 +547,17 @@ export default function DepartmentsPage() {
         </div>
       </div>
 
+      {/* Modals */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteDepartment}
+        title="Delete Department"
+        description={`Are you sure you want to delete the ${selectedDepartment?.name} department? This action cannot be undone.`}
+        confirmText="Delete"
+        isDestructive
+      />
+
       {/* Create Department Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -546,7 +597,7 @@ export default function DepartmentsPage() {
                   
                   {isMemberDropdownOpen && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-grey-4 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto p-2">
-                      {MOCK_MEMBERS.map(member => (
+                      {filteredMembers.map(member => (
                         <div 
                           key={member.id} 
                           onClick={() => toggleMemberSelection(member.id)}
@@ -605,46 +656,6 @@ export default function DepartmentsPage() {
         </div>
       )}
 
-      {/* Success Modal */}
-      {isSuccessModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-8 flex flex-col items-center text-center relative">
-            <button onClick={() => setIsSuccessModalOpen(false)} className="absolute top-4 right-4 text-grey-3 hover:text-grey-1">
-              <X className="w-5 h-5" />
-            </button>
-            
-            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-6 text-[#F27D26]">
-              <Check className="w-10 h-10" strokeWidth={3} />
-            </div>
-            
-            <h2 className="text-xl font-bold text-grey-1 mb-2">Department successfully created</h2>
-            <p className="text-sm text-grey-2 mb-8">
-              Your department <span className="font-bold text-grey-1">{departments[0]?.name}</span> have been successfully created
-            </p>
-            
-            <div className="w-full flex items-center justify-between p-3 border border-grey-4 rounded-lg bg-white">
-              <span className="text-sm text-grey-2 truncate mr-2">Https://wellstaq.com/departments/{departments[0]?.name.toLowerCase().replace(/\s+/g, '_')}...</span>
-              <button 
-                onClick={handleCopy}
-                className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors ${isCopied ? 'text-green-600' : 'text-grey-1'}`}
-              >
-                {isCopied ? (
-                  <>
-                    <Check className="w-4 h-4" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                    Copy
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Add Member Modal */}
       {isAddMemberModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -673,7 +684,7 @@ export default function DepartmentsPage() {
                   
                   {isMemberDropdownOpen && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-grey-4 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto p-2">
-                      {MOCK_MEMBERS.map(member => (
+                      {filteredMembers.map(member => (
                         <div 
                           key={member.id} 
                           onClick={() => toggleMemberSelection(member.id)}
@@ -735,26 +746,6 @@ export default function DepartmentsPage() {
         </div>
       )}
 
-      {/* Add Member Success Modal */}
-      {isAddMemberSuccessModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-8 flex flex-col items-center text-center relative">
-            <button onClick={() => setIsAddMemberSuccessModalOpen(false)} className="absolute top-4 right-4 text-grey-3 hover:text-grey-1">
-              <X className="w-5 h-5" />
-            </button>
-            
-            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-6 text-[#F27D26]">
-              <Check className="w-10 h-10" strokeWidth={3} />
-            </div>
-            
-            <h2 className="text-xl font-bold text-grey-1 mb-2">Members have been added successfully!</h2>
-            <p className="text-sm text-grey-2">
-              New members have been added successfully! They will be notified and added to the department.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Edit Department Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -800,62 +791,6 @@ export default function DepartmentsPage() {
         </div>
       )}
 
-      {/* Delete Department Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-[480px] flex flex-col">
-            <div className="p-6 border-b border-grey-4 flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-bold text-red-600 mb-1">Delete Department</h2>
-                <p className="text-sm text-grey-2">This action cannot be undone</p>
-              </div>
-              <button onClick={() => setIsDeleteModalOpen(false)} className="text-grey-3 hover:text-grey-1">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-grey-2">
-                Are you sure you want to delete <span className="font-bold text-grey-1">{selectedDepartment?.name}</span>? 
-                All data associated with this department will be permanently removed.
-              </p>
-              <div className="p-3 bg-red-50 rounded-lg border border-red-100">
-                <p className="text-xs text-red-600">
-                  To confirm deletion, please type <span className="font-bold">delete</span> below:
-                </p>
-              </div>
-              <input 
-                type="text" 
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder="Type 'delete' to confirm"
-                className="w-full h-11 px-4 rounded-lg border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-            </div>
-
-            <div className="p-6 border-t border-grey-4 flex justify-end gap-3 bg-grey-5/30">
-              <button 
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setDeleteConfirmText("");
-                }}
-                className="px-6 py-2 rounded-lg border border-grey-4 text-sm font-medium text-grey-1 bg-white hover:bg-grey-5"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleDeleteDepartment}
-                disabled={deleteConfirmText !== "delete"}
-                className={`px-6 py-2 rounded-lg text-white text-sm font-medium transition-colors ${
-                  deleteConfirmText === "delete" ? 'bg-red-600 hover:bg-red-700' : 'bg-red-300 cursor-not-allowed'
-                }`}
-              >
-                Delete Department
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

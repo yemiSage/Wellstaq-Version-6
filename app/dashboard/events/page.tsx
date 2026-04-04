@@ -1,135 +1,97 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Search, Plus, Calendar, Users, TrendingUp, MoreHorizontal, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Clock, X, ChevronDown, Check } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { EVENTS, PARTICIPANT_OPTIONS } from "@/lib/mock-data";
 import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
-
-const STATS = [
-  {
-    title: "Total Events",
-    value: "52",
-    trend: "+4 this month",
-    icon: <Users className="w-5 h-5 text-pink-500" />,
-    iconBg: "bg-pink-100",
-    trendColor: "text-green-500"
-  },
-  {
-    title: "Upcoming Events",
-    value: "12,342",
-    trend: "+21%",
-    icon: <TrendingUp className="w-5 h-5 text-purple-500" />,
-    iconBg: "bg-purple-100",
-    trendColor: "text-green-500"
-  },
-  {
-    title: "Completed Events",
-    value: "231",
-    trend: "+12",
-    icon: <Calendar className="w-5 h-5 text-blue-500" />,
-    iconBg: "bg-blue-100",
-    trendColor: "text-green-500"
-  },
-  {
-    title: "Total Participants",
-    value: "100",
-    trend: "+8",
-    icon: <Users className="w-5 h-5 text-green-500" />,
-    iconBg: "bg-green-100",
-    trendColor: "text-green-500"
-  }
-];
-
-const EVENTS = [
-  {
-    id: 1,
-    title: "Morning yoga and Breathwork",
-    date: "every monday",
-    time: "2:00pm",
-    participants: 23,
-    status: "Upcoming",
-    image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800&h=600&auto=format&fit=crop"
-  },
-  {
-    id: 2,
-    title: "Morning yoga and Breathwork",
-    date: "every monday",
-    time: "2:00pm",
-    participants: 23,
-    status: "Upcoming",
-    image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=800&h=600&auto=format&fit=crop"
-  },
-  {
-    id: 3,
-    title: "Evening Meditation",
-    date: "every wednesday",
-    time: "6:00pm",
-    participants: 15,
-    status: "Upcoming",
-    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=800&h=600&auto=format&fit=crop"
-  },
-  {
-    id: 4,
-    title: "Weekend Hiking Trip",
-    date: "first saturday of the month",
-    time: "8:00am",
-    participants: 30,
-    status: "Completed",
-    image: "https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=800&h=600&auto=format&fit=crop"
-  },
-  {
-    id: 5,
-    title: "Nutrition Workshop",
-    date: "last friday of the month",
-    time: "5:00pm",
-    participants: 25,
-    status: "Completed",
-    image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=800&h=600&auto=format&fit=crop"
-  },
-  {
-    id: 6,
-    title: "Creative Writing Class",
-    date: "every tuesday",
-    time: "4:00pm",
-    participants: 18,
-    status: "Canceled",
-    image: "https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=800&h=600&auto=format&fit=crop"
-  },
-  {
-    id: 7,
-    title: "Group Cycling Session",
-    date: "every thursday",
-    time: "7:00pm",
-    participants: 20,
-    status: "Upcoming",
-    image: "https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&h=600&auto=format&fit=crop"
-  },
-  {
-    id: 8,
-    title: "Photography Outing",
-    date: "third sunday of the month",
-    time: "9:00am",
-    participants: 10,
-    status: "Upcoming",
-    image: "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=800&h=600&auto=format&fit=crop"
-  }
-];
-
-const PARTICIPANT_OPTIONS = [
-  { id: 'd1', name: 'Mongo Warriors', type: 'department', icon: 'Users' },
-  { id: 'd2', name: 'Tabakrr boys', type: 'department', icon: 'Users' },
-  { id: 'u1', name: 'Toby Forge', type: 'user', avatar: 'https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334436/sports-men-standing-white-wall_mz07zp.jpg' },
-  { id: 'u2', name: 'Luna Rivers', type: 'user', avatar: 'https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334554/diverse-young-people-holding-hands_z0tupa.jpg' },
-];
 
 export default function EventsPage() {
   const [activeTab, setActiveTab] = useState("All Events");
   const [searchQuery, setSearchQuery] = useState("");
   const [events, setEvents] = useState(EVENTS);
+  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [stats, setStats] = useState({
+    totalEvents: 0,
+    upcomingEvents: 0,
+    completedEvents: 0,
+    totalParticipants: 0
+  });
+
+  useEffect(() => {
+    const storedBranch = localStorage.getItem('activeBranch');
+    const branch = storedBranch || "Yemi Inc lokoja";
+    setActiveBranch(branch);
+    updateStats(branch);
+
+    const handleBranchChange = () => {
+      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
+      setActiveBranch(newBranch);
+      setCurrentPage(1);
+      updateStats(newBranch);
+    };
+
+    window.addEventListener('branchChange', handleBranchChange);
+    window.addEventListener('storage', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChange', handleBranchChange);
+      window.removeEventListener('storage', handleBranchChange);
+    };
+  }, []);
+
+  const updateStats = (branch: string) => {
+    const branchEvents = EVENTS.filter(e => e.branch === branch);
+    const upcoming = branchEvents.filter(e => e.status === 'Upcoming').length;
+    const completed = branchEvents.filter(e => e.status === 'Completed').length;
+    const participants = branchEvents.reduce((acc, e) => acc + e.participants, 0);
+
+    setStats({
+      totalEvents: branchEvents.length,
+      upcomingEvents: upcoming,
+      completedEvents: completed,
+      totalParticipants: participants
+    });
+  };
+
+  const dashboardStats = [
+    {
+      title: "Total Events",
+      value: stats.totalEvents.toString(),
+      trend: "+4 this month",
+      icon: <Users className="w-5 h-5 text-pink-500" />,
+      iconBg: "bg-pink-100",
+      trendColor: "text-green-500"
+    },
+    {
+      title: "Upcoming Events",
+      value: stats.upcomingEvents.toString(),
+      trend: "+21%",
+      icon: <TrendingUp className="w-5 h-5 text-purple-500" />,
+      iconBg: "bg-purple-100",
+      trendColor: "text-green-500"
+    },
+    {
+      title: "Completed Events",
+      value: stats.completedEvents.toString(),
+      trend: "+12",
+      icon: <Calendar className="w-5 h-5 text-blue-500" />,
+      iconBg: "bg-blue-100",
+      trendColor: "text-green-500"
+    },
+    {
+      title: "Total Participants",
+      value: stats.totalParticipants.toString(),
+      trend: "+8",
+      icon: <Users className="w-5 h-5 text-green-500" />,
+      iconBg: "bg-green-100",
+      trendColor: "text-green-500"
+    }
+  ];
+
   const [isParticipantDropdownOpen, setIsParticipantDropdownOpen] = useState(false);
   const participantDropdownRef = useRef<HTMLDivElement>(null);
   useClickOutside(participantDropdownRef, () => setIsParticipantDropdownOpen(false));
@@ -143,7 +105,8 @@ export default function EventsPage() {
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === "All Events" || event.status === activeTab;
-    return matchesSearch && matchesTab;
+    const matchesBranch = event.branch === activeBranch;
+    return matchesSearch && matchesTab && matchesBranch;
   });
 
   const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
@@ -185,7 +148,7 @@ export default function EventsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[12px] mb-0">
-        {STATS.map((stat, idx) => (
+        {dashboardStats.map((stat, idx) => (
           <div key={idx} className="bg-white p-[14px] rounded-[12px] border border-grey-4">
             <div className="flex items-center justify-between mb-4">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.iconBg}`}>

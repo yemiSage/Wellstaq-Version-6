@@ -1,92 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Search, Filter, Plus, Trophy, Users, Calendar, ArrowRight, CheckCircle2, Clock, MoreHorizontal, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-const STATS = [
-  { label: "Active Challenges", value: "12", trend: "+2 this week", trendColor: "text-green-600", icon: <Trophy className="w-5 h-5" />, iconBg: "bg-orange-50 text-orange-600" },
-  { label: "Total Participants", value: "845", trend: "+12% vs last month", trendColor: "text-green-600", icon: <Users className="w-5 h-5" />, iconBg: "bg-blue-50 text-blue-600" },
-  { label: "Completion Rate", value: "68%", trend: "-2% vs last month", trendColor: "text-red-600", icon: <CheckCircle2 className="w-5 h-5" />, iconBg: "bg-green-50 text-green-600" },
-];
-
-const CHALLENGES = [
-  {
-    id: 1,
-    title: "10k Steps a Day",
-    category: "Physical",
-    status: "Active",
-    participants: 124,
-    daysLeft: 14,
-    progress: 45,
-    image: "https://images.unsplash.com/photo-1552674605-15c37127ec8d?q=80&w=800&h=600&auto=format&fit=crop",
-    description: "Hit 10,000 steps every day for a month to improve cardiovascular health and build a consistent walking habit."
-  },
-  {
-    id: 2,
-    title: "Mindful Mornings",
-    category: "Mental",
-    status: "Starting Soon",
-    participants: 86,
-    daysLeft: 30,
-    progress: 0,
-    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=800&h=600&auto=format&fit=crop",
-    description: "Dedicate 10 minutes each morning to meditation or deep breathing exercises before starting your workday."
-  },
-  {
-    id: 3,
-    title: "Hydration Hero",
-    category: "Nutrition",
-    status: "Active",
-    participants: 210,
-    daysLeft: 5,
-    progress: 82,
-    image: "https://images.unsplash.com/photo-1523362628745-0c100150b504?q=80&w=800&h=600&auto=format&fit=crop",
-    description: "Drink at least 8 glasses (2 liters) of water daily to stay hydrated and maintain optimal energy levels."
-  },
-  {
-    id: 4,
-    title: "Screen-Free Evenings",
-    category: "Mental",
-    status: "Completed",
-    participants: 156,
-    daysLeft: 0,
-    progress: 100,
-    image: "https://images.unsplash.com/photo-1517672651691-24622a91b550?q=80&w=800&h=600&auto=format&fit=crop",
-    description: "Disconnect from all digital screens 2 hours before bedtime to improve sleep quality and reduce eye strain."
-  },
-  {
-    id: 5,
-    title: "Healthy Recipe Swap",
-    category: "Nutrition",
-    status: "Active",
-    participants: 92,
-    daysLeft: 21,
-    progress: 30,
-    image: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=800&h=600&auto=format&fit=crop",
-    description: "Cook and share one new healthy recipe with the community each week."
-  },
-  {
-    id: 6,
-    title: "Desk Stretches",
-    category: "Physical",
-    status: "Active",
-    participants: 178,
-    daysLeft: 10,
-    progress: 65,
-    image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=800&h=600&auto=format&fit=crop",
-    description: "Perform a 5-minute stretching routine at your desk twice a day to reduce muscle tension and improve posture."
-  }
-];
+import { CHALLENGES } from "@/lib/mock-data";
 
 export default function ChallengesPage() {
   const [activeTab, setActiveTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [challenges, setChallenges] = useState(CHALLENGES);
+  const [stats, setStats] = useState({
+    activeChallenges: 0,
+    totalParticipants: 0,
+    completionRate: "0%"
+  });
+
+  useEffect(() => {
+    const storedBranch = localStorage.getItem('activeBranch');
+    const branch = storedBranch || "Yemi Inc lokoja";
+    setActiveBranch(branch);
+    updateStats(branch);
+
+    const handleBranchChange = () => {
+      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
+      setActiveBranch(newBranch);
+      setCurrentPage(1);
+      updateStats(newBranch);
+    };
+
+    window.addEventListener('branchChange', handleBranchChange);
+    window.addEventListener('storage', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChange', handleBranchChange);
+      window.removeEventListener('storage', handleBranchChange);
+    };
+  }, []);
+
+  const updateStats = (branch: string) => {
+    const branchChallenges = CHALLENGES.filter(c => c.branch === branch);
+    const active = branchChallenges.filter(c => c.status === 'Active').length;
+    const participants = branchChallenges.reduce((acc, c) => acc + c.participants, 0);
+    const avgProgress = branchChallenges.length > 0 
+      ? Math.round(branchChallenges.reduce((acc, c) => acc + c.progress, 0) / branchChallenges.length) 
+      : 0;
+
+    setStats({
+      activeChallenges: active,
+      totalParticipants: participants,
+      completionRate: `${avgProgress}%`
+    });
+  };
+
+  const dashboardStats = [
+    { label: "Active Challenges", value: stats.activeChallenges.toString(), trend: "+2 this week", trendColor: "text-green-600", icon: <Trophy className="w-5 h-5" />, iconBg: "bg-orange-50 text-orange-600" },
+    { label: "Total Participants", value: stats.totalParticipants.toString(), trend: "+12% vs last month", trendColor: "text-green-600", icon: <Users className="w-5 h-5" />, iconBg: "bg-blue-50 text-blue-600" },
+    { label: "Completion Rate", value: stats.completionRate, trend: "-2% vs last month", trendColor: "text-red-600", icon: <CheckCircle2 className="w-5 h-5" />, iconBg: "bg-green-50 text-green-600" },
+  ];
+
   const [assignType, setAssignType] = useState<"individual" | "department">("individual");
   
   // Pagination state
@@ -97,7 +73,8 @@ export default function ChallengesPage() {
     const matchesSearch = challenge.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           challenge.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === "All" || challenge.status === activeTab;
-    return matchesSearch && matchesTab;
+    const matchesBranch = challenge.branch === activeBranch;
+    return matchesSearch && matchesTab && matchesBranch;
   });
 
   const totalPages = Math.ceil(filteredChallenges.length / itemsPerPage);
@@ -135,7 +112,7 @@ export default function ChallengesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-[12px] mb-0">
-        {STATS.map((stat, idx) => (
+        {dashboardStats.map((stat, idx) => (
           <div key={idx} className="bg-white p-[14px] rounded-[12px] border border-grey-4">
             <div className="flex items-center justify-between mb-4">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.iconBg}`}>

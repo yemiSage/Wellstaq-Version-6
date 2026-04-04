@@ -1,66 +1,101 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Search, Plus, Users, Activity, TrendingUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Modal } from "@/components/ui/modal";
-
-const STATS = [
-  {
-    title: "Total Members",
-    value: "142",
-    trend: "+12% this month",
-    trendColor: "text-green-500",
-    icon: <Users className="w-5 h-5 text-blue-500" />,
-    iconBg: "bg-blue-50"
-  },
-  {
-    title: "Active Teams",
-    value: "8",
-    trend: "Stable",
-    trendColor: "text-grey-2",
-    icon: <Activity className="w-5 h-5 text-purple-500" />,
-    iconBg: "bg-purple-50"
-  },
-  {
-    title: "Engagement Rate",
-    value: "87%",
-    trend: "+5% this month",
-    trendColor: "text-green-500",
-    icon: <TrendingUp className="w-5 h-5 text-green-500" />,
-    iconBg: "bg-green-50"
-  }
-];
-
-const INITIAL_MEMBERS = [
-  { id: 1, name: "Sarah Jenkins", email: "sarah.j@example.com", department: "Engineering", status: "Excellent", avatar: "https://picsum.photos/seed/sarah/100/100" },
-  { id: 2, name: "Marcus Thorne", email: "marcus.t@example.com", department: "Design", status: "Good", avatar: "https://picsum.photos/seed/marcus/100/100" },
-  { id: 3, name: "Elena Rodriguez", email: "elena.r@example.com", department: "Marketing", status: "Needs Attention", avatar: "https://picsum.photos/seed/elena/100/100" },
-  { id: 4, name: "David Chen", email: "david.c@example.com", department: "Engineering", status: "Excellent", avatar: "https://picsum.photos/seed/david/100/100" },
-  { id: 5, name: "Amira Hassan", email: "amira.h@example.com", department: "Sales", status: "Good", avatar: "https://picsum.photos/seed/amira/100/100" },
-  { id: 6, name: "James Wilson", email: "james.w@example.com", department: "HR", status: "Excellent", avatar: "https://picsum.photos/seed/james/100/100" },
-  { id: 7, name: "Lisa Taylor", email: "lisa.t@example.com", department: "Design", status: "Good", avatar: "https://picsum.photos/seed/lisa/100/100" },
-  { id: 8, name: "Robert Fox", email: "robert.f@example.com", department: "Engineering", status: "Needs Attention", avatar: "https://picsum.photos/seed/robert/100/100" },
-  { id: 9, name: "Kevin Hart", email: "kevin.h@example.com", department: "Marketing", status: "Good", avatar: "https://picsum.photos/seed/kevin/100/100" },
-  { id: 10, name: "Rachel Green", email: "rachel.g@example.com", department: "Design", status: "Excellent", avatar: "https://picsum.photos/seed/rachel/100/100" },
-];
+import { Input } from "@/components/ui/input";
+import { INITIAL_MEMBERS, MOCK_DEPARTMENTS } from "@/lib/mock-data";
 
 export default function TeamsPage() {
   const [members, setMembers] = useState(INITIAL_MEMBERS);
+  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
   const [searchQuery, setSearchQuery] = useState("");
+  const [stats, setStats] = useState({
+    totalMembers: 0,
+    activeTeams: 0,
+    engagementRate: "0%"
+  });
+
+  useEffect(() => {
+    const storedBranch = localStorage.getItem('activeBranch');
+    const branch = storedBranch || "Yemi Inc lokoja";
+    setActiveBranch(branch);
+    updateStats(branch);
+
+    const handleBranchChange = () => {
+      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
+      setActiveBranch(newBranch);
+      setCurrentPage(1);
+      updateStats(newBranch);
+    };
+
+    window.addEventListener('branchChange', handleBranchChange);
+    window.addEventListener('storage', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChange', handleBranchChange);
+      window.removeEventListener('storage', handleBranchChange);
+    };
+  }, []);
+
+  const updateStats = (branch: string) => {
+    const branchMembers = INITIAL_MEMBERS.filter(m => m.branch === branch);
+    const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === branch);
+    
+    // Calculate engagement based on activities in departments
+    const totalActivities = branchDepts.reduce((acc, dept) => acc + dept.activities, 0);
+    const engagement = branchMembers.length > 0 ? Math.min(100, Math.round((totalActivities / (branchMembers.length * 100)) * 100)) : 0;
+
+    setStats({
+      totalMembers: branchMembers.length,
+      activeTeams: branchDepts.length,
+      engagementRate: `${engagement}%`
+    });
+  };
+
+  const dashboardStats = [
+    {
+      title: "Total Members",
+      value: stats.totalMembers.toString(),
+      trend: "+12% this month",
+      trendColor: "text-green-500",
+      icon: <Users className="w-5 h-5 text-blue-500" />,
+      iconBg: "bg-blue-50"
+    },
+    {
+      title: "Active Teams",
+      value: stats.activeTeams.toString(),
+      trend: "Stable",
+      trendColor: "text-grey-2",
+      icon: <Activity className="w-5 h-5 text-purple-500" />,
+      iconBg: "bg-purple-50"
+    },
+    {
+      title: "Engagement Rate",
+      value: stats.engagementRate,
+      trend: "+5% this month",
+      trendColor: "text-green-500",
+      icon: <TrendingUp className="w-5 h-5 text-green-500" />,
+      iconBg: "bg-green-50"
+    }
+  ];
+
   const [memberToDelete, setMemberToDelete] = useState<number | null>(null);
   const [memberToEdit, setMemberToEdit] = useState<typeof INITIAL_MEMBERS[0] | null>(null);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [newMember, setNewMember] = useState({ name: "", email: "", department: "Engineering" });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
   const filteredMembers = members.filter(m => 
-    m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.department.toLowerCase().includes(searchQuery.toLowerCase())
+    m.department.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    m.branch === activeBranch
   );
 
   const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
@@ -86,6 +121,21 @@ export default function TeamsPage() {
     }
   };
 
+  const handleAddMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    const member = {
+      id: members.length + 1,
+      ...newMember,
+      status: "Good",
+      branch: activeBranch,
+      avatar: `https://picsum.photos/seed/${newMember.name}/100/100`
+    };
+    setMembers([member, ...members]);
+    toast.success("Team member added successfully");
+    setIsAddMemberModalOpen(false);
+    setNewMember({ name: "", email: "", department: "Engineering" });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Excellent": return "bg-green-50 text-green-600 border-green-200";
@@ -103,7 +153,10 @@ export default function TeamsPage() {
           <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">My Teams</h1>
           <p className="text-sm text-grey-2">Manage your team members, view their wellness status, and organize departments.</p>
         </div>
-        <button className="px-4 py-2 bg-[#E65100] text-white font-medium text-sm rounded-lg hover:bg-[#E65100]/90 transition-colors flex items-center gap-2">
+        <button 
+          onClick={() => setIsAddMemberModalOpen(true)}
+          className="px-4 py-2 bg-[#E65100] text-white font-medium text-sm rounded-lg hover:bg-[#E65100]/90 transition-colors flex items-center gap-2"
+        >
           <Plus className="w-4 h-4" />
           Add Member
         </button>
@@ -111,7 +164,7 @@ export default function TeamsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-[12px] mb-0">
-        {STATS.map((stat, idx) => (
+        {dashboardStats.map((stat, idx) => (
           <div key={idx} className="bg-white p-[14px] rounded-[12px] border border-grey-4">
             <div className="flex items-center justify-between mb-4">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.iconBg}`}>
@@ -272,6 +325,64 @@ export default function TeamsPage() {
         confirmText="Remove"
         isDestructive={true}
       />
+
+      <Modal
+        isOpen={isAddMemberModalOpen}
+        onClose={() => setIsAddMemberModalOpen(false)}
+        title="Add Team Member"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleAddMember} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-grey-1 mb-1">Full Name</label>
+            <Input 
+              value={newMember.name}
+              onChange={(e) => setNewMember({...newMember, name: e.target.value})}
+              placeholder="e.g. John Doe"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-1 mb-1">Email Address</label>
+            <Input 
+              type="email"
+              value={newMember.email}
+              onChange={(e) => setNewMember({...newMember, email: e.target.value})}
+              placeholder="e.g. john@example.com"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-1 mb-1">Department</label>
+            <select 
+              value={newMember.department}
+              onChange={(e) => setNewMember({...newMember, department: e.target.value})}
+              className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
+            >
+              <option value="Engineering">Engineering</option>
+              <option value="Design">Design</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Sales">Sales</option>
+              <option value="HR">HR</option>
+            </select>
+          </div>
+          <div className="pt-4 flex justify-end gap-3">
+            <button 
+              type="button"
+              onClick={() => setIsAddMemberModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit"
+              className="px-4 py-2 bg-primary-1 text-white text-sm font-medium rounded-lg hover:bg-primary-1/90 transition-colors"
+            >
+              Add Member
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         isOpen={memberToEdit !== null}

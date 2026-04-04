@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ASSETS } from "@/lib/constants";
+import { CHALLENGES } from "@/lib/mock-data";
 import { 
   Home, 
   Lightbulb, 
@@ -23,6 +24,31 @@ import {
 export function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
+
+  useEffect(() => {
+    const storedBranch = localStorage.getItem('activeBranch');
+    if (storedBranch) {
+      setActiveBranch(storedBranch);
+    }
+
+    const handleBranchChange = () => {
+      const newBranch = localStorage.getItem('activeBranch');
+      if (newBranch) {
+        setActiveBranch(newBranch);
+      }
+    };
+
+    window.addEventListener('branchChange', handleBranchChange);
+    window.addEventListener('storage', handleBranchChange);
+    return () => {
+      window.removeEventListener('branchChange', handleBranchChange);
+      window.removeEventListener('storage', handleBranchChange);
+    };
+  }, []);
+
+  const branchChallenges = CHALLENGES.filter(c => c.branch === activeBranch);
+  const lastChallenges = branchChallenges.slice(-4).reverse();
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -69,42 +95,39 @@ export function Sidebar() {
         </div>
 
         {/* Challenges Section */}
-        <div className="border-t border-grey-4 pt-4">
-          <div className={`flex items-center px-3 mb-2 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-            <div className={`flex items-center gap-2 text-grey-3 text-xs font-semibold uppercase tracking-wider ${isCollapsed ? 'justify-center' : ''}`}>
-              {!isCollapsed && <span className="whitespace-nowrap">Challenges</span>}
+        {branchChallenges.length > 0 && (
+          <div className="border-t border-grey-4 pt-4">
+            <div className={`flex items-center px-3 mb-2 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+              <div className={`flex items-center gap-2 text-grey-3 text-xs font-semibold uppercase tracking-wider ${isCollapsed ? 'justify-center' : ''}`}>
+                {!isCollapsed && <span className="whitespace-nowrap">Challenges</span>}
+              </div>
+              {!isCollapsed && (
+                <button className="text-grey-3 hover:text-grey-1 flex-shrink-0">
+                  <Plus size={14} strokeWidth={1.5} />
+                </button>
+              )}
             </div>
             {!isCollapsed && (
-              <button className="text-grey-3 hover:text-grey-1 flex-shrink-0">
-                <Plus size={14} strokeWidth={1.5} />
-              </button>
+              <div className="space-y-0.5">
+                {lastChallenges.map(challenge => (
+                  <Link href="/dashboard/challenges" key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+                    <div className="w-3 h-3 rounded-full border border-grey-3 flex-shrink-0" />
+                    <span className="truncate">{challenge.title}</span>
+                  </Link>
+                ))}
+                <Link href="/dashboard/challenges" className="flex items-center justify-between px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 flex items-center justify-center text-grey-3 flex-shrink-0">
+                      <Layers size={14} strokeWidth={1.5} />
+                    </div>
+                    <span className="whitespace-nowrap">More Challenges</span>
+                  </div>
+                  <ChevronRight size={14} strokeWidth={1.5} className="flex-shrink-0" />
+                </Link>
+              </div>
             )}
           </div>
-          {!isCollapsed && (
-            <div className="space-y-0.5">
-              {[
-                { id: "1", name: "Step Up for Health" },
-                { id: "2", name: "Green Fitness Initiative" },
-                { id: "3", name: "Healthy Habits Month" },
-                { id: "4", name: "Mindful Movement Week" }
-              ].map(challenge => (
-                <Link href={`/dashboard/challenges/${challenge.id}`} key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
-                  <div className="w-3 h-3 rounded-full border border-grey-3 flex-shrink-0" />
-                  <span className="truncate">{challenge.name}</span>
-                </Link>
-              ))}
-              <Link href="/dashboard/challenges" className="flex items-center justify-between px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 flex items-center justify-center text-grey-3 flex-shrink-0">
-                    <Layers size={14} strokeWidth={1.5} />
-                  </div>
-                  <span className="whitespace-nowrap">More Challenges</span>
-                </div>
-                <ChevronRight size={14} strokeWidth={1.5} className="flex-shrink-0" />
-              </Link>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Integrations Section */}
         <div className="border-t border-grey-4 pt-4">

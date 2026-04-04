@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 const NAV_ITEMS = [
   { id: "profile", label: "Profile", sublabel: "Personal information", icon: <User className="w-5 h-5" /> },
@@ -26,12 +27,14 @@ const NAV_ITEMS = [
   { id: "notifications", label: "Notifications", sublabel: "Alerts & reminders", icon: <Bell className="w-5 h-5" /> },
   { id: "privacy", label: "Privacy", sublabel: "Data & visibility", icon: <Lock className="w-5 h-5" /> },
   { id: "appearance", label: "Appearance", sublabel: "Theme & display", icon: <Palette className="w-5 h-5" /> },
+  { id: "roles", label: "Roles & Permissions", sublabel: "Manage access levels", icon: <Lock className="w-5 h-5" /> },
   { id: "billing", label: "Billing", sublabel: "Plan & payments", icon: <CreditCard className="w-5 h-5" /> },
 ];
 
 export default function SettingsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("profile");
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "Opeyemi",
     lastName: "Adegboye",
@@ -47,7 +50,9 @@ export default function SettingsPage() {
   };
 
   const handleLogout = () => {
+    setIsLogoutModalOpen(false);
     localStorage.clear();
+    toast.success("Logged out successfully");
     router.push("/");
   };
 
@@ -86,7 +91,7 @@ export default function SettingsPage() {
           <div className="h-px bg-grey-4 my-2" />
 
           <button 
-            onClick={handleLogout}
+            onClick={() => setIsLogoutModalOpen(true)}
             className="flex items-center gap-3 p-3 rounded-xl text-left text-red-500 hover:bg-red-50 transition-all border-[1.5px] border-transparent"
           >
             <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
@@ -301,6 +306,65 @@ export default function SettingsPage() {
             </>
           )}
 
+          {activeTab === "roles" && (
+            <>
+              <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[32px]">Roles & Permissions</h2>
+              <p className="text-[14px] text-grey-2 pb-[12px]">Manage user roles and their access levels across the platform.</p>
+              
+              <div className="space-y-6 mt-4">
+                {[
+                  { 
+                    role: "Super Admin", 
+                    description: "Full access to all features and settings across all branches.",
+                    users: 2,
+                    permissions: ["Manage Branches", "Manage Billing", "Full System Access"]
+                  },
+                  { 
+                    role: "Branch Manager", 
+                    description: "Manage teams, events, and challenges for a specific branch.",
+                    users: 12,
+                    permissions: ["Manage Branch Teams", "Create Events", "Manage Challenges"]
+                  },
+                  { 
+                    role: "Team Lead", 
+                    description: "Manage specific teams and view team-level insights.",
+                    users: 45,
+                    permissions: ["View Team Stats", "Approve Team Requests", "Create Team Events"]
+                  },
+                  { 
+                    role: "Employee", 
+                    description: "Standard access to participate in events and challenges.",
+                    users: 850,
+                    permissions: ["Participate in Events", "Join Challenges", "View Personal Stats"]
+                  }
+                ].map((role, idx) => (
+                  <div key={idx} className="p-5 rounded-xl border border-grey-4 hover:border-primary-1/30 transition-all">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="text-base font-bold text-grey-1">{role.role}</h3>
+                        <p className="text-xs text-grey-2 mt-1">{role.description}</p>
+                      </div>
+                      <div className="px-3 py-1 bg-grey-5 rounded-full text-[10px] font-bold text-grey-2">
+                        {role.users} USERS
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {role.permissions.map((perm, pIdx) => (
+                        <span key={pIdx} className="px-2 py-1 bg-primary-1/5 text-primary-1 text-[10px] font-medium rounded-md border border-primary-1/10">
+                          {perm}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-grey-4/50">
+                      <button className="text-xs font-bold text-grey-2 hover:text-grey-1">View Details</button>
+                      <button className="text-xs font-bold text-primary-1 hover:text-primary-2">Edit Permissions</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           {activeTab === "billing" && (
             <>
               <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[32px]">Billing & Subscription</h2>
@@ -334,11 +398,21 @@ export default function SettingsPage() {
           )}
 
           <div className="flex items-center justify-end gap-3 pt-6 border-t border-grey-4 mt-8">
-            <Button variant="outline">Discard Changes</Button>
+            <Button variant="outline" onClick={() => toast.info("Changes discarded")}>Discard Changes</Button>
             <Button onClick={handleSave}>Save Changes</Button>
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleLogout}
+        title="Sign Out"
+        description="Are you sure you want to sign out of your account?"
+        confirmText="Sign Out"
+        isDestructive={true}
+      />
     </div>
   );
 }

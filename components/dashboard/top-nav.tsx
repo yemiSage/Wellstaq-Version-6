@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Send, Menu, Edit, Layout, MoreHorizontal, Plus, Settings2, Scale, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { generateChatResponse } from "@/app/actions/chat";
+import { GoogleGenAI } from "@google/genai";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { INITIAL_MEMBERS, MOCK_DEPARTMENTS, EVENTS, CHALLENGES } from "@/lib/mock-data";
 
 export function TopNav() {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -33,7 +34,19 @@ export function TopNav() {
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (isChatOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isChatOpen, isTyping]);
+
   const [userData, setUserData] = useState({
     firstName: "Opeyemi",
     lastName: "Adegboye",
@@ -42,6 +55,33 @@ export function TopNav() {
   });
   const [branches, setBranches] = useState<{name: string, employees: string}[]>([]);
   const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
+
+  const MOCK_DATA_CONTEXT = useMemo(() => {
+    const branchMembers = INITIAL_MEMBERS.filter(m => m.branch === activeBranch);
+    const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === activeBranch);
+    const branchEvents = EVENTS.filter(e => e.branch === activeBranch);
+    const branchChallenges = CHALLENGES.filter(c => c.branch === activeBranch);
+
+    return `
+You are ws-AI, an intelligent wellness coach and therapist for the Wellstaq platform.
+Your role is to answer questions about the platform, provide wellness coaching, and act as a supportive therapist.
+Always be empathetic, encouraging, and helpful.
+
+Here is the current platform data for the ${activeBranch} branch:
+- Total Staff: ${branchMembers.length}
+- Active Departments: ${branchDepts.length} (${branchDepts.map(d => d.name).join(", ") || "None yet"})
+- Upcoming Events: ${branchEvents.length} (${branchEvents.map(e => e.title).join(", ") || "None scheduled"})
+- Active Challenges: ${branchChallenges.length} (${branchChallenges.map(c => c.title).join(", ") || "None active"})
+
+Global Platform Info:
+- Total Branches: 3 (Yemi Inc lokoja, Lagos Branch, Abuja Branch)
+- Top Performers: Alex Johnson (12,450 steps), Sarah Williams (10,230 steps), Michael Brown (9,800 steps).
+- Trending Topics: #StepUpForHealth, #MindfulMovement, #LagosRuns, #CleanEating, #TeamHIIT.
+
+When the user asks for advice, provide actionable wellness tips. When they share feelings, be empathetic like a therapist.
+Keep your responses concise and conversational.
+`;
+  }, [activeBranch]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -52,10 +92,28 @@ export function TopNav() {
     setIsTyping(true);
 
     try {
-      const response = await generateChatResponse(newMessages, userData.firstName);
-      setMessages([...newMessages, { role: 'ai', content: response }]);
+      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("API Key is missing. Please set NEXT_PUBLIC_GEMINI_API_KEY in your environment.");
+      }
+      
+      const ai = new GoogleGenAI({ apiKey });
+      const conversation = newMessages.map(m => `${m.role === 'user' ? 'User' : 'ws-AI'}: ${m.content}`).join('\n');
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [{ parts: [{ text: `Here is the conversation history:\n${conversation}\n\nws-AI:` }] }],
+        config: {
+          systemInstruction: MOCK_DATA_CONTEXT + `\nThe user's name is ${userData.firstName}.`,
+        }
+      });
+
+      const aiResponse = response.text || "I'm here to help you with your wellness journey.";
+      setMessages([...newMessages, { role: 'ai', content: aiResponse }]);
     } catch (e) {
-      setMessages([...newMessages, { role: 'ai', content: "Sorry, I couldn't process that right now." }]);
+      console.error("AI Chat Error:", e);
+      const errorMessage = e instanceof Error ? e.message : "Sorry, I couldn't process that right now.";
+      setMessages([...newMessages, { role: 'ai', content: errorMessage.includes("API Key") ? "AI service is currently unavailable. Please contact support to configure the API key." : "Sorry, I couldn't process that right now. Please check your connection." }]);
     } finally {
       setIsTyping(false);
     }
@@ -80,6 +138,7 @@ export function TopNav() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('branches', JSON.stringify(updatedBranches));
       localStorage.setItem('activeBranch', newBranchData.name);
+      window.dispatchEvent(new Event('branchChange'));
     }
     
     toast.success("Branch added successfully!");
@@ -179,8 +238,10 @@ export function TopNav() {
                           setActiveBranch(branch.name);
                           if (typeof window !== 'undefined') {
                             localStorage.setItem('activeBranch', branch.name);
+                            window.dispatchEvent(new Event('branchChange'));
                           }
                           setIsOrgSwitcherOpen(false);
+                          toast.success(`Switched to ${branch.name}`);
                         }}
                         className={`w-full flex items-center gap-3 p-2 rounded-md transition-colors ${activeBranch === branch.name ? 'bg-grey-5' : 'hover:bg-grey-5'}`}
                       >
@@ -394,6 +455,7 @@ export function TopNav() {
                         </div>
                       </div>
                     )}
+                    <div ref={chatEndRef} />
                   </div>
                 )}
               </div>
