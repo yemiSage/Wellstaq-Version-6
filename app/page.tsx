@@ -162,15 +162,19 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white font-sans selection:bg-primary-mid selection:text-primary-orange">
+    <div className="min-h-screen bg-white font-sans selection:bg-primary-mid selection:text-primary-orange leading-[1.5] lg:leading-normal">
       
       {/* 1. NAVBAR */}
-      <nav className={`fixed top-0 left-0 right-0 h-[76px] transition-all duration-300 z-50 flex items-center justify-between px-[60px] ${scrolled ? 'bg-white border-b border-grey-4 shadow-sm' : 'bg-transparent border-transparent'}`}>
+      <nav className={`fixed top-0 left-0 right-0 h-[76px] transition-all duration-300 z-50 flex items-center justify-between px-4 lg:px-[60px] ${scrolled ? 'bg-white border-b border-grey-4 shadow-sm' : 'bg-transparent border-transparent'}`}>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary-orange rounded-lg flex items-center justify-center">
-            <div className="w-4 h-4 bg-white rounded-sm rotate-45" />
-          </div>
-          <span className={`font-display font-bold text-2xl transition-colors ${scrolled ? 'text-grey-1' : 'text-white'}`}>Wellstaq</span>
+          <Image
+            src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1772170704/wellstaq_logo_raxmmg.png"
+            alt="Wellstaq Logo"
+            width={120}
+            height={30}
+            className={`object-contain transition-all ${scrolled ? '' : 'brightness-0 invert'}`}
+            referrerPolicy="no-referrer"
+          />
         </div>
         
         <div className="flex items-center gap-8">
@@ -204,11 +208,11 @@ export default function LandingPage() {
           <div className="absolute top-1/2 right-1/4 w-[600px] h-[400px] bg-purple-600/20 blur-[120px] rounded-full" />
         </div>
         
-        <div className="relative z-10 flex flex-col items-center text-center px-4 mt-12">
-          <h1 className="text-white max-w-[633px] mb-6">
+        <div className="relative z-10 flex flex-col items-start text-left lg:items-center lg:text-center px-4 mt-12">
+          <h1 className="text-white text-[32px] lg:text-5xl max-w-[633px] mb-6">
             Enhance the well-being of your remote and hybrid teams!
           </h1>
-          <p className="text-white text-lg max-w-[556px] mb-10 opacity-90">
+          <p className="text-white text-sm lg:text-lg max-w-[556px] mb-10 opacity-90">
             Improve team wellness, discover inspiring spaces, and make informed HR decisions with privacy-focused insights.
           </p>
           <div className="flex flex-col sm:flex-row gap-5 w-full max-w-[551px]">
@@ -226,7 +230,7 @@ export default function LandingPage() {
 
       {/* 3. LOGO STRIP */}
       <section className="w-full h-[109px] bg-white border-b border-grey-4 flex items-center overflow-hidden">
-        <div className="flex items-center gap-[94px] px-[60px] animate-marquee whitespace-nowrap">
+        <div className="flex items-center gap-[94px] px-4 lg:px-[60px] animate-marquee whitespace-nowrap">
           {[...brands, ...brands, ...brands].map((brand, idx) => (
             <div key={idx} className="flex items-center gap-2 opacity-40 grayscale">
               <div className="w-8 h-8 bg-grey-1 rounded-full flex items-center justify-center">
@@ -239,10 +243,10 @@ export default function LandingPage() {
       </section>
 
       {/* 4. WELLBEING PILLARS SECTION */}
-      <section id="why-wellstaq" className="py-[80px] px-[60px] bg-white max-w-[1440px] mx-auto scroll-mt-20">
+      <section id="why-wellstaq" className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-white max-w-[1440px] mx-auto scroll-mt-20">
         <div className="text-center mb-[60px]">
-          <h3 className="text-grey-1 mb-4">We handle the complexity. Your team sees clarity.</h3>
-          <p className="text-grey-2 max-w-[655px] mx-auto text-lg">
+          <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">We handle the complexity. Your team sees clarity.</h3>
+          <p className="text-grey-2 max-w-[655px] mx-auto text-sm lg:text-lg">
             Wellbeing isn't just mental or physical. It's everything. Wellstaq helps individuals and organizations track and improve all dimensions in one unified system.
           </p>
         </div>
@@ -272,7 +276,7 @@ export default function LandingPage() {
       </section>
 
       {/* 5. UNLOCK THE POWER DARK FEATURE SECTION */}
-      <section className="px-[60px] pb-[80px]">
+      <section className="px-4 lg:px-[60px] py-10 lg:pb-[80px]">
         <div className="relative w-full h-[765px] rounded-[32px] overflow-hidden bg-black">
           <Image 
             src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=2000&auto=format&fit=crop" 
@@ -283,12 +287,12 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-black/20" />
           
           {/* Content */}
-          <div className="absolute left-[59px] top-[197px] w-[321px] z-10">
+          <div className="absolute left-4 lg:left-[59px] top-[197px] w-[321px] z-10">
             <div className="w-[50px] h-[50px] border-2 border-white rounded-lg flex items-center justify-center mb-6">
               <Trophy className="text-white w-6 h-6" />
             </div>
-            <h3 className="text-white mb-4">Unlock the power of a healthier workforce</h3>
-            <p className="text-grey-4 text-lg">
+            <h3 className="text-white text-2xl lg:text-4xl mb-4">Unlock the power of a healthier workforce</h3>
+            <p className="text-grey-4 text-sm lg:text-lg">
               Bring together productivity, community, and compliance in one unified wellbeing platform.
             </p>
           </div>
@@ -323,10 +327,10 @@ export default function LandingPage() {
       </section>
 
       {/* 6. GO WELLSTAQ FEATURE TABS SECTION - STICKY SCROLL REVEAL */}
-      <section id="solutions" className="py-[80px] px-[60px] bg-primary-light scroll-mt-20">
+      <section id="solutions" className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-primary-light scroll-mt-20">
         <div className="text-center mb-[60px]">
-          <h3 className="text-grey-1 mb-4">Enjoy solution that drives real results. Go Wellstaq.</h3>
-          <p className="text-grey-2 max-w-[702px] mx-auto text-lg">
+          <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">Enjoy solution that drives real results. Go Wellstaq.</h3>
+          <p className="text-grey-2 max-w-[702px] mx-auto text-sm lg:text-lg">
             Wellstaq empowers teams to thrive by blending lifestyle, productivity, and compliance into one cohesive system. Dashboards for HR to habit-forming tools for employees, we create measurable impact without compromising trust.
           </p>
         </div>
@@ -341,12 +345,22 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1 }}
                 viewport={{ margin: "-40% 0px -40% 0px" }}
                 onViewportEnter={() => setActiveTab(idx)}
-                className="flex gap-4"
+                className="flex flex-col lg:flex-row gap-4"
               >
-                <div className={`w-1 h-full min-h-[100px] rounded-full transition-colors duration-500 ${activeTab === idx ? 'bg-primary-orange' : 'bg-grey-4'}`} />
-                <div>
-                  <h3 className="text-grey-1 mb-4 text-2xl lg:text-3xl font-bold">{tab.title}</h3>
-                  <p className="text-lg text-grey-2 max-w-[400px]">{tab.subtitle}</p>
+                <div className="lg:hidden w-full h-[250px] relative rounded-[20px] overflow-hidden mb-6">
+                  <Image 
+                    src={tab.image} 
+                    alt={tab.title} 
+                    fill 
+                    className="object-cover"
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <div className={`w-1 h-full min-h-[100px] rounded-full transition-colors duration-500 ${activeTab === idx ? 'bg-primary-orange' : 'bg-grey-4'}`} />
+                  <div>
+                    <h3 className="text-grey-1 mb-4 text-[20px] lg:text-3xl font-bold">{tab.title}</h3>
+                    <p className="text-sm lg:text-lg text-grey-2 max-w-[400px]">{tab.subtitle}</p>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -389,24 +403,14 @@ export default function LandingPage() {
               </motion.div>
             </AnimatePresence>
           </div>
-
-          {/* Mobile Image (Visible on small screens) */}
-          <div className="lg:hidden w-full h-[300px] relative rounded-[20px] overflow-hidden shadow-xl mb-10">
-            <Image 
-              src={featureTabs[activeTab].image} 
-              alt={featureTabs[activeTab].title} 
-              fill 
-              className="object-cover"
-            />
-          </div>
         </div>
       </section>
 
       {/* 7. HABIT FORMATION SECTION */}
-      <section className="py-[80px] px-[60px] bg-white">
+      <section className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-white">
         <div className="text-center mb-[60px]">
-          <h3 className="text-grey-1 mb-4">Built on the science of habit formation</h3>
-          <p className="text-grey-2 max-w-[655px] mx-auto text-lg">
+          <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">Built on the science of habit formation</h3>
+          <p className="text-grey-2 max-w-[655px] mx-auto text-sm lg:text-lg">
             Wellstaq is transforming wellbeing into a sustainable practice for everyone. By using a simple behavioral loop, it helps people incorporate healthy habits into their daily routines, making the path to wellness both achievable and enjoyable.
           </p>
         </div>
@@ -485,24 +489,24 @@ export default function LandingPage() {
       </section>
 
       {/* 8. FAQ SECTION */}
-      <section id="faq" className="py-[80px] px-[60px] bg-white scroll-mt-20">
+      <section id="faq" className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-white scroll-mt-20">
         <div className="text-center mb-[60px]">
-          <h3 className="text-grey-1 mb-4">Commonly Asked Questions</h3>
-          <p className="text-grey-2 max-w-[686px] mx-auto text-lg">
+          <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">Commonly Asked Questions</h3>
+          <p className="text-grey-2 max-w-[686px] mx-auto text-sm lg:text-lg">
             Let's delve deeper into the intriguing aspects of this topic and uncover all the fascinating insights and benefits that they provide! There's so much to explore and understand, and I'm excited to share everything with you!
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {faqs.map((faq, idx) => (
-            <div key={idx} className="p-8 border-2 border-grey-4 rounded-[24px] bg-white hover:border-primary-border transition-all group">
+            <div key={idx} className="p-3 lg:p-8 border-2 border-grey-4 rounded-[24px] bg-white hover:border-primary-border transition-all group">
               <div className="flex items-center gap-5 mb-4">
                 <div className="w-[52px] h-[52px] bg-primary-mid rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                   {faq.icon}
                 </div>
                 <h5 className="text-grey-1 font-medium">{faq.question}</h5>
               </div>
-              <p className="text-grey-3 text-sm leading-relaxed pl-[72px]">
+              <p className="text-grey-3 text-sm leading-relaxed pl-0 lg:pl-[72px]">
                 {faq.answer}
               </p>
             </div>
@@ -511,7 +515,7 @@ export default function LandingPage() {
       </section>
 
       {/* 9. CTA BANNER */}
-      <section className="py-[80px] px-[60px] bg-grey-5">
+      <section className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-grey-5">
         <div className="relative w-full h-[551px] rounded-[20px] overflow-hidden flex flex-col items-center justify-center text-center px-6">
           <Image 
             src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1775377098/Banner_Image_wxrsdz.png"
@@ -525,8 +529,8 @@ export default function LandingPage() {
             <div className="mb-8 rotate-12">
               <Leaf size={84} className="text-white fill-current" />
             </div>
-            <h2 className="text-white mb-6">Start building a healthier work culture.</h2>
-            <p className="text-white/90 max-w-[568px] mb-10 text-lg">
+            <h2 className="text-white text-2xl lg:text-5xl mb-6">Start building a healthier work culture.</h2>
+            <p className="text-white/90 max-w-[568px] mb-10 text-sm lg:text-lg">
               Empower your team with tools that balance productivity, wellbeing, and community, all in one platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-5 w-full max-w-[642px]">
@@ -544,7 +548,7 @@ export default function LandingPage() {
       </section>
 
       {/* 10. FOOTER */}
-      <footer className="bg-grey-5 pt-10 pb-20 px-[60px] border-t border-grey-4">
+      <footer className="bg-grey-5 pt-10 pb-20 px-4 lg:px-[60px] border-t border-grey-4">
         <div className="max-w-[1320px] mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
             {/* Column 1 */}
