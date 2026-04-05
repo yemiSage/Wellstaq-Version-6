@@ -213,7 +213,7 @@ export default function LandingPage() {
         </div>
         
         <div className="relative z-10 flex flex-col items-start text-left lg:items-center lg:text-center px-4 mt-12">
-          <h1 className="text-white text-[32px] leading-[38px] lg:leading-normal lg:text-5xl max-w-[633px] mb-6 text-left lg:text-center">
+          <h1 className="text-white text-[32px] leading-[38px] lg:leading-[54px] lg:text-5xl max-w-[633px] mb-6 text-left lg:text-center">
             Enhance the well-being of your remote and hybrid teams!
           </h1>
           <p className="text-white text-sm lg:text-lg max-w-[556px] mb-10 opacity-90 text-left lg:text-center">
@@ -362,7 +362,7 @@ export default function LandingPage() {
                 <div className="flex gap-4">
                   <div className={`w-1 h-full min-h-[100px] rounded-full transition-colors duration-500 ${activeTab === idx ? 'bg-primary-orange' : 'bg-grey-4'}`} />
                   <div>
-                    <h3 className="text-grey-1 mb-4 text-[20px] leading-[28px] lg:leading-normal lg:text-3xl font-bold">{tab.title}</h3>
+                    <h3 className="text-grey-1 mb-4 text-[20px] leading-[28px] lg:leading-[38px] lg:text-3xl font-bold">{tab.title}</h3>
                     <p className="text-sm lg:text-lg text-grey-2 max-w-[400px]">{tab.subtitle}</p>
                   </div>
                 </div>
@@ -508,7 +508,7 @@ export default function LandingPage() {
                 <div className="w-8 h-8 lg:w-[52px] lg:h-[52px] bg-primary-mid rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                   {faq.icon}
                 </div>
-                <h5 className="text-grey-1 text-base leading-[24px] font-bold lg:font-medium lg:text-lg lg:leading-normal">{faq.question}</h5>
+                <h5 className="text-grey-1 text-base leading-[24px] font-bold lg:font-bold lg:text-lg lg:leading-normal">{faq.question}</h5>
               </div>
               <p className="text-grey-3 text-sm leading-relaxed pl-0 lg:pl-[72px]">
                 {faq.answer}
