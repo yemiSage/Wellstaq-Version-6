@@ -294,7 +294,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                 className="text-xs font-bold text-primary-1 hover:text-primary-2 flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" />
-                Invite
+                Invite Employee
               </button>
             </div>
 
@@ -306,7 +306,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                   </div>
                   <div>
                     <p className="text-sm font-bold text-grey-1">{participant.name}</p>
-                    <p className="text-xs text-grey-2">{participant.role}</p>
+                    <p className="text-xs text-grey-2">{participant.role} | {participant.department}</p>
                   </div>
                 </div>
               ))}

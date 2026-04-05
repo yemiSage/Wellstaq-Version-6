@@ -179,22 +179,22 @@ export function Leaderboard() {
 
       <div className="space-y-4">
         {leaderboardData.map((user) => (
-          <div key={user.rank} className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[8px] bg-grey-4 overflow-hidden relative">
+          <div key={user.rank} className="flex items-center justify-between p-2 hover:bg-grey-5 rounded-xl transition-colors">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[8px] bg-grey-4 overflow-hidden relative shrink-0">
                 <Image src={`https://picsum.photos/seed/${user.avatar}/100/100`} alt={user.name} fill className="object-cover" referrerPolicy="no-referrer" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-grey-1">{user.name}</p>
-                <p className="text-xs text-grey-3">{leaderboardMetric === 'Steps' ? user.steps : leaderboardMetric === 'Distance' ? '12.5 km' : leaderboardMetric === 'Run' ? '45 mins' : '15 mins'}</p>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-grey-1 truncate">{user.name}</p>
+                <p className="text-[10px] sm:text-xs text-grey-3 truncate">{leaderboardMetric === 'Steps' ? user.steps : leaderboardMetric === 'Distance' ? '12.5 km' : leaderboardMetric === 'Run' ? '45 mins' : '15 mins'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-grey-1">{user.rank}</span>
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              <span className="text-xs sm:text-sm font-bold text-grey-1">{user.rank}</span>
               {user.trend === 'up' ? (
-                <ArrowUpRight className="w-4 h-4 text-green-500" />
+                <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
               ) : (
-                <ArrowDownRight className="w-4 h-4 text-red-500" />
+                <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
               )}
             </div>
           </div>

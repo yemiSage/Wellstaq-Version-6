@@ -1,16 +1,16 @@
 export const INITIAL_MEMBERS = [
-  { id: 1, name: "Sarah Jenkins", email: "sarah.j@example.com", department: "Engineering", status: "Excellent", avatar: "https://picsum.photos/seed/sarah/100/100", branch: "Yemi Inc lokoja" },
-  { id: 2, name: "Marcus Thorne", email: "marcus.t@example.com", department: "Design", status: "Good", avatar: "https://picsum.photos/seed/marcus/100/100", branch: "Yemi Inc lokoja" },
-  { id: 3, name: "Elena Rodriguez", email: "elena.r@example.com", department: "Marketing", status: "Needs Attention", avatar: "https://picsum.photos/seed/elena/100/100", branch: "Lagos Branch" },
-  { id: 4, name: "David Chen", email: "david.c@example.com", department: "Engineering", status: "Excellent", avatar: "https://picsum.photos/seed/david/100/100", branch: "Yemi Inc lokoja" },
-  { id: 5, name: "Amira Hassan", email: "amira.h@example.com", department: "Sales", status: "Good", avatar: "https://picsum.photos/seed/amira/100/100", branch: "Abuja Branch" },
-  { id: 6, name: "James Wilson", email: "james.w@example.com", department: "HR", status: "Excellent", avatar: "https://picsum.photos/seed/james/100/100", branch: "Yemi Inc lokoja" },
-  { id: 7, name: "Lisa Taylor", email: "lisa.t@example.com", department: "Design", status: "Good", avatar: "https://picsum.photos/seed/lisa/100/100", branch: "Lagos Branch" },
-  { id: 8, name: "Robert Fox", email: "robert.f@example.com", department: "Engineering", status: "Needs Attention", avatar: "https://picsum.photos/seed/robert/100/100", branch: "Abuja Branch" },
-  { id: 9, name: "Kevin Hart", email: "kevin.h@example.com", department: "Marketing", status: "Good", avatar: "https://picsum.photos/seed/kevin/100/100", branch: "Lagos Branch" },
-  { id: 10, name: "Rachel Green", email: "rachel.g@example.com", department: "Design", status: "Excellent", avatar: "https://picsum.photos/seed/rachel/100/100", branch: "Yemi Inc lokoja" },
-  { id: 11, name: "Michael Scott", email: "michael.s@example.com", department: "Sales", status: "Good", avatar: "https://picsum.photos/seed/michael/100/100", branch: "Abuja Branch" },
-  { id: 12, name: "Pam Beesly", email: "pam.b@example.com", department: "Design", status: "Excellent", avatar: "https://picsum.photos/seed/pam/100/100", branch: "Abuja Branch" },
+  { id: 1, name: "Sarah Jenkins", email: "sarah.j@example.com", department: "Engineering", status: "Excellent", avatar: "https://picsum.photos/seed/sarah/100/100", branch: "Yemi Inc lokoja", role: "Super Admin" },
+  { id: 2, name: "Marcus Thorne", email: "marcus.t@example.com", department: "Design", status: "Good", avatar: "https://picsum.photos/seed/marcus/100/100", branch: "Yemi Inc lokoja", role: "Branch Manager" },
+  { id: 3, name: "Elena Rodriguez", email: "elena.r@example.com", department: "Marketing", status: "Needs Attention", avatar: "https://picsum.photos/seed/elena/100/100", branch: "Lagos Branch", role: "Team Lead" },
+  { id: 4, name: "David Chen", email: "david.c@example.com", department: "Engineering", status: "Excellent", avatar: "https://picsum.photos/seed/david/100/100", branch: "Yemi Inc lokoja", role: "Employee" },
+  { id: 5, name: "Amira Hassan", email: "amira.h@example.com", department: "Sales", status: "Good", avatar: "https://picsum.photos/seed/amira/100/100", branch: "Abuja Branch", role: "Employee" },
+  { id: 6, name: "James Wilson", email: "james.w@example.com", department: "HR", status: "Excellent", avatar: "https://picsum.photos/seed/james/100/100", branch: "Yemi Inc lokoja", role: "Team Lead" },
+  { id: 7, name: "Lisa Taylor", email: "lisa.t@example.com", department: "Design", status: "Good", avatar: "https://picsum.photos/seed/lisa/100/100", branch: "Lagos Branch", role: "Employee" },
+  { id: 8, name: "Robert Fox", email: "robert.f@example.com", department: "Engineering", status: "Needs Attention", avatar: "https://picsum.photos/seed/robert/100/100", branch: "Abuja Branch", role: "Employee" },
+  { id: 9, name: "Kevin Hart", email: "kevin.h@example.com", department: "Marketing", status: "Good", avatar: "https://picsum.photos/seed/kevin/100/100", branch: "Lagos Branch", role: "Employee" },
+  { id: 10, name: "Rachel Green", email: "rachel.g@example.com", department: "Design", status: "Excellent", avatar: "https://picsum.photos/seed/rachel/100/100", branch: "Yemi Inc lokoja", role: "Employee" },
+  { id: 11, name: "Michael Scott", email: "michael.s@example.com", department: "Sales", status: "Good", avatar: "https://picsum.photos/seed/michael/100/100", branch: "Abuja Branch", role: "Branch Manager" },
+  { id: 12, name: "Pam Beesly", email: "pam.b@example.com", department: "Design", status: "Excellent", avatar: "https://picsum.photos/seed/pam/100/100", branch: "Abuja Branch", role: "Employee" },
 ];
 
 export const MOCK_DEPARTMENTS = [

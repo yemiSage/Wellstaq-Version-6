@@ -245,9 +245,9 @@ export default function DepartmentsPage() {
         ))}
       </div>
 
-      <div className="m-0 p-[12px] bg-white rounded-[12px] flex gap-6 h-[600px]">
+      <div className="m-0 p-0 lg:p-[12px] bg-transparent lg:bg-white rounded-[12px] flex flex-col lg:flex-row gap-6 lg:h-[600px]">
         {/* Left Sidebar - Department List */}
-        <div className="w-[320px] flex-shrink-0 flex flex-col gap-4 rounded-[12px] border-[1.5px] border-[#E6E6E6] p-[12px]">
+        <div className={`w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-4 rounded-[12px] border-[1.5px] border-[#E6E6E6] p-[12px] bg-white ${selectedDepartment ? 'hidden lg:flex' : 'flex'}`}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
             <input 
@@ -257,7 +257,7 @@ export default function DepartmentsPage() {
             />
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-3 pr-2 no-scrollbar">
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2 no-scrollbar min-h-[400px] lg:min-h-0">
             {filteredDepartments.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white rounded-[12px]">
                 <h3 className="text-lg font-bold text-grey-1 mb-2">No Departments Available</h3>
@@ -311,7 +311,7 @@ export default function DepartmentsPage() {
         </div>
 
         {/* Right Area - Department Details */}
-        <div className="flex-1 bg-white rounded-[12px] overflow-hidden flex flex-col">
+        <div className={`flex-1 bg-white rounded-[12px] overflow-hidden flex flex-col ${!selectedDepartment ? 'hidden lg:flex' : 'flex'}`}>
           {!selectedDepartment ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4 text-orange-500">
@@ -323,9 +323,18 @@ export default function DepartmentsPage() {
           ) : (
             <div className="flex-1 overflow-y-auto border-[#E6E6E6] rounded-[12px] border-[1.5px] no-scrollbar">
               <div className="m-[12px] bg-[#FAFAFA] rounded-[12px] p-[12px]">
-                <div className="flex items-start justify-between mb-8">
+                {/* Mobile Back Button */}
+                <button 
+                  onClick={() => setSelectedDepartment(null)}
+                  className="lg:hidden flex items-center gap-2 text-sm font-medium text-grey-2 mb-4 hover:text-grey-1"
+                >
+                  <ChevronDown className="w-4 h-4 rotate-90" />
+                  Back to List
+                </button>
+
+                <div className="flex flex-col sm:flex-row items-start justify-between mb-8 gap-4">
                   <div className="flex items-start gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-orange-50 flex items-center justify-center text-2xl font-bold text-orange-500">
+                    <div className="w-16 h-16 rounded-xl bg-orange-50 flex items-center justify-center text-2xl font-bold text-orange-500 shrink-0">
                       {selectedDepartment.name.charAt(0)}
                     </div>
                     <div>
@@ -357,7 +366,7 @@ export default function DepartmentsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="p-4 rounded-xl border border-[#E6E6E6] bg-white">
                     <h3 className="text-2xl font-bold text-grey-1 mb-1">{selectedDepartment.members}</h3>
                     <p className="text-xs text-grey-3">Members</p>
@@ -375,12 +384,12 @@ export default function DepartmentsPage() {
 
               {/* Tabs */}
               <div className="px-[12px]">
-                <div className="flex items-center gap-6 border-b border-grey-4 mb-6">
+                <div className="flex items-center gap-4 sm:gap-6 border-b border-grey-4 mb-6 overflow-x-auto no-scrollbar">
                   {["Overview", "Members", "Activities"].map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab ? 'border-[#F27D26] text-[#F27D26]' : 'border-transparent text-grey-2 hover:text-grey-1'}`}
+                      className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#F27D26] text-[#F27D26]' : 'border-transparent text-grey-2 hover:text-grey-1'}`}
                     >
                       {tab}
                     </button>
@@ -390,7 +399,7 @@ export default function DepartmentsPage() {
 
               <div className="px-[12px] pb-[12px]">
                 {activeTab === "Overview" && (
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
                       <h3 className="text-sm font-bold text-grey-1 mb-4">Department Performance</h3>
                       <div className="bg-[#F8F9FA] rounded-xl p-4 h-[250px] relative group">
@@ -438,7 +447,7 @@ export default function DepartmentsPage() {
                         </ResponsiveContainer>
                       </div>
                       <div className="flex flex-col gap-2 mt-2">
-                        <div className="flex items-center gap-4 text-[10px] text-grey-2">
+                        <div className="flex flex-wrap items-center gap-4 text-[10px] text-grey-2">
                           <div className="flex items-center gap-1">
                             <div className="w-2 h-2 rounded-full bg-[#F27D26]"></div>
                             <span>Health Score: Physical well-being</span>
@@ -561,7 +570,7 @@ export default function DepartmentsPage() {
       {/* Create Department Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-[720px] flex flex-col">
+          <div className="bg-white rounded-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-grey-4 flex justify-between items-start">
               <div>
                 <h2 className="text-xl font-bold text-grey-1 mb-1">Create New Department</h2>
@@ -572,7 +581,7 @@ export default function DepartmentsPage() {
               </button>
             </div>
             
-            <div className="p-6 flex-1 space-y-5">
+            <div className="p-6 flex-1 space-y-5 overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-grey-1 mb-1.5">Department Name <span className="text-red-500">*</span></label>
                 <input 

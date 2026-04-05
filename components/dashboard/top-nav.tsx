@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { INITIAL_MEMBERS, MOCK_DEPARTMENTS, EVENTS, CHALLENGES } from "@/lib/mock-data";
 
-export function TopNav() {
+export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isOrgSwitcherOpen, setIsOrgSwitcherOpen] = useState(false);
@@ -51,7 +51,8 @@ export function TopNav() {
     firstName: "Opeyemi",
     lastName: "Adegboye",
     email: "adegboyeopeyemi065@gmail.com",
-    businessName: "Yemi Inc lokoja"
+    businessName: "Yemi Inc lokoja",
+    profileImage: "https://picsum.photos/seed/opeyemi/100/100"
   });
   const [branches, setBranches] = useState<{name: string, employees: string}[]>([]);
   const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
@@ -152,51 +153,73 @@ Keep your responses concise and conversational.
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedData = localStorage.getItem('onboardingData');
-      if (storedData) {
-        try {
-          const parsed = JSON.parse(storedData);
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setUserData({
-            firstName: parsed.firstName || "Opeyemi",
-            lastName: parsed.lastName || "Adegboye",
-            email: parsed.email || "adegboyeopeyemi065@gmail.com",
-            businessName: parsed.businessName || "Yemi Inc lokoja"
-          });
-          
+    const loadUserData = () => {
+      if (typeof window !== 'undefined') {
+        const storedData = localStorage.getItem('onboardingData');
+        if (storedData) {
+          try {
+            const parsed = JSON.parse(storedData);
+            setUserData({
+              firstName: parsed.firstName || "Opeyemi",
+              lastName: parsed.lastName || "Adegboye",
+              email: parsed.email || "adegboyeopeyemi065@gmail.com",
+              businessName: parsed.businessName || "Yemi Inc lokoja",
+              profileImage: parsed.profileImage || "https://picsum.photos/seed/opeyemi/100/100"
+            });
+            
+            const storedBranches = localStorage.getItem('branches');
+            if (storedBranches) {
+              setBranches(JSON.parse(storedBranches));
+            } else {
+              setBranches([{ name: parsed.businessName || "Yemi Inc lokoja", employees: "10" }]);
+            }
+            
+            const storedActiveBranch = localStorage.getItem('activeBranch');
+            if (storedActiveBranch) {
+              setActiveBranch(storedActiveBranch);
+            } else {
+              setActiveBranch(parsed.businessName || "Yemi Inc lokoja");
+            }
+          } catch (e) {
+            console.error("Failed to parse onboarding data", e);
+          }
+        } else {
           const storedBranches = localStorage.getItem('branches');
           if (storedBranches) {
             setBranches(JSON.parse(storedBranches));
           } else {
-            setBranches([{ name: parsed.businessName || "Yemi Inc lokoja", employees: "10" }]);
+            setBranches([{ name: "Yemi Inc lokoja", employees: "10" }]);
           }
           
           const storedActiveBranch = localStorage.getItem('activeBranch');
           if (storedActiveBranch) {
             setActiveBranch(storedActiveBranch);
           } else {
-            setActiveBranch(parsed.businessName || "Yemi Inc lokoja");
+            setActiveBranch("Yemi Inc lokoja");
           }
-        } catch (e) {
-          console.error("Failed to parse onboarding data", e);
-        }
-      } else {
-        const storedBranches = localStorage.getItem('branches');
-        if (storedBranches) {
-          setBranches(JSON.parse(storedBranches));
-        } else {
-          setBranches([{ name: "Yemi Inc lokoja", employees: "10" }]);
-        }
-        
-        const storedActiveBranch = localStorage.getItem('activeBranch');
-        if (storedActiveBranch) {
-          setActiveBranch(storedActiveBranch);
-        } else {
-          setActiveBranch("Yemi Inc lokoja");
         }
       }
-    }
+    };
+
+    loadUserData();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'onboardingData' || !e.key) {
+        loadUserData();
+      }
+    };
+
+    const handleCustomStorageEvent = () => {
+      loadUserData();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('profileUpdate', handleCustomStorageEvent);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('profileUpdate', handleCustomStorageEvent);
+    };
   }, []);
 
   useClickOutside(profileRef, () => setIsProfileOpen(false));
@@ -204,19 +227,27 @@ Keep your responses concise and conversational.
 
   return (
     <>
-      <header className="h-16 bg-white border-b border-grey-4 flex items-center justify-between px-6 relative z-40">
-        <div className="flex-1 flex items-center gap-4">
+      <header className="h-16 bg-white border-b border-grey-4 flex items-center justify-between px-4 lg:px-6 relative z-40">
+        <div className="flex-1 flex items-center gap-2 lg:gap-4">
+          {/* Mobile Menu Button */}
+          <button 
+            onClick={onMenuClick}
+            className="lg:hidden p-2 text-grey-2 hover:bg-grey-5 rounded-lg"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
           {/* Organization Switcher */}
           <div className="relative" ref={orgSwitcherRef}>
             <button 
               onClick={() => setIsOrgSwitcherOpen(!isOrgSwitcherOpen)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-grey-4 hover:bg-grey-5 transition-colors"
+              className="flex items-center gap-2 px-2 lg:px-3 py-2 rounded-lg border border-grey-4 hover:bg-grey-5 transition-colors"
             >
-              <div className="w-6 h-6 rounded bg-primary-1 text-white flex items-center justify-center text-xs font-bold">
+              <div className="w-6 h-6 rounded bg-primary-1 text-white flex items-center justify-center text-[10px] lg:text-xs font-bold">
                 {activeBranch.charAt(0).toUpperCase()}
               </div>
-              <span className="text-sm font-medium text-grey-1">{activeBranch}</span>
-              <ChevronDown className="w-4 h-4 text-grey-3" />
+              <span className="text-xs lg:text-sm font-medium text-grey-1 max-w-[80px] lg:max-w-none truncate">{activeBranch}</span>
+              <ChevronDown className="w-3 h-3 lg:w-4 lg:h-4 text-grey-3" />
             </button>
 
             <AnimatePresence>
@@ -271,44 +302,44 @@ Keep your responses concise and conversational.
             </AnimatePresence>
           </div>
 
-          <div className="relative w-[459px]">
+          <div className="relative flex-1 max-w-[459px] hidden sm:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
             <input 
               type="text" 
-              placeholder="Search events, challenges, departments and more" 
+              placeholder="Search..." 
               className="h-10 pl-[40px] pr-16 w-full rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">⌘</kbd>
               <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">K</kbd>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 ml-4">
-          <button className="w-10 h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5">
-            <MessageSquare className="w-5 h-5" />
+        <div className="flex items-center gap-2 lg:gap-4 ml-2 lg:ml-4">
+          <button className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5 hidden sm:flex">
+            <MessageSquare className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
-          <button className="w-10 h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5">
-            <Bell className="w-5 h-5" />
+          <button className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5">
+            <Bell className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
           <button 
             onClick={() => setIsChatOpen(true)}
-            className="h-10 px-4 rounded-[12px] border border-grey-4 flex items-center gap-2 text-sm font-medium text-grey-1 hover:bg-grey-5 transition-colors"
+            className="h-8 lg:h-10 px-2 lg:px-4 rounded-[12px] border border-grey-4 flex items-center gap-2 text-xs lg:text-sm font-medium text-grey-1 hover:bg-grey-5 transition-colors"
           >
-            <Sparkles className="w-4 h-4" />
-            Ask ws-AI
+            <Sparkles className="w-3 h-3 lg:w-4 lg:h-4" />
+            <span className="hidden sm:inline">Ask ws-AI</span>
           </button>
           
           <div className="relative" ref={profileRef}>
             <div 
-              className="flex items-center gap-3 ml-2 cursor-pointer"
+              className="flex items-center gap-2 lg:gap-3 ml-1 lg:ml-2 cursor-pointer"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
-              <div className="w-10 h-10 rounded-full bg-primary-1 text-white flex items-center justify-center font-medium overflow-hidden relative">
-                <Image src="https://picsum.photos/seed/opeyemi/100/100" alt="Opeyemi" fill className="object-cover" referrerPolicy="no-referrer" />
+              <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-primary-1 text-white flex items-center justify-center font-medium overflow-hidden relative border border-grey-4">
+                <Image src={userData.profileImage} alt={userData.firstName} fill className="object-cover" referrerPolicy="no-referrer" />
               </div>
-              <div className="hidden md:block">
+              <div className="hidden xl:block">
                 <p className="text-sm font-medium text-grey-1 leading-tight">{userData.firstName} {userData.lastName}</p>
                 <p className="text-xs text-grey-3">
                   {userData.email.split('@')[0].length > 7 
@@ -316,7 +347,7 @@ Keep your responses concise and conversational.
                     : userData.email}
                 </p>
               </div>
-              <ChevronDown className="w-4 h-4 text-grey-3" />
+              <ChevronDown className="w-3 h-3 lg:w-4 lg:h-4 text-grey-3" />
             </div>
 
             <AnimatePresence>

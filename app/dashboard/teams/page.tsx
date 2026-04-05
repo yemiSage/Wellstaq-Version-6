@@ -85,7 +85,7 @@ export default function TeamsPage() {
   const [memberToDelete, setMemberToDelete] = useState<number | null>(null);
   const [memberToEdit, setMemberToEdit] = useState<typeof INITIAL_MEMBERS[0] | null>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-  const [newMember, setNewMember] = useState({ name: "", email: "", department: "Engineering" });
+  const [newMember, setNewMember] = useState({ name: "", email: "", department: "Engineering", role: "Employee" });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,14 +126,14 @@ export default function TeamsPage() {
     const member = {
       id: members.length + 1,
       ...newMember,
-      status: "Good",
+      status: "Good", // Default status from wellness report
       branch: activeBranch,
       avatar: `https://picsum.photos/seed/${newMember.name}/100/100`
     };
     setMembers([member, ...members]);
     toast.success("Team member added successfully");
     setIsAddMemberModalOpen(false);
-    setNewMember({ name: "", email: "", department: "Engineering" });
+    setNewMember({ name: "", email: "", department: "Engineering", role: "Employee" });
   };
 
   const getStatusColor = (status: string) => {
@@ -200,14 +200,15 @@ export default function TeamsPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Table/Cards View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-grey-4">
                 <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Name</th>
                 <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Email</th>
                 <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Department</th>
+                <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Role</th>
                 <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Wellness Status</th>
                 <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider text-right">Actions</th>
               </tr>
@@ -225,6 +226,11 @@ export default function TeamsPage() {
                   </td>
                   <td className="py-3 px-4 text-sm text-grey-2">{member.email}</td>
                   <td className="py-3 px-4 text-sm text-grey-2">{member.department}</td>
+                  <td className="py-3 px-4 text-sm text-grey-2">
+                    <span className="px-2 py-1 bg-grey-5 rounded-md text-[10px] font-bold text-grey-2 border border-grey-4">
+                      {member.role || "Employee"}
+                    </span>
+                  </td>
                   <td className="py-3 px-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(member.status)}`}>
                       {member.status}
@@ -252,13 +258,69 @@ export default function TeamsPage() {
               ))}
               {paginatedMembers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-sm text-grey-2">
+                  <td colSpan={6} className="py-8 text-center text-sm text-grey-2">
                     No team members found.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden flex flex-col gap-4">
+          {paginatedMembers.map((member) => (
+            <div key={member.id} className="bg-white p-4 rounded-xl border border-grey-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden relative shrink-0">
+                    <Image src={member.avatar} alt={member.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-grey-1">{member.name}</p>
+                    <p className="text-xs text-grey-3">{member.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setMemberToEdit(member)} 
+                    className="p-2 text-grey-3 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setMemberToDelete(member.id)} 
+                    className="p-2 text-grey-3 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-grey-4">
+                <div>
+                  <p className="text-[10px] text-grey-3 uppercase font-bold tracking-wider mb-1">Department</p>
+                  <p className="text-xs text-grey-2 font-medium">{member.department}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-grey-3 uppercase font-bold tracking-wider mb-1">Role</p>
+                  <span className="px-2 py-0.5 bg-grey-5 rounded text-[10px] font-bold text-grey-2 border border-grey-4 inline-block">
+                    {member.role || "Employee"}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-[10px] text-grey-3 uppercase font-bold tracking-wider mb-1">Wellness Status</p>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-block ${getStatusColor(member.status)}`}>
+                    {member.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {paginatedMembers.length === 0 && (
+            <div className="py-8 text-center text-sm text-grey-2 bg-grey-5 rounded-xl border border-dashed border-grey-4">
+              No team members found.
+            </div>
+          )}
         </div>
 
         {/* Pagination */}
@@ -366,6 +428,19 @@ export default function TeamsPage() {
               <option value="HR">HR</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-grey-1 mb-1">Role</label>
+            <select 
+              value={newMember.role}
+              onChange={(e) => setNewMember({...newMember, role: e.target.value})}
+              className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
+            >
+              <option value="Super Admin">Super Admin</option>
+              <option value="Branch Manager">Branch Manager</option>
+              <option value="Team Lead">Team Lead</option>
+              <option value="Employee">Employee</option>
+            </select>
+          </div>
           <div className="pt-4 flex justify-end gap-3">
             <button 
               type="button"
@@ -427,15 +502,16 @@ export default function TeamsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-grey-1 mb-1">Status</label>
+              <label className="block text-sm font-medium text-grey-1 mb-1">Role</label>
               <select 
-                value={memberToEdit.status}
-                onChange={(e) => setMemberToEdit({...memberToEdit, status: e.target.value})}
+                value={memberToEdit.role || "Employee"}
+                onChange={(e) => setMemberToEdit({...memberToEdit, role: e.target.value})}
                 className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
               >
-                <option value="Excellent">Excellent</option>
-                <option value="Good">Good</option>
-                <option value="Needs Attention">Needs Attention</option>
+                <option value="Super Admin">Super Admin</option>
+                <option value="Branch Manager">Branch Manager</option>
+                <option value="Team Lead">Team Lead</option>
+                <option value="Employee">Employee</option>
               </select>
             </div>
             <div className="pt-4 flex justify-end gap-3">

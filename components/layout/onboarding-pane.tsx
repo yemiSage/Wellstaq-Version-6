@@ -5,7 +5,7 @@ export function OnboardingPane({ children }: { children: React.ReactNode }) {
     <div className="flex-1 flex flex-col relative overflow-hidden">
       {/* Subtle Background Shape */}
       <svg 
-        className="absolute top-1/3 -right-32 w-[800px] h-[800px] text-secondary-4/20 -z-10 pointer-events-none" 
+        className="absolute top-1/3 -right-32 w-[800px] h-[800px] text-grey-4/5 -z-10 pointer-events-none" 
         viewBox="0 0 200 200" 
         fill="currentColor"
       >

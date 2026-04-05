@@ -18,10 +18,11 @@ import {
   MessageSquare, 
   Layers,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  X
 } from "lucide-react";
 
-export function Sidebar() {
+export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
@@ -67,12 +68,21 @@ export function Sidebar() {
         {!isCollapsed && (
           <Image src={ASSETS.LOGO} alt="WellStaq" width={100} height={28} className="object-contain" referrerPolicy="no-referrer" />
         )}
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-grey-2 hover:text-grey-1 p-1 border border-grey-4 rounded-md bg-white flex-shrink-0"
-        >
-          {isCollapsed ? <PanelLeftOpen size={14} strokeWidth={1.5} /> : <PanelLeftClose size={14} strokeWidth={1.5} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="text-grey-2 hover:text-grey-1 p-1 border border-grey-4 rounded-md bg-white flex-shrink-0 hidden lg:flex"
+          >
+            {isCollapsed ? <PanelLeftOpen size={14} strokeWidth={1.5} /> : <PanelLeftClose size={14} strokeWidth={1.5} />}
+          </button>
+          {/* Mobile Close Button */}
+          <button 
+            onClick={onClose}
+            className="lg:hidden text-grey-2 hover:text-grey-1 p-1 border border-grey-4 rounded-md bg-white flex-shrink-0"
+          >
+            <X size={14} strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-6 overflow-x-hidden no-scrollbar">
@@ -85,6 +95,7 @@ export function Sidebar() {
               <Link 
                 key={item.name}
                 href={item.href} 
+                onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md font-normal cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${isActive ? 'bg-primary-5 text-primary-1 font-medium' : 'text-grey-2 hover:bg-grey-5'}`}
               >
                 <item.icon size={18} strokeWidth={1.5} className="flex-shrink-0" />
@@ -95,39 +106,41 @@ export function Sidebar() {
         </div>
 
         {/* Challenges Section */}
-        {branchChallenges.length > 0 && (
-          <div className="border-t border-grey-4 pt-4">
-            <div className={`flex items-center px-3 mb-2 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-              <div className={`flex items-center gap-2 text-grey-3 text-xs font-semibold uppercase tracking-wider ${isCollapsed ? 'justify-center' : ''}`}>
-                {!isCollapsed && <span className="whitespace-nowrap">Challenges</span>}
-              </div>
-              {!isCollapsed && (
-                <button className="text-grey-3 hover:text-grey-1 flex-shrink-0">
-                  <Plus size={14} strokeWidth={1.5} />
-                </button>
-              )}
+        <div className="border-t border-grey-4 pt-4">
+          <div className={`flex items-center px-3 mb-2 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+            <div className={`flex items-center gap-2 text-grey-3 text-xs font-semibold uppercase tracking-wider ${isCollapsed ? 'justify-center' : ''}`}>
+              {!isCollapsed && <span className="whitespace-nowrap">Challenges</span>}
             </div>
             {!isCollapsed && (
-              <div className="space-y-0.5">
-                {lastChallenges.map(challenge => (
-                  <Link href="/dashboard/challenges" key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
-                    <div className="w-3 h-3 rounded-full border border-grey-3 flex-shrink-0" />
-                    <span className="truncate">{challenge.title}</span>
-                  </Link>
-                ))}
-                <Link href="/dashboard/challenges" className="flex items-center justify-between px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 flex items-center justify-center text-grey-3 flex-shrink-0">
-                      <Layers size={14} strokeWidth={1.5} />
-                    </div>
-                    <span className="whitespace-nowrap">More Challenges</span>
-                  </div>
-                  <ChevronRight size={14} strokeWidth={1.5} className="flex-shrink-0" />
-                </Link>
-              </div>
+              <button className="text-grey-3 hover:text-grey-1 flex-shrink-0">
+                <Plus size={14} strokeWidth={1.5} />
+              </button>
             )}
           </div>
-        )}
+          {!isCollapsed && branchChallenges.length > 0 ? (
+            <div className="space-y-0.5">
+              {lastChallenges.map(challenge => (
+                <Link href="/dashboard/challenges" key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+                  <div className="w-3 h-3 rounded-full border border-grey-3 flex-shrink-0" />
+                  <span className="truncate">{challenge.title}</span>
+                </Link>
+              ))}
+              <Link href="/dashboard/challenges" className="flex items-center justify-between px-3 py-1.5 text-grey-2 hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 flex items-center justify-center text-grey-3 flex-shrink-0">
+                    <Layers size={14} strokeWidth={1.5} />
+                  </div>
+                  <span className="whitespace-nowrap">More Challenges</span>
+                </div>
+                <ChevronRight size={14} strokeWidth={1.5} className="flex-shrink-0" />
+              </Link>
+            </div>
+          ) : !isCollapsed && (
+            <div className="px-3 py-2 text-xs text-grey-3 italic">
+              No challenges yet
+            </div>
+          )}
+        </div>
 
         {/* Integrations Section */}
         <div className="border-t border-grey-4 pt-4">

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, Plus, User, Video, MapPin, Send, Heart, Users, Flame, ChevronLeft, TrendingUp, ImageIcon, MessageCircle, Share2, Bookmark, ThumbsUp, PanelLeftClose, PanelLeftOpen, Sticker, Paperclip, MoreHorizontal, Trash2 } from "lucide-react";
+import { Search, Plus, User, Video, MapPin, Send, Heart, Users, Flame, ChevronLeft, TrendingUp, ImageIcon, MessageCircle, Share2, Bookmark, ThumbsUp, PanelLeftClose, PanelLeftOpen, Sticker, Paperclip, MoreHorizontal, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 // Mock Data
@@ -176,6 +177,7 @@ export default function SpacePage() {
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [deleteConfirmPostId, setDeleteConfirmPostId] = useState<number | null>(null);
   const [deleteConfirmComment, setDeleteConfirmComment] = useState<{postId: number, commentId: number} | null>(null);
+  const [activeMobileTab, setActiveMobileTab] = useState<"explore" | "feed" | "clubs">("feed");
   const [messages, setMessages] = useState(chatMessages);
   const [chatInput, setChatInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -339,6 +341,32 @@ export default function SpacePage() {
     toast.success("Comment added!");
   };
 
+  const [isCreateClubModalOpen, setIsCreateClubModalOpen] = useState(false);
+  const [newClubData, setNewClubData] = useState({ name: "", description: "", image: "", category: "Fitness" });
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+
+  const handleCreateClub = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newClub = {
+      id: Date.now(),
+      name: newClubData.name,
+      category: newClubData.category,
+      description: newClubData.description,
+      members: 1,
+      branch: activeBranch,
+      image: newClubData.image || `https://picsum.photos/seed/${newClubData.name}/400/300`
+    };
+    setMyClubsList([...myClubsList, newClub]);
+    setIsCreateClubModalOpen(false);
+    setNewClubData({ name: "", description: "", image: "", category: "Fitness" });
+    toast.success(`${newClub.name} created successfully!`);
+  };
+
+  const handleDeleteMessage = (messageId: number) => {
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    toast.success("Message deleted");
+  };
+
   const handleDeleteComment = (postId: number, commentId: number) => {
     setPosts(posts.map(p => {
       if (p.id === postId) {
@@ -482,7 +510,10 @@ export default function SpacePage() {
             <p className="text-sm text-grey-2 mb-6">
               No user club has been created so far, when someone or your organization creates a club, they&apos;ll appear here
             </p>
-            <button className="w-full py-2 border border-primary-1 text-primary-1 rounded-lg text-sm font-medium hover:bg-primary-5 transition-colors flex items-center justify-center gap-2">
+            <button 
+              onClick={() => setIsCreateClubModalOpen(true)}
+              className="w-full py-2 border border-primary-1 text-primary-1 rounded-lg text-sm font-medium hover:bg-primary-5 transition-colors flex items-center justify-center gap-2"
+            >
               <Plus className="w-4 h-4" />
               Create a club
             </button>
@@ -776,13 +807,35 @@ export default function SpacePage() {
                     <Image src={msg.avatar} alt={msg.user} fill className="object-cover" referrerPolicy="no-referrer" />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-bold text-grey-1">{msg.user}</span>
-                      <span className="text-xs text-grey-3">› {msg.time}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-grey-1">{msg.user}</span>
+                        <span className="text-xs text-grey-3">› {msg.time}</span>
+                      </div>
+                      {msg.isMe && (
+                        <button 
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="p-1 text-grey-3 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                     <div className="text-xs text-grey-3 mb-2">{msg.role}</div>
                     <div className={`text-sm text-grey-1 pl-3 border-l-2 ${msg.isMe ? 'border-green-500' : 'border-primary-1'}`}>
                       {msg.message}
+                      
+                      {/* Attachment Previews */}
+                      {msg.message === "[Image Attachment]" && (
+                        <div className="mt-2 relative aspect-video w-full max-w-[300px] rounded-lg overflow-hidden border border-grey-4">
+                          <Image src="https://picsum.photos/seed/attachment/400/300" alt="attachment" fill className="object-cover" />
+                        </div>
+                      )}
+                      {msg.message === "[Video Attachment]" && (
+                        <div className="mt-2 w-full max-w-[300px] aspect-video bg-black rounded-lg flex items-center justify-center">
+                          <Video className="w-8 h-8 text-white" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -798,9 +851,46 @@ export default function SpacePage() {
                 accept="image/*,video/*" 
                 onChange={handleChatFileUpload} 
               />
-              <button className="w-10 h-10 rounded-xl border border-grey-4 flex items-center justify-center text-grey-3 hover:bg-grey-5 transition-colors shrink-0">
-                <Sticker className="w-5 h-5" />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
+                  className={`w-10 h-10 rounded-xl border border-grey-4 flex items-center justify-center transition-colors shrink-0 ${isEmojiPickerOpen ? 'bg-primary-1/10 text-primary-1 border-primary-1' : 'text-grey-3 hover:bg-grey-5'}`}
+                >
+                  <Sticker className="w-5 h-5" />
+                </button>
+                
+                <AnimatePresence>
+                  {isEmojiPickerOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                      className="absolute bottom-full left-0 mb-2 p-4 bg-white rounded-2xl shadow-2xl border border-grey-4 w-[280px] z-50"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-grey-1">Emojis & Stickers</span>
+                        <button onClick={() => setIsEmojiPickerOpen(false)}>
+                          <Plus className="w-4 h-4 text-grey-3 rotate-45" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-6 gap-2">
+                        {['😊', '😂', '🔥', '❤️', '👍', '🙌', '💪', '🏃', '🥗', '🧘', '✨', '🎉', '🌟', '💯', '🚀', '👏', '🤝', '✅'].map(emoji => (
+                          <button 
+                            key={emoji}
+                            onClick={() => {
+                              setChatInput(prev => prev + emoji);
+                              setIsEmojiPickerOpen(false);
+                            }}
+                            className="text-xl hover:scale-125 transition-transform p-1"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               <div className="relative flex items-center">
                 <button 
                   onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
@@ -836,7 +926,11 @@ export default function SpacePage() {
                   className="w-full h-10 px-4 bg-white border border-grey-4 rounded-full text-sm focus:outline-none focus:border-primary-1 focus:ring-1 focus:ring-primary-1"
                 />
               </div>
-              <button className="w-10 h-10 rounded-xl bg-[#F2C9A8] flex items-center justify-center text-white hover:bg-[#e8b890] transition-colors shrink-0" onClick={handleSendMessage}>
+              <button 
+                disabled={!chatInput.trim()}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 ${chatInput.trim() ? 'bg-primary-1 text-white shadow-lg shadow-primary-1/20' : 'bg-grey-5 text-grey-3 cursor-not-allowed'}`} 
+                onClick={handleSendMessage}
+              >
                 <Send className="w-4 h-4 ml-1" />
               </button>
             </div>
@@ -927,11 +1021,129 @@ export default function SpacePage() {
 
   return (
     <>
-      <div className="flex h-[calc(100vh-64px)] -m-[20px] bg-white overflow-hidden">
-        {renderLeftColumn()}
-        {selectedClub ? renderClubView() : renderFeed()}
-        {renderRightColumn()}
+      <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] -m-[20px] bg-white overflow-hidden relative">
+        {/* Mobile Tabs */}
+        <div className="md:hidden flex border-b border-grey-4 bg-white sticky top-0 z-10 shrink-0">
+          <button 
+            onClick={() => setActiveMobileTab("explore")}
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeMobileTab === "explore" ? "border-primary-1 text-primary-1" : "border-transparent text-grey-2"}`}
+          >
+            Explore
+          </button>
+          <button 
+            onClick={() => setActiveMobileTab("feed")}
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeMobileTab === "feed" ? "border-primary-1 text-primary-1" : "border-transparent text-grey-2"}`}
+          >
+            Feed
+          </button>
+          <button 
+            onClick={() => setActiveMobileTab("clubs")}
+            className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeMobileTab === "clubs" ? "border-primary-1 text-primary-1" : "border-transparent text-grey-2"}`}
+          >
+            Clubs
+          </button>
+        </div>
+
+        {/* Columns */}
+        <div className={`w-full md:w-[280px] shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "explore" ? "block" : "hidden md:block"}`}>
+          {renderLeftColumn()}
+        </div>
+        
+        <div className={`flex-1 min-w-0 bg-[#FAFAFA] overflow-y-auto ${activeMobileTab === "feed" ? "block" : "hidden md:block"}`}>
+          {selectedClub ? renderClubView() : renderFeed()}
+        </div>
+        
+        <div className={`w-full md:w-[320px] shrink-0 border-l border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "clubs" ? "block" : "hidden md:block"}`}>
+          {renderRightColumn()}
+        </div>
       </div>
+
+      {/* Create Club Modal */}
+      <AnimatePresence>
+        {isCreateClubModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCreateClubModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-grey-4 flex items-center justify-between bg-grey-5/30">
+                <h3 className="text-lg font-bold text-grey-1">Create New Club</h3>
+                <button 
+                  onClick={() => setIsCreateClubModalOpen(false)}
+                  className="p-2 hover:bg-grey-4 rounded-xl transition-colors"
+                >
+                  <X className="w-5 h-5 text-grey-2" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateClub} className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-grey-1">Club Name</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={newClubData.name}
+                    onChange={(e) => setNewClubData({...newClubData, name: e.target.value})}
+                    placeholder="e.g. Morning Runners"
+                    className="w-full h-12 px-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-grey-1">Category</label>
+                  <select 
+                    value={newClubData.category}
+                    onChange={(e) => setNewClubData({...newClubData, category: e.target.value})}
+                    className="w-full h-12 px-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1 bg-white"
+                  >
+                    <option value="Fitness">Fitness</option>
+                    <option value="Nutrition">Nutrition</option>
+                    <option value="Mental Health">Mental Health</option>
+                    <option value="Team Bonding">Team Bonding</option>
+                    <option value="Creativity">Creativity</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-grey-1">Description</label>
+                  <textarea 
+                    required
+                    value={newClubData.description}
+                    onChange={(e) => setNewClubData({...newClubData, description: e.target.value})}
+                    placeholder="What is this club about?"
+                    className="w-full p-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1 min-h-[100px] resize-none"
+                  />
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setIsCreateClubModalOpen(false)}
+                    className="flex-1 h-12 rounded-xl text-sm font-bold text-grey-2 hover:bg-grey-5 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 h-12 bg-primary-1 text-white rounded-xl text-sm font-bold hover:bg-primary-2 transition-all shadow-lg shadow-primary-1/20"
+                  >
+                    Create Club
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Join Club Modal */}
       {clubToJoin && (
@@ -966,6 +1178,7 @@ export default function SpacePage() {
         confirmText="Delete Comment"
         isDestructive
       />
+
     </>
   );
 }

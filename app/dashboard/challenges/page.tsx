@@ -166,9 +166,9 @@ export default function ChallengesPage() {
         </div>
 
         {/* Challenges Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {paginatedChallenges.map((challenge) => (
-            <div key={challenge.id} className="bg-[#FAFAFA] rounded-lg border border-[#F0F0F0] overflow-hidden flex flex-col p-2 gap-2 h-[340px] relative group">
+            <div key={challenge.id} className="bg-[#FAFAFA] rounded-lg border border-[#F0F0F0] overflow-hidden flex flex-col p-2 gap-2 h-auto sm:h-[340px] relative group">
               <div className="relative h-[120px] w-full rounded-lg overflow-hidden shrink-0">
                 <Image 
                   src={challenge.image} 
@@ -239,26 +239,26 @@ export default function ChallengesPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-grey-4 mt-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-grey-4 mt-4 gap-4">
             <div className="text-[14px] leading-[20px] text-[#373737]">
               Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredChallenges.length)} of {filteredChallenges.length} challenges
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full">
               <button 
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50 shrink-0"
               >
-                <ChevronsLeft className="w-4 h-4 text-[#626262]" /> First
+                <ChevronsLeft className="w-4 h-4 text-[#626262]" /> <span className="hidden sm:inline">First</span>
               </button>
               <button 
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50 shrink-0"
               >
-                <ChevronLeft className="w-4 h-4 text-[#626262]" /> Prev
+                <ChevronLeft className="w-4 h-4 text-[#626262]" /> <span className="hidden sm:inline">Prev</span>
               </button>
-              <div className="flex items-center gap-1 px-2">
+              <div className="flex items-center gap-1 px-2 shrink-0">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button
                     key={page}
@@ -276,16 +276,16 @@ export default function ChallengesPage() {
               <button 
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50 shrink-0"
               >
-                Next <ChevronRight className="w-4 h-4 text-[#626262]" />
+                <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4 text-[#626262]" />
               </button>
               <button 
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50 shrink-0"
               >
-                Last <ChevronsRight className="w-4 h-4 text-[#626262]" />
+                <span className="hidden sm:inline">Last</span> <ChevronsRight className="w-4 h-4 text-[#626262]" />
               </button>
             </div>
           </div>
