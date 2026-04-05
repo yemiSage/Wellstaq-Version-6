@@ -34,7 +34,8 @@ import {
   Linkedin,
   Instagram,
   Twitter,
-  Layout
+  Layout,
+  Menu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -187,7 +188,10 @@ export default function LandingPage() {
             <Link href="#" className={`font-medium transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>Pricing</Link>
             <Link href="#" className="text-primary-orange font-semibold">Contact Us</Link>
           </div>
-          <Link href="/onboarding">
+          <div className="lg:hidden">
+            <Menu className={`w-8 h-8 transition-colors ${scrolled ? 'text-grey-1' : 'text-white'}`} />
+          </div>
+          <Link href="/onboarding" className="hidden lg:block">
             <button className={`px-6 py-3 border rounded-[12px] font-semibold transition-all ${scrolled ? 'border-primary-orange bg-primary-light text-primary-orange hover:bg-primary-mid' : 'border-white bg-white/10 backdrop-blur-md text-white hover:bg-white/20'}`}>
               Request a Demo
             </button>
@@ -196,7 +200,7 @@ export default function LandingPage() {
       </nav>
 
       {/* 2. HERO SECTION */}
-      <section className="relative w-full h-[842px] flex items-center justify-center overflow-hidden">
+      <section className="relative w-full h-screen lg:h-[842px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image 
             src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1775377174/Hero_Image_feakdi.png" 
@@ -209,10 +213,10 @@ export default function LandingPage() {
         </div>
         
         <div className="relative z-10 flex flex-col items-start text-left lg:items-center lg:text-center px-4 mt-12">
-          <h1 className="text-white text-[32px] lg:text-5xl max-w-[633px] mb-6">
+          <h1 className="text-white text-[32px] leading-[38px] lg:leading-normal lg:text-5xl max-w-[633px] mb-6 text-left lg:text-center">
             Enhance the well-being of your remote and hybrid teams!
           </h1>
-          <p className="text-white text-sm lg:text-lg max-w-[556px] mb-10 opacity-90">
+          <p className="text-white text-sm lg:text-lg max-w-[556px] mb-10 opacity-90 text-left lg:text-center">
             Improve team wellness, discover inspiring spaces, and make informed HR decisions with privacy-focused insights.
           </p>
           <div className="flex flex-col sm:flex-row gap-5 w-full max-w-[551px]">
@@ -244,9 +248,9 @@ export default function LandingPage() {
 
       {/* 4. WELLBEING PILLARS SECTION */}
       <section id="why-wellstaq" className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-white max-w-[1440px] mx-auto scroll-mt-20">
-        <div className="text-center mb-[60px]">
+        <div className="text-left lg:text-center mb-[60px]">
           <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">We handle the complexity. Your team sees clarity.</h3>
-          <p className="text-grey-2 max-w-[655px] mx-auto text-sm lg:text-lg">
+          <p className="text-grey-2 max-w-[655px] lg:mx-auto text-sm lg:text-lg">
             Wellbeing isn't just mental or physical. It's everything. Wellstaq helps individuals and organizations track and improve all dimensions in one unified system.
           </p>
         </div>
@@ -255,7 +259,7 @@ export default function LandingPage() {
           {wellbeingPillars.map((pillar, idx) => (
             <div 
               key={idx} 
-              className={`h-[307px] p-5 rounded-[20px] flex flex-col justify-between transition-all hover:scale-[1.02] ${
+              className={`h-[307px] p-5 rounded-[12px] lg:rounded-[20px] flex flex-col justify-between transition-all hover:scale-[1.02] ${
                 pillar.variant === 'orange' ? 'bg-primary-orange text-white border-2 border-primary-border' :
                 pillar.variant === 'green' ? 'bg-secondary-green text-white border-2 border-secondary-green' :
                 'bg-white text-grey-1 border-2 border-grey-4'
@@ -277,7 +281,7 @@ export default function LandingPage() {
 
       {/* 5. UNLOCK THE POWER DARK FEATURE SECTION */}
       <section className="px-4 lg:px-[60px] py-10 lg:pb-[80px]">
-        <div className="relative w-full h-[765px] rounded-[32px] overflow-hidden bg-black">
+        <div className="relative w-full h-[765px] rounded-[12px] lg:rounded-[32px] overflow-hidden bg-black">
           <Image 
             src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=2000&auto=format&fit=crop" 
             alt="Happy African professional woman talking with coworkers" 
@@ -328,16 +332,16 @@ export default function LandingPage() {
 
       {/* 6. GO WELLSTAQ FEATURE TABS SECTION - STICKY SCROLL REVEAL */}
       <section id="solutions" className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-primary-light scroll-mt-20">
-        <div className="text-center mb-[60px]">
+        <div className="text-left lg:text-center mb-[60px]">
           <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">Enjoy solution that drives real results. Go Wellstaq.</h3>
-          <p className="text-grey-2 max-w-[702px] mx-auto text-sm lg:text-lg">
+          <p className="text-grey-2 max-w-[702px] lg:mx-auto text-sm lg:text-lg">
             Wellstaq empowers teams to thrive by blending lifestyle, productivity, and compliance into one cohesive system. Dashboards for HR to habit-forming tools for employees, we create measurable impact without compromising trust.
           </p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-10 items-start relative">
           {/* Left Side: Scrollable Content */}
-          <div className="flex-1 space-y-[100px] lg:space-y-[300px] py-[100px]">
+          <div className="flex-1 space-y-[100px] lg:space-y-[300px] py-0 lg:py-[100px]">
             {featureTabs.map((tab, idx) => (
               <motion.div 
                 key={idx}
@@ -347,7 +351,7 @@ export default function LandingPage() {
                 onViewportEnter={() => setActiveTab(idx)}
                 className="flex flex-col lg:flex-row gap-4"
               >
-                <div className="lg:hidden w-full h-[250px] relative rounded-[20px] overflow-hidden mb-6">
+                <div className="lg:hidden w-full h-[250px] relative rounded-[12px] lg:rounded-[20px] overflow-hidden mb-6">
                   <Image 
                     src={tab.image} 
                     alt={tab.title} 
@@ -358,7 +362,7 @@ export default function LandingPage() {
                 <div className="flex gap-4">
                   <div className={`w-1 h-full min-h-[100px] rounded-full transition-colors duration-500 ${activeTab === idx ? 'bg-primary-orange' : 'bg-grey-4'}`} />
                   <div>
-                    <h3 className="text-grey-1 mb-4 text-[20px] lg:text-3xl font-bold">{tab.title}</h3>
+                    <h3 className="text-grey-1 mb-4 text-[20px] leading-[28px] lg:leading-normal lg:text-3xl font-bold">{tab.title}</h3>
                     <p className="text-sm lg:text-lg text-grey-2 max-w-[400px]">{tab.subtitle}</p>
                   </div>
                 </div>
@@ -367,7 +371,7 @@ export default function LandingPage() {
           </div>
 
           {/* Right Side: Sticky Image */}
-          <div className="hidden lg:block sticky top-[150px] w-[656px] h-[550px] rounded-[20px] overflow-hidden">
+          <div className="hidden lg:block sticky top-[150px] w-[656px] h-[550px] rounded-[12px] lg:rounded-[20px] overflow-hidden">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -407,17 +411,17 @@ export default function LandingPage() {
       </section>
 
       {/* 7. HABIT FORMATION SECTION */}
-      <section className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-white">
-        <div className="text-center mb-[60px]">
-          <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">Built on the science of habit formation</h3>
-          <p className="text-grey-2 max-w-[655px] mx-auto text-sm lg:text-lg">
+      <section className="pt-10 pb-0 lg:py-[80px] px-4 lg:px-[60px] bg-white">
+        <div className="text-left lg:text-center mb-[60px]">
+          <h3 className="text-grey-1 text-2xl leading-[30px] lg:leading-normal lg:text-4xl mb-4">Built on the science of habit formation</h3>
+          <p className="text-grey-2 max-w-[655px] lg:mx-auto text-sm lg:text-lg">
             Wellstaq is transforming wellbeing into a sustainable practice for everyone. By using a simple behavioral loop, it helps people incorporate healthy habits into their daily routines, making the path to wellness both achievable and enjoyable.
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-5 h-auto lg:h-[520px]">
+        <div className="flex flex-col lg:flex-row gap-5 h-0 w-[324.4px] lg:h-[520px] lg:w-auto overflow-hidden lg:overflow-visible">
           {/* Left Card */}
-          <div className="w-full lg:w-[607px] relative rounded-[20px] overflow-hidden bg-grey-1">
+          <div className="w-full lg:w-[607px] relative rounded-[12px] lg:rounded-[20px] overflow-hidden bg-grey-1">
             <Image 
               src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1775377095/1_y5hopw.png" 
               alt="Gym space" 
@@ -425,7 +429,7 @@ export default function LandingPage() {
               className="object-cover opacity-50 blur-[2px]"
             />
             <div className="absolute inset-0 flex items-center justify-center p-6">
-              <div className="bg-white/80 backdrop-blur-md border border-grey-4 rounded-[41px] w-full max-w-[550px] h-full max-h-[413px] p-8 flex flex-col">
+              <div className="bg-white/80 backdrop-blur-md border border-grey-4 rounded-[12px] lg:rounded-[41px] w-full max-w-[550px] h-full max-h-[413px] p-8 flex flex-col">
                 <div className="flex items-center gap-3 mb-8">
                   <Clock className="text-primary-orange" />
                   <h5 className="font-semibold text-grey-1">Upcoming Schedule</h5>
@@ -459,7 +463,7 @@ export default function LandingPage() {
           </div>
 
           {/* Right Card */}
-          <div className="flex-1 relative rounded-[20px] overflow-hidden bg-grey-5">
+          <div className="flex-1 relative rounded-[12px] lg:rounded-[20px] overflow-hidden bg-grey-5">
             <Image 
               src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1775377105/2_xghqdi.png" 
               alt="Joyful woman" 
@@ -490,21 +494,21 @@ export default function LandingPage() {
 
       {/* 8. FAQ SECTION */}
       <section id="faq" className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-white scroll-mt-20">
-        <div className="text-center mb-[60px]">
+        <div className="text-left lg:text-center mb-[60px]">
           <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">Commonly Asked Questions</h3>
-          <p className="text-grey-2 max-w-[686px] mx-auto text-sm lg:text-lg">
+          <p className="text-grey-2 max-w-[686px] lg:mx-auto text-sm lg:text-lg">
             Let's delve deeper into the intriguing aspects of this topic and uncover all the fascinating insights and benefits that they provide! There's so much to explore and understand, and I'm excited to share everything with you!
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {faqs.map((faq, idx) => (
-            <div key={idx} className="p-3 lg:p-8 border-2 border-grey-4 rounded-[24px] bg-white hover:border-primary-border transition-all group">
+            <div key={idx} className="p-3 lg:p-8 border-2 border-grey-4 rounded-[12px] lg:rounded-[24px] bg-white hover:border-primary-border transition-all group">
               <div className="flex items-center gap-5 mb-4">
-                <div className="w-[52px] h-[52px] bg-primary-mid rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="w-8 h-8 lg:w-[52px] lg:h-[52px] bg-primary-mid rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                   {faq.icon}
                 </div>
-                <h5 className="text-grey-1 font-medium">{faq.question}</h5>
+                <h5 className="text-grey-1 text-base leading-[24px] font-bold lg:font-medium lg:text-lg lg:leading-normal">{faq.question}</h5>
               </div>
               <p className="text-grey-3 text-sm leading-relaxed pl-0 lg:pl-[72px]">
                 {faq.answer}
@@ -516,7 +520,7 @@ export default function LandingPage() {
 
       {/* 9. CTA BANNER */}
       <section className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-grey-5">
-        <div className="relative w-full h-[551px] rounded-[20px] overflow-hidden flex flex-col items-center justify-center text-center px-6">
+        <div className="relative w-full h-[551px] rounded-[12px] lg:rounded-[20px] overflow-hidden flex flex-col items-center justify-center text-center px-6">
           <Image 
             src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1775377098/Banner_Image_wxrsdz.png"
             alt="Banner background"
@@ -525,12 +529,12 @@ export default function LandingPage() {
           />
           <div className="absolute inset-0 bg-black/40" />
           
-          <div className="relative z-10 flex flex-col items-center">
+          <div className="relative z-10 flex flex-col items-start text-left lg:items-center lg:text-center">
             <div className="mb-8 rotate-12">
-              <Leaf size={84} className="text-white fill-current" />
+              <Leaf className="text-white fill-current w-[60px] h-[60px] lg:w-[84px] lg:h-[84px]" />
             </div>
-            <h2 className="text-white text-2xl lg:text-5xl mb-6">Start building a healthier work culture.</h2>
-            <p className="text-white/90 max-w-[568px] mb-10 text-sm lg:text-lg">
+            <h2 className="text-white text-2xl leading-[32px] lg:leading-normal lg:text-5xl mb-6 text-left lg:text-center">Start building a healthier work culture.</h2>
+            <p className="text-white/90 max-w-[568px] mb-10 text-sm lg:text-lg text-left lg:text-center">
               Empower your team with tools that balance productivity, wellbeing, and community, all in one platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-5 w-full max-w-[642px]">
