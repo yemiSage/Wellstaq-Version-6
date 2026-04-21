@@ -403,7 +403,7 @@ export default function SpacePage() {
   const renderLeftColumn = () => {
     if (!isLeftColumnOpen) return null;
     return (
-      <div className="w-[320px] border-r border-grey-4 bg-white flex flex-col h-full shrink-0">
+      <div className="w-full border-r border-grey-4 bg-white flex flex-col h-full shrink-0">
       <div className="pt-4 px-4 pb-0 border-b border-grey-4">
         <div className="flex items-center gap-2 mb-6">
           <div className="relative flex-1">
@@ -775,7 +775,7 @@ export default function SpacePage() {
       
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative">
         {/* Sticky Club Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-grey-4 pb-[12px] pt-[20px] px-[20px]">
+        <div className="sticky top-[61px] z-10 bg-white border-b border-grey-4 pb-[12px] pt-[20px] px-[20px]">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-[20px] font-medium text-grey-1 leading-[30px]">Yogo Club</h1>
             <div className="flex items-center gap-1 text-xs text-grey-3">
@@ -964,7 +964,7 @@ export default function SpacePage() {
   );
 
   const renderRightColumn = () => (
-    <div className="w-[320px] border-l border-grey-4 bg-[#ffffff] p-6 overflow-y-auto no-scrollbar h-full">
+    <div className="w-full border-l border-grey-4 bg-[#ffffff] p-6 overflow-y-auto no-scrollbar h-full">
       {/* Activity Card */}
       <div className="bg-gradient-to-br from-[#F27D26] to-[#FFB780] rounded-xl p-5 mb-6 text-white shadow-sm">
         <h3 className="text-[16px] font-bold mb-1">Your Activity This Week</h3>
@@ -1045,7 +1045,7 @@ export default function SpacePage() {
         </div>
 
         {/* Columns */}
-        <div className={`w-full md:w-[280px] shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "explore" ? "block" : "hidden md:block"}`}>
+        <div className={`w-full md:w-[320px] shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "clubs" ? "block" : "hidden md:block"}`}>
           {renderLeftColumn()}
         </div>
         
@@ -1053,7 +1053,7 @@ export default function SpacePage() {
           {selectedClub ? renderClubView() : renderFeed()}
         </div>
         
-        <div className={`w-full md:w-[320px] shrink-0 border-l border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "clubs" ? "block" : "hidden md:block"}`}>
+        <div className={`w-full md:w-[320px] shrink-0 border-l border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "explore" ? "block" : "hidden md:block"}`}>
           {renderRightColumn()}
         </div>
       </div>
