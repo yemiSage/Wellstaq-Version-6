@@ -35,12 +35,17 @@ import {
   Instagram,
   Twitter,
   Layout,
-  Menu
+  Menu,
+  X,
+  Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+  const [demoForm, setDemoForm] = useState({ name: '', email: '', reason: '' });
 
   // Marquee items for Logo Strip
   const brands = ["Tricycle", "Inventory", "Neoniq", "Vertex", "Quonar", "Fission"];
@@ -237,25 +242,160 @@ export default function LandingPage() {
         </div>
         
         <div className="flex items-center gap-8">
-          <div className="hidden lg:flex items-center gap-8">
+          <div className="flex items-center gap-8 text-white">
             <Link href="#solutions" className={`font-medium transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>
               Solutions
             </Link>
             <Link href="#why-wellstaq" className={`font-medium transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>Why Wellstaq</Link>
             <Link href="#faq" className={`font-medium transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>FAQ</Link>
             <Link href="#" className={`font-medium transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>Pricing</Link>
-            <Link href="#" className={`font-semibold transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>Contact Us</Link>
+            <Link href="/" className={`font-medium transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>Contact Us</Link>
           </div>
-          <div className="lg:hidden">
+          <div className="lg:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             <Menu className={`w-8 h-8 transition-colors ${scrolled ? 'text-grey-1' : 'text-white'}`} />
           </div>
-          <Link href="/onboarding" className="hidden lg:block">
-            <button className={`px-6 py-3 border rounded-[12px] font-semibold transition-all ${scrolled ? 'border-primary-orange bg-primary-light text-primary-orange hover:bg-primary-mid' : 'border-white bg-white/10 backdrop-blur-md text-white hover:bg-white/20'}`}>
+          <div className="hidden lg:block">
+            <button 
+              onClick={() => setIsDemoModalOpen(true)}
+              className={`px-6 py-3 border rounded-[12px] font-medium transition-all ${scrolled ? 'border-primary-orange bg-primary-light text-primary-orange hover:bg-primary-mid' : 'border-white bg-white/10 backdrop-blur-md text-white hover:bg-white/20'}`}
+            >
               Request a Demo
             </button>
-          </Link>
+          </div>
         </div>
       </nav>
+
+      {/* MOBILE MENU OVERLAY */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[100] bg-white flex flex-col p-6 overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-12">
+              <Image
+                src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1772170704/wellstaq_logo_raxmmg.png"
+                alt="Wellstaq Logo"
+                width={120}
+                height={30}
+                className="object-contain"
+              />
+              <button onClick={() => setIsMenuOpen(false)} className="p-2">
+                <X size={32} className="text-grey-1" />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-8">
+              {[
+                { name: 'Solutions', href: '#solutions' },
+                { name: 'Why Wellstaq', href: '#why-wellstaq' },
+                { name: 'FAQ', href: '#faq' },
+                { name: 'Pricing', href: '#' },
+                { name: 'Contact Us', href: '/' }
+              ].map((link) => (
+                <Link 
+                  key={link.name} 
+                  href={link.href} 
+                  onClick={() => setIsMenuOpen(false)}
+                  className="text-2xl font-medium text-grey-1 hover:text-primary-orange"
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-auto pt-10">
+              <Link href="/onboarding" onClick={() => setIsMenuOpen(false)}>
+                <button className="w-full py-4 bg-primary-orange text-white rounded-[12px] font-medium text-xl mb-4">
+                  Get Started
+                </button>
+              </Link>
+              <button 
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsDemoModalOpen(true);
+                }}
+                className="w-full py-4 border border-grey-4 text-grey-1 rounded-[12px] font-medium text-xl"
+              >
+                Request a Demo
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* DEMO REQUEST MODAL (DRAWER/BOTTOM SHEET) */}
+      <AnimatePresence>
+        {isDemoModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-end lg:items-stretch lg:justify-end">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDemoModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm shadow-none"
+            />
+            <motion.div
+              initial={{ y: '100%', x: 0 }}
+              animate={{ y: 0, x: 0 }}
+              exit={{ y: '100%' }}
+              className="relative w-full lg:w-[500px] h-fit lg:h-full bg-white rounded-t-[24px] lg:rounded-t-none p-6 lg:p-10 flex flex-col shadow-2xl z-10 overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-2xl font-bold text-grey-1">Book a Demo</h3>
+                <button onClick={() => setIsDemoModalOpen(false)} className="p-2 hover:bg-grey-5 rounded-full transition-colors">
+                  <X size={24} className="text-grey-2" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-grey-2 mb-2">Full Name</label>
+                  <input 
+                    type="text" 
+                    value={demoForm.name}
+                    onChange={(e) => setDemoForm({...demoForm, name: e.target.value})}
+                    placeholder="Enter your name"
+                    className="w-full px-4 py-3 rounded-[12px] border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-orange/20 focus:border-primary-orange transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-grey-2 mb-2">Work Email</label>
+                  <input 
+                    type="email" 
+                    value={demoForm.email}
+                    onChange={(e) => setDemoForm({...demoForm, email: e.target.value})}
+                    placeholder="name@company.com"
+                    className="w-full px-4 py-3 rounded-[12px] border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-orange/20 focus:border-primary-orange transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-grey-2 mb-2">Reason for Contact</label>
+                  <textarea 
+                    value={demoForm.reason}
+                    onChange={(e) => setDemoForm({...demoForm, reason: e.target.value})}
+                    placeholder="How can we help your team?"
+                    rows={4}
+                    className="w-full px-4 py-3 rounded-[12px] border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-orange/20 focus:border-primary-orange transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-10 mb-6 lg:mb-0">
+                <button 
+                  onClick={() => setIsDemoModalOpen(false)}
+                  className="w-full py-4 bg-primary-orange text-white rounded-[12px] font-medium text-lg hover:bg-[#D45F04] transition-all shadow-lg shadow-primary-orange/20"
+                >
+                  Send Request
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* 2. HERO SECTION */}
       <section className="relative w-full h-screen lg:h-[842px] flex items-center justify-center overflow-hidden">
@@ -277,13 +417,16 @@ export default function LandingPage() {
           <p className="text-white text-sm lg:text-lg max-w-[556px] mb-10 opacity-90 text-left lg:text-center">
             Improve team wellness, discover inspiring spaces, and make informed HR decisions with privacy-focused insights.
           </p>
-          <div className="flex flex-col sm:flex-row gap-5 w-full max-w-[551px]">
+            <div className="flex flex-col sm:flex-row gap-5 w-full max-w-[551px]">
             <Link href="/onboarding" className="flex-1">
-              <button className="w-full py-4 bg-primary-orange text-white rounded-[12px] font-bold text-lg hover:bg-[#D45F04] transition-all shadow-lg shadow-primary-orange/20">
+              <button className="w-full py-4 bg-primary-orange text-white rounded-[12px] font-medium text-lg hover:bg-[#D45F04] transition-all shadow-lg shadow-primary-orange/20">
                 Get Started
               </button>
             </Link>
-            <button className="flex-1 py-4 border border-white bg-white/10 backdrop-blur-md text-white rounded-[12px] font-bold text-lg hover:bg-white/20 transition-all">
+            <button 
+              onClick={() => setIsDemoModalOpen(true)}
+              className="flex-1 py-4 border border-white bg-white/10 backdrop-blur-md text-white rounded-[12px] font-medium text-lg hover:bg-white/20 transition-all"
+            >
               Request a Demo
             </button>
           </div>
@@ -307,7 +450,7 @@ export default function LandingPage() {
       {/* 4. WELLBEING PILLARS SECTION */}
       <section id="why-wellstaq" className="py-10 lg:py-[120px] px-4 lg:px-[60px] bg-white w-full scroll-mt-20">
         <div className="text-left lg:text-center mb-[60px]">
-          <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">We handle the complexity. Your team sees clarity.</h3>
+          <h3 className="text-grey-1 text-2xl leading-[32px] lg:leading-normal lg:text-4xl mb-4">We handle the complexity. Your team sees clarity.</h3>
           <p className="text-grey-2 max-w-[655px] lg:mx-auto text-sm lg:text-lg">
             Wellbeing isn't just mental or physical. It's everything. Wellstaq helps individuals and organizations track and improve all dimensions in one unified system.
           </p>
@@ -339,24 +482,54 @@ export default function LandingPage() {
 
       {/* 5. UNLOCK THE POWER DARK FEATURE SECTION */}
       <section className="px-4 lg:px-[60px] py-10 lg:py-[120px]">
-        <div className="relative w-full h-[765px] rounded-[12px] lg:rounded-[32px] overflow-hidden bg-black">
+        <div className="relative w-full h-[610px] lg:h-[765px] rounded-[12px] lg:rounded-[32px] overflow-hidden bg-black">
           <Image 
             src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1776764993/Frame_26_n6laxa.png" 
             alt="Unlock the power of a healthier workforce" 
             fill 
-            className="object-cover opacity-60"
+            className="object-cover opacity-80"
           />
           <div className="absolute inset-0 bg-black/20" />
           
           {/* Content */}
-          <div className="absolute left-4 lg:left-[59px] top-[197px] w-[321px] z-10">
-            <div className="w-[50px] h-[50px] border-2 border-white rounded-lg flex items-center justify-center mb-6">
-              <Trophy className="text-white w-6 h-6" />
+          <div className="absolute inset-x-0 bottom-10 lg:bottom-auto lg:left-[59px] lg:top-[197px] flex flex-col items-center lg:items-start text-center lg:text-left px-4 lg:px-0 z-20">
+            <div className="w-[50px] h-[40px] lg:w-[50px] lg:h-[50px] border-2 border-white rounded-lg flex items-center justify-center mb-6">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
+                <path d="M5 15L3 6L9 9L12 3L15 9L21 6L19 15H5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M5 18H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
-            <h3 className="text-white text-2xl lg:text-4xl mb-4">Unlock the power of a healthier workforce</h3>
-            <p className="text-grey-4 text-sm lg:text-lg">
+            <h3 className="text-white text-[28px] lg:text-4xl leading-tight mb-4 font-bold max-w-[321px]">Unlock the power of a healthier workforce</h3>
+            <p className="text-grey-4 text-sm lg:text-lg max-w-[321px]">
               Bring together productivity, community, and compliance in one unified wellbeing platform.
             </p>
+          </div>
+
+          {/* Mobile Icon Arc Overlay */}
+          <div className="absolute inset-0 z-10 lg:hidden pointer-events-none">
+            <div className="relative w-full h-full">
+              {/* Arc Path (Visual Only) */}
+              <svg className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[80%] h-[40%] opacity-20" viewBox="0 0 100 50">
+                <path d="M0 50C0 22.3858 22.3858 0 50 0C77.6142 0 100 22.3858 100 50" stroke="white" strokeWidth="2" strokeDasharray="4 4" fill="none"/>
+              </svg>
+
+              {/* Icons along arc */}
+              <div className="absolute left-[8%] top-[35%] w-10 h-10 rounded-full bg-[#DE9300] flex items-center justify-center border-2 border-white/20 shadow-lg">
+                <Activity size={20} className="text-white" />
+              </div>
+              <div className="absolute left-[18%] top-[22%] w-10 h-10 rounded-full bg-[#318AFF] flex items-center justify-center border-2 border-white/20 shadow-lg">
+                <Heart size={20} className="text-white" />
+              </div>
+              <div className="absolute left-[50%] top-[14%] -translate-x-1/2 w-10 h-10 rounded-full bg-[#AE22FF] flex items-center justify-center border-2 border-white/20 shadow-lg">
+                <Leaf size={20} className="text-white" />
+              </div>
+              <div className="absolute right-[18%] top-[22%] w-10 h-10 rounded-full bg-[#00CEFD] flex items-center justify-center border-2 border-white/20 shadow-lg">
+                <ShieldCheck size={20} className="text-white" />
+              </div>
+              <div className="absolute right-[8%] top-[35%] w-10 h-10 rounded-full bg-[#86A400] flex items-center justify-center border-2 border-white/20 shadow-lg">
+                <BookOpen size={20} className="text-white" />
+              </div>
+            </div>
           </div>
 
           <div className="absolute inset-0 pointer-events-none">
@@ -369,7 +542,7 @@ export default function LandingPage() {
       {/* 6. GO WELLSTAQ FEATURE TABS SECTION - STICKY SCROLL REVEAL */}
       <section id="solutions" className="py-10 lg:py-[120px] px-4 lg:px-[60px] bg-primary-light scroll-mt-20">
         <div className="text-left lg:text-center mb-[60px]">
-          <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">Enjoy solution that drives real results. Go Wellstaq.</h3>
+          <h3 className="text-grey-1 text-2xl leading-[32px] lg:leading-normal lg:text-4xl mb-4">Enjoy solution that drives real results. Go Wellstaq.</h3>
           <p className="text-grey-2 max-w-[702px] lg:mx-auto text-sm lg:text-lg">
             Wellstaq empowers teams to thrive by blending lifestyle, productivity, and compliance into one cohesive system. Dashboards for HR to habit-forming tools for employees, we create measurable impact without compromising trust.
           </p>
@@ -447,7 +620,7 @@ export default function LandingPage() {
       </section>
 
       {/* 7. HABIT FORMATION SECTION */}
-      <section className="py-10 lg:py-[120px] px-4 lg:px-[60px] bg-white">
+      <section className="pt-10 pb-0 lg:py-[120px] px-4 lg:px-[60px] bg-white">
         <div className="text-left lg:text-center mb-[60px]">
           <h3 className="text-grey-1 text-2xl leading-[30px] lg:leading-normal lg:text-4xl mb-4">Built on the science of habit formation</h3>
           <p className="text-grey-2 max-w-[655px] lg:mx-auto text-sm lg:text-lg">
@@ -455,9 +628,9 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-5 h-0 w-[324.4px] lg:h-[520px] lg:w-auto overflow-hidden lg:overflow-visible">
+        <div className="flex flex-col lg:flex-row gap-5 lg:h-[520px] lg:w-auto">
           {/* Left Card */}
-          <div className="w-full lg:w-[607px] relative rounded-[12px] lg:rounded-[20px] overflow-hidden bg-grey-1">
+          <div className="w-full lg:w-[607px] min-h-[300px] lg:min-h-0 relative rounded-[12px] lg:rounded-[20px] overflow-hidden bg-grey-1">
             <Image 
               src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1775377095/1_y5hopw.png" 
               alt="Gym space" 
@@ -467,7 +640,7 @@ export default function LandingPage() {
           </div>
 
           {/* Right Card */}
-          <div className="flex-1 relative rounded-[12px] lg:rounded-[20px] overflow-hidden bg-grey-5">
+          <div className="flex-1 min-h-[300px] lg:min-h-0 relative rounded-[12px] lg:rounded-[20px] overflow-hidden bg-grey-5">
             <Image 
               src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1775377105/2_xghqdi.png" 
               alt="Joyful woman" 
@@ -524,11 +697,14 @@ export default function LandingPage() {
               Empower your team with tools that balance productivity, wellbeing, and community, all in one platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-5 w-full max-w-[642px]">
-              <button className="flex-1 py-4 border-[3px] border-white text-white rounded-[12px] font-bold text-lg hover:bg-white/10 transition-all">
+              <button 
+                onClick={() => setIsDemoModalOpen(true)}
+                className="flex-1 py-4 border lg:border-[3px] border-white text-white rounded-[12px] font-medium text-lg hover:bg-white/10 transition-all"
+              >
                 Book a demo
               </button>
               <Link href="/onboarding" className="flex-1">
-                <button className="w-full py-4 bg-primary-orange text-white rounded-[12px] font-bold text-lg hover:bg-[#D45F04] transition-all">
+                <button className="w-full py-4 bg-primary-orange text-white rounded-[12px] font-medium text-lg hover:bg-[#D45F04] transition-all">
                   Get Started
                 </button>
               </Link>
@@ -538,7 +714,7 @@ export default function LandingPage() {
       </section>
 
       {/* 10. FOOTER */}
-      <footer className="bg-grey-5 pt-10 pb-20 px-10 border-t border-grey-4">
+      <footer className="bg-grey-5 pt-10 pb-20 px-[12px] lg:px-10 border-t border-grey-4">
         <div className="max-w-[1320px] mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
             {/* Column 1 */}
