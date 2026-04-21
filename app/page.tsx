@@ -49,49 +49,107 @@ export default function LandingPage() {
     {
       title: "Mental Wellbeing",
       description: "Build clarity, resilience, and emotional awareness with guided check-ins and AI nudges.",
-      icon: <Target className="w-8 h-8" />,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0 0L16 16H0V0Z" fill="currentColor"/>
+          <path d="M16 0L32 16H16V0Z" fill="currentColor"/>
+          <path d="M0 16L16 32H0V16Z" fill="currentColor"/>
+          <path d="M16 16L32 32H16V16Z" fill="currentColor"/>
+        </svg>
+      ),
       variant: "white"
     },
     {
       title: "Physical Wellbeing",
       description: "Track movements, energies, sleep, and every habits that support long-term health of your staff or employee.",
-      icon: <Moon className="w-8 h-8" />,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 0V32C1.79086 32 0 30.2091 0 28V4C0 1.79086 1.79086 0 4 0Z" fill="currentColor"/>
+          <path opacity="0.3" d="M16 32C24.8366 32 32 24.8366 32 16C32 7.16344 24.8366 0 16 0V32Z" fill="currentColor"/>
+          <path opacity="0.5" d="M8 32C16.8366 32 24 24.8366 24 16C24 7.16344 16.8366 0 8 0V32Z" fill="currentColor"/>
+        </svg>
+      ),
       variant: "orange"
     },
     {
       title: "Financial Wellbeing",
       description: "Encourage smarter financial habits with literacy programs and consistent progress tracking.",
-      icon: <Circle className="w-8 h-8" />,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 32C24.8366 32 32 24.8366 32 16C32 7.16344 24.8366 0 16 0C7.16344 0 0 7.16344 0 16C0 24.8366 7.16344 32 16 32Z" fill="currentColor" opacity="0.2"/>
+          <path d="M16 16L32 16C32 24.8366 24.8366 32 16 32V16Z" fill="currentColor"/>
+          <path d="M16 16L16 0C7.16344 0 0 7.16344 0 16H16V16Z" fill="currentColor"/>
+          <path d="M16 16V32C7.16344 32 0 24.8366 0 16H16V32Z" fill="currentColor" opacity="0.5"/>
+        </svg>
+      ),
       variant: "white"
     },
     {
       title: "Occupation Wellbeing",
       description: "Align productivity with purpose through focus modes and performance balance tools.",
-      icon: <Circle className="w-8 h-8 fill-current" />,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="16" fill="currentColor" opacity="0.1"/>
+          <circle cx="16" cy="16" r="12" fill="currentColor" opacity="0.3"/>
+          <circle cx="16" cy="16" r="8" fill="currentColor"/>
+          <circle cx="16" cy="16" r="4" fill="white"/>
+        </svg>
+      ),
       variant: "white"
     },
     {
       title: "Social Wellbeing",
       description: "Strengthen relationships through clubs, events, communities and shared experiences.",
-      icon: <Users className="w-8 h-8" />,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="4" cy="4" r="4" fill="currentColor"/>
+          <circle cx="16" cy="4" r="4" fill="currentColor"/>
+          <circle cx="28" cy="4" r="4" fill="currentColor"/>
+          <circle cx="4" cy="16" r="4" fill="currentColor"/>
+          <circle cx="16" cy="16" r="4" fill="currentColor"/>
+          <circle cx="28" cy="16" r="4" fill="currentColor"/>
+          <circle cx="4" cy="28" r="4" fill="currentColor"/>
+          <circle cx="16" cy="28" r="4" fill="currentColor"/>
+          <circle cx="28" cy="28" r="4" fill="currentColor"/>
+        </svg>
+      ),
       variant: "white"
     },
     {
       title: "Intellectual Wellbeing",
       description: "Stimulate growth with curated content, learning challenges, and skill-building prompts.",
-      icon: <BookOpen className="w-8 h-8" />,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="6" fill="currentColor"/>
+          <circle cx="4" cy="4" r="4" fill="currentColor"/>
+          <circle cx="28" cy="4" r="4" fill="currentColor"/>
+          <circle cx="4" cy="28" r="4" fill="currentColor"/>
+          <circle cx="28" cy="28" r="4" fill="currentColor"/>
+        </svg>
+      ),
       variant: "white"
     },
     {
       title: "Environment Wellbeing",
       description: "Encourage healthier surroundings and sustainable choices at work and also beyond work.",
-      icon: <Leaf className="w-8 h-8" />,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 2L24 16L16 30L8 16L16 2Z" fill="currentColor"/>
+          <path d="M4 8L8 16L4 24L0 16L4 8Z" fill="currentColor" opacity="0.5"/>
+          <path d="M28 8L32 16L28 24L24 16L28 8Z" fill="currentColor" opacity="0.5"/>
+        </svg>
+      ),
       variant: "white"
     },
     {
       title: "Spiritual Wellbeing",
       description: "Create a safe space for personal reflection, mindfulness, and also personal meaning.",
-      icon: <Moon className="w-8 h-8" />,
+      icon: (
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 0C16 8.83656 8.83656 16 0 16C8.83656 16 16 23.1634 16 32C16 23.1634 23.1634 16 32 16C23.1634 16 16 8.83656 16 0Z" fill="currentColor"/>
+          <path opacity="0.5" d="M16 4C16 10.6274 10.6274 16 4 16C10.6274 16 16 21.3726 16 28C16 21.3726 21.3726 16 28 16C21.3726 16 16 10.6274 16 4Z" fill="currentColor"/>
+        </svg>
+      ),
       variant: "green"
     }
   ];
@@ -186,7 +244,7 @@ export default function LandingPage() {
             <Link href="#why-wellstaq" className={`font-medium transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>Why Wellstaq</Link>
             <Link href="#faq" className={`font-medium transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>FAQ</Link>
             <Link href="#" className={`font-medium transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>Pricing</Link>
-            <Link href="#" className="text-primary-orange font-semibold">Contact Us</Link>
+            <Link href="#" className={`font-semibold transition-colors ${scrolled ? 'text-grey-1 hover:text-primary-orange' : 'text-white hover:text-primary-orange'}`}>Contact Us</Link>
           </div>
           <div className="lg:hidden">
             <Menu className={`w-8 h-8 transition-colors ${scrolled ? 'text-grey-1' : 'text-white'}`} />
@@ -247,7 +305,7 @@ export default function LandingPage() {
       </section>
 
       {/* 4. WELLBEING PILLARS SECTION */}
-      <section id="why-wellstaq" className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-white max-w-[1440px] mx-auto scroll-mt-20">
+      <section id="why-wellstaq" className="py-10 lg:py-[120px] px-4 lg:px-[60px] bg-white w-full scroll-mt-20">
         <div className="text-left lg:text-center mb-[60px]">
           <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">We handle the complexity. Your team sees clarity.</h3>
           <p className="text-grey-2 max-w-[655px] lg:mx-auto text-sm lg:text-lg">
@@ -255,22 +313,22 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {wellbeingPillars.map((pillar, idx) => (
             <div 
               key={idx} 
-              className={`h-[307px] p-5 rounded-[12px] lg:rounded-[20px] flex flex-col justify-between transition-all hover:scale-[1.02] ${
-                pillar.variant === 'orange' ? 'bg-primary-orange text-white border-2 border-primary-border' :
-                pillar.variant === 'green' ? 'bg-secondary-green text-white border-2 border-secondary-green' :
-                'bg-white text-grey-1 border-2 border-grey-4'
+              className={`min-h-[307px] w-full p-5 rounded-[12px] lg:rounded-[20px] flex flex-col justify-between transition-all hover:scale-[1.02] ${
+                pillar.variant === 'orange' ? 'bg-[#ffc193] text-[#373737] border-0' :
+                pillar.variant === 'green' ? 'bg-[#ccefd2] text-[#373737] border-0' :
+                'bg-white text-grey-1 border-2 border-[#f2f2f2]'
               }`}
             >
-              <div className={`${pillar.variant === 'white' ? 'text-primary-orange' : 'text-white'}`}>
+              <div className={`w-8 h-8 ${pillar.variant === 'white' ? 'text-primary-orange' : (pillar.variant === 'orange' || pillar.variant === 'green') ? 'text-[#373737]' : 'text-white'}`}>
                 {pillar.icon}
               </div>
               <div>
-                <h4 className="mb-3">{pillar.title}</h4>
-                <p className={`text-sm ${pillar.variant === 'white' ? 'text-grey-2' : 'text-white/90'}`}>
+                <h4 className="mb-3 font-bold text-lg">{pillar.title}</h4>
+                <p className={`text-sm leading-relaxed ${pillar.variant === 'white' ? 'text-grey-2' : (pillar.variant === 'orange' || pillar.variant === 'green') ? 'text-[#373737]' : 'text-white/90'}`}>
                   {pillar.description}
                 </p>
               </div>
@@ -280,11 +338,11 @@ export default function LandingPage() {
       </section>
 
       {/* 5. UNLOCK THE POWER DARK FEATURE SECTION */}
-      <section className="px-4 lg:px-[60px] py-10 lg:pb-[80px]">
+      <section className="px-4 lg:px-[60px] py-10 lg:py-[120px]">
         <div className="relative w-full h-[765px] rounded-[12px] lg:rounded-[32px] overflow-hidden bg-black">
           <Image 
-            src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=2000&auto=format&fit=crop" 
-            alt="Happy African professional woman talking with coworkers" 
+            src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1776764993/Frame_26_n6laxa.png" 
+            alt="Unlock the power of a healthier workforce" 
             fill 
             className="object-cover opacity-60"
           />
@@ -301,29 +359,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Floating Badges */}
           <div className="absolute inset-0 pointer-events-none">
-            {/* Gold Badge */}
-            <div className="absolute left-[45%] top-[60%] p-[25px] rounded-full bg-[#DE9300]/20 backdrop-blur-[6px] border border-white/20 animate-bounce-slow">
-              <Heart className="w-12 h-12 text-[#DE9300]" />
-            </div>
-            {/* Blue Badge */}
-            <div className="absolute left-[40%] top-[30%] p-[25px] rounded-full bg-[#318AFF]/20 backdrop-blur-[6px] border border-white/20 animate-pulse">
-              <Heart className="w-12 h-12 text-[#318AFF]" />
-            </div>
-            {/* Purple Badge */}
-            <div className="absolute left-[60%] top-[20%] p-[25px] rounded-full bg-[#AE22FF]/20 backdrop-blur-[6px] border border-white/20 animate-bounce-slow">
-              <Sparkles className="w-12 h-12 text-[#AE22FF]" />
-            </div>
-            {/* Cyan Badge */}
-            <div className="absolute left-[80%] top-[35%] p-[25px] rounded-full bg-[#00CEFD]/20 backdrop-blur-[6px] border border-white/20 animate-pulse">
-              <Heart className="w-12 h-12 text-[#00CEFD]" />
-            </div>
-            {/* Olive Badge */}
-            <div className="absolute left-[85%] top-[65%] p-[25px] rounded-full bg-[#86A400]/20 backdrop-blur-[6px] border border-white/20 animate-bounce-slow">
-              <Palette className="w-12 h-12 text-[#86A400]" />
-            </div>
-            
             {/* Purple Glow */}
             <div className="absolute top-[10%] right-[10%] w-[400px] h-[300px] bg-purple-600/30 blur-[100px] rounded-full" />
           </div>
@@ -331,7 +367,7 @@ export default function LandingPage() {
       </section>
 
       {/* 6. GO WELLSTAQ FEATURE TABS SECTION - STICKY SCROLL REVEAL */}
-      <section id="solutions" className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-primary-light scroll-mt-20">
+      <section id="solutions" className="py-10 lg:py-[120px] px-4 lg:px-[60px] bg-primary-light scroll-mt-20">
         <div className="text-left lg:text-center mb-[60px]">
           <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">Enjoy solution that drives real results. Go Wellstaq.</h3>
           <p className="text-grey-2 max-w-[702px] lg:mx-auto text-sm lg:text-lg">
@@ -411,7 +447,7 @@ export default function LandingPage() {
       </section>
 
       {/* 7. HABIT FORMATION SECTION */}
-      <section className="pt-10 pb-0 lg:py-[80px] px-4 lg:px-[60px] bg-white">
+      <section className="py-10 lg:py-[120px] px-4 lg:px-[60px] bg-white">
         <div className="text-left lg:text-center mb-[60px]">
           <h3 className="text-grey-1 text-2xl leading-[30px] lg:leading-normal lg:text-4xl mb-4">Built on the science of habit formation</h3>
           <p className="text-grey-2 max-w-[655px] lg:mx-auto text-sm lg:text-lg">
@@ -426,40 +462,8 @@ export default function LandingPage() {
               src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1775377095/1_y5hopw.png" 
               alt="Gym space" 
               fill 
-              className="object-cover opacity-50 blur-[2px]"
+              className="object-cover"
             />
-            <div className="absolute inset-0 flex items-center justify-center p-6">
-              <div className="bg-white/80 backdrop-blur-md border border-grey-4 rounded-[12px] lg:rounded-[41px] w-full max-w-[550px] h-full max-h-[413px] p-8 flex flex-col">
-                <div className="flex items-center gap-3 mb-8">
-                  <Clock className="text-primary-orange" />
-                  <h5 className="font-semibold text-grey-1">Upcoming Schedule</h5>
-                </div>
-                
-                <div className="flex gap-3 mb-8">
-                  <div className="px-6 py-2 bg-primary-light border border-primary-orange text-primary-orange rounded-full text-sm font-medium">Now</div>
-                  <div className="px-6 py-2 bg-grey-5 border border-grey-4 text-grey-3 rounded-full text-sm font-medium">12:45am</div>
-                  <div className="px-6 py-2 bg-grey-5 border border-grey-4 text-grey-3 rounded-full text-sm font-medium">3:00pm</div>
-                </div>
-
-                <div className="space-y-6">
-                  {[
-                    { title: "Lunch Meditation 🧘", sub: "Mindfulness session with Dr. Aisha.", color: "bg-purple-500" },
-                    { title: "Hydration Challenge", sub: "Remember to drink water.", color: "bg-blue-500" },
-                    { title: "Stretching Break", sub: "Time for a quick stretch.", color: "bg-blue-400" }
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full ${item.color} flex items-center justify-center text-white`}>
-                        <Bell size={18} />
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-grey-1">{item.title}</div>
-                        <div className="text-xs text-grey-2">{item.sub}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Right Card */}
@@ -470,30 +474,12 @@ export default function LandingPage() {
               fill 
               className="object-cover opacity-80"
             />
-            <div className="absolute bottom-10 right-10 flex flex-col items-end gap-[-20px]">
-              {[1, 2, 3].map((i) => (
-                <div 
-                  key={i} 
-                  className={`bg-white border border-grey-4 rounded-2xl p-4 flex items-center gap-4 shadow-xl transition-all duration-500 hover:translate-y-[-10px] ${
-                    i === 1 ? 'w-[320px] z-30' : i === 2 ? 'w-[280px] z-20 opacity-80 translate-x-4 translate-y-4' : 'w-[240px] z-10 opacity-60 translate-x-8 translate-y-8'
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary-mid flex items-center justify-center text-primary-orange">
-                    <Trophy size={20} />
-                  </div>
-                  <div>
-                    <div className="text-sm font-bold text-grey-1">Congratulations 🥳</div>
-                    <div className="text-[10px] text-grey-3 leading-tight">You finished the noSoda challenge and came out as number 1 player 💯</div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
 
       {/* 8. FAQ SECTION */}
-      <section id="faq" className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-white scroll-mt-20">
+      <section id="faq" className="py-10 lg:py-[120px] px-4 lg:px-[60px] bg-white scroll-mt-20">
         <div className="text-left lg:text-center mb-[60px]">
           <h3 className="text-grey-1 text-2xl lg:text-4xl mb-4">Commonly Asked Questions</h3>
           <p className="text-grey-2 max-w-[686px] lg:mx-auto text-sm lg:text-lg">
@@ -519,7 +505,7 @@ export default function LandingPage() {
       </section>
 
       {/* 9. CTA BANNER */}
-      <section className="py-10 lg:py-[80px] px-4 lg:px-[60px] bg-grey-5">
+      <section className="py-10 lg:py-[120px] px-4 lg:px-[60px] bg-grey-5">
         <div className="relative w-full h-[551px] rounded-[12px] lg:rounded-[20px] overflow-hidden flex flex-col items-center justify-center text-center px-6">
           <Image 
             src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1775377098/Banner_Image_wxrsdz.png"
@@ -552,7 +538,7 @@ export default function LandingPage() {
       </section>
 
       {/* 10. FOOTER */}
-      <footer className="bg-grey-5 pt-10 pb-20 px-4 lg:px-[60px] border-t border-grey-4">
+      <footer className="bg-grey-5 pt-10 pb-20 px-10 border-t border-grey-4">
         <div className="max-w-[1320px] mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
             {/* Column 1 */}
