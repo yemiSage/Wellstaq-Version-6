@@ -571,7 +571,7 @@ export default function LandingPage() {
                 <div className="flex gap-4">
                   <div className={`w-1 h-full min-h-[100px] rounded-full transition-colors duration-500 ${activeTab === idx ? 'bg-primary-orange' : 'bg-grey-4'}`} />
                   <div>
-                    <h3 className="text-grey-1 mb-4 text-[20px] leading-[28px] lg:leading-[38px] lg:text-3xl font-bold">{tab.title}</h3>
+                    <h3 className="text-grey-1 mb-4 text-[24px] leading-[30px] lg:leading-[38px] lg:text-3xl font-bold">{tab.title}</h3>
                     <p className="text-sm lg:text-lg text-grey-2 max-w-[400px]">{tab.subtitle}</p>
                   </div>
                 </div>
