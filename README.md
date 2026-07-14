@@ -7,10 +7,12 @@ Wellstaq is a comprehensive employee wellbeing platform designed for remote and 
 This project is built using **Next.js 15+** with the **App Router**. It features a high-converting marketing landing page and a robust dashboard application for wellness tracking, community engagement, and HR insights.
 
 ### Architecture
-The project uses **Route Groups** to separate the marketing site from the application logic:
-- `(marketing)`: Located at the root `/`. This is the public-facing landing page.
-- `(app)`: Located at `/dashboard`. This contains the core application features.
-- `onboarding`: Located at `/onboarding`. This is the entry point for new users.
+The application uses three clear App Router surfaces:
+- `/`: Public marketing site.
+- `/onboarding`: OTP authentication and organization onboarding.
+- `/dashboard`: Authenticated organization workspace.
+
+Browser code uses the typed client in `services/api.ts`. In API mode, requests pass through the same-origin BFF at `app/api/backend/[...path]/route.ts`; backend URLs and session tokens are never exposed to client JavaScript.
 
 ## 🛠 Tech Stack
 
@@ -69,13 +71,13 @@ The application is built on the science of habit formation.
 - **Reward:** Recognition, leaderboard points, or partner perks.
 
 ### 3. Wellness Reports
-Aggregated, privacy-focused insights for HR. Individual data is never shared; only team-level trends are visible to management to ensure trust and compliance (NDPR).
+The product is designed for aggregated, privacy-focused HR insights. The production backend must enforce tenant authorization, aggregation thresholds, consent, retention, and applicable NDPR requirements before real employee wellness data is enabled.
 
-### 4. Route Groups `(groupname)`
-Folders wrapped in parentheses are Next.js Route Groups. They allow you to organize routes without affecting the URL path. This is used here to apply different layouts to the marketing site and the app.
+### 4. API and Preview Modes
+`NEXT_PUBLIC_DATA_SOURCE=mock` runs the existing interface against seeded preview data. `NEXT_PUBLIC_DATA_SOURCE=api` enables the production BFF, secure session cookies, route protection, and backend persistence.
 
-### 5. Synchronization via Storage Events
-Profile updates in the Settings page are synchronized with the Top Navigation bar using `localStorage` and a `storage` event listener. This ensures the UI stays consistent across different parts of the app without a complex global state manager.
+### 5. Shared Dashboard State
+Profile, branch, member, event, department, challenge, and leaderboard data are loaded through `DashboardDataProvider`. Screens do not persist organization or personal information in browser storage.
 
 ### 6. Responsive Patterns
 The application implements several industrial-standard responsive patterns:
@@ -86,13 +88,17 @@ The application implements several industrial-standard responsive patterns:
 ## 🔧 Development
 
 ### Getting Started
-1. Install dependencies: `npm install`
-2. Run the dev server: `npm run dev`
-3. Open [http://localhost:3000](http://localhost:3000)
+1. Install dependencies: `npm ci`
+2. Copy `.env.example` to `.env.local` and keep `NEXT_PUBLIC_DATA_SOURCE=mock` for preview.
+3. Run the quality gate: `npm run check`
+4. Run the dev server: `npm run dev`
+5. Open [http://localhost:3000](http://localhost:3000)
+
+The backend contract and production switch-over checklist are documented in `docs/API_INTEGRATION.md`.
 
 ### Adding New Features
 - **UI Components:** Place reusable components in `components/ui/`.
-- **New Pages:** Add them to the appropriate route group in the `app/` directory.
+- **New Pages:** Add them to the appropriate route in the `app/` directory.
 - **Icons:** Always use `lucide-react`.
 
 ---

@@ -9,7 +9,6 @@ import {
   Trash2, 
   Users, 
   Calendar, 
-  Clock, 
   Send,
   Plus,
   X,
@@ -17,11 +16,11 @@ import {
   Search,
   Trophy,
   Target,
-  CheckCircle2
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { INITIAL_MEMBERS } from "@/lib/mock-data";
+import { api } from "@/services/api";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 
 const MOCK_PARTICIPANTS = [
   { id: 1, name: "Brian Kim", role: "Designer", department: "Engineering", avatar: "https://picsum.photos/seed/brian/100/100" },
@@ -51,20 +50,33 @@ const MOCK_MESSAGES = [
 ];
 
 export default function ChallengeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { members: INITIAL_MEMBERS, user } = useDashboardData();
   const [id, setId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState(MOCK_MESSAGES);
+  const [challengeData, setChallengeData] = useState<Record<string, unknown> | null>(null);
+  const [participants, setParticipants] = useState(MOCK_PARTICIPANTS);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    params.then(p => setId(p.id));
+    params.then(async (p) => {
+      setId(p.id);
+      const [loadedChallenge, loadedMessages, loadedParticipants] = await Promise.all([
+        api.resources.get<Record<string, unknown>>("challenges", p.id, {}),
+        api.resources.list("challenges/messages", MOCK_MESSAGES, `challengeId=${encodeURIComponent(p.id)}`),
+        api.resources.list("challenges/participants", MOCK_PARTICIPANTS, `challengeId=${encodeURIComponent(p.id)}`),
+      ]);
+      setChallengeData(loadedChallenge);
+      setMessages(loadedMessages);
+      setParticipants(loadedParticipants);
+    });
   }, [params]);
 
   // Mock data for the challenge
-  const challenge = {
+  const fallbackChallenge = {
     id: id,
     name: id === "1" ? "Step Up for Health" : 
           id === "2" ? "Green Fitness Initiative" : 
@@ -86,20 +98,22 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
       { rank: 5, name: "Jessica Taylor", score: "249,000 steps", avatar: "https://picsum.photos/seed/jessica/100/100" },
     ]
   };
+  const challenge = {...fallbackChallenge, ...challengeData} as typeof fallbackChallenge;
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
 
     const newMessage = {
       id: messages.length + 1,
-      user: "Opeyemi Adegboye",
+      user: `${user.firstName} ${user.lastName}`,
       role: "Admin",
       time: "Just now",
       content: message,
       avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334436/sports-men-standing-white-wall_mz07zp.jpg"
     };
 
+    await api.resources.mutate({ resource: "challenges/messages", action: "create", id: id ?? undefined, payload: newMessage });
     setMessages([...messages, newMessage]);
     setMessage("");
     setTimeout(() => {
@@ -120,11 +134,12 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
     );
   };
 
-  const handleSendInvites = () => {
+  const handleSendInvites = async () => {
     if (selectedEmployees.length === 0) {
       toast.error("Please select at least one employee to invite");
       return;
     }
+    await api.resources.mutate({ resource: "challenges", action: "invite", id: id ?? undefined, payload: { memberIds: selectedEmployees } });
     toast.success(`Invites sent to ${selectedEmployees.length} employees!`);
     setIsInviteModalOpen(false);
     setSelectedEmployees([]);
@@ -223,7 +238,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                   />
                 </div>
                 <p className="text-xs text-grey-2 text-center">
-                  You've completed 20 days out of 31. Keep it up!
+                  You&apos;ve completed 20 days out of 31. Keep it up!
                 </p>
               </div>
             </div>
@@ -299,7 +314,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
             </div>
 
             <div className="space-y-4">
-              {MOCK_PARTICIPANTS.map((participant) => (
+              {participants.map((participant) => (
                 <div key={participant.id} className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full overflow-hidden relative">
                     <Image src={participant.avatar} alt={participant.name} fill className="object-cover" />

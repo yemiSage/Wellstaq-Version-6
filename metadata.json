@@ -1,6 +1,5 @@
 {
-  "name": "WellStaq B2B V5",
+  "name": "Wellstaq Version 6",
   "description": "A comprehensive B2B wellness platform for organizations to manage employee wellbeing, events, and performance across multiple branches.",
-  "requestFramePermissions": [],
-  "returningUser": "adegboyeopeyemi065@gmail.com"
+  "requestFramePermissions": []
 }

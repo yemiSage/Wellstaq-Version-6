@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import { Search, Plus, Calendar, Mail, MessageSquare, Video, Link as LinkIcon, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { api } from "@/services/api";
 
 const INTEGRATIONS = [
   {
@@ -50,12 +50,29 @@ export default function IntegrationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [integrationToDisconnect, setIntegrationToDisconnect] = useState<number | null>(null);
 
+  useEffect(() => {
+    void api.resources.list<Array<Omit<(typeof INTEGRATIONS)[number], "icon" | "iconBg">>>(
+      "integrations",
+      INTEGRATIONS.map(({id, name, description, status, enabled}) => ({id, name, description, status, enabled})),
+    ).then((remoteIntegrations) => {
+      setIntegrations(INTEGRATIONS.map((presentation) => ({
+        ...presentation,
+        ...remoteIntegrations.find((integration) => integration.id === presentation.id),
+        icon: presentation.icon,
+        iconBg: presentation.iconBg,
+      })));
+    });
+  }, []);
+
   const filteredIntegrations = integrations.filter(i => 
     i.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     i.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleToggle = (id: number) => {
+  const handleToggle = async (id: number) => {
+    const integration = integrations.find((item) => item.id === id);
+    if (!integration) return;
+    await api.resources.mutate({ resource: "integrations", action: "toggle", id, payload: { enabled: !integration.enabled } });
     setIntegrations(integrations.map(i => {
       if (i.id === id) {
         const newEnabled = !i.enabled;
@@ -70,13 +87,14 @@ export default function IntegrationsPage() {
     }));
   };
 
-  const handleConnect = (id: number) => {
+  const handleConnect = async (id: number) => {
     const integration = integrations.find(i => i.id === id);
     if (!integration) return;
 
     if (integration.status === "connected") {
       setIntegrationToDisconnect(id);
     } else {
+      await api.resources.mutate({ resource: "integrations", action: "connect", id });
       setIntegrations(integrations.map(i => {
         if (i.id === id) {
           toast.success(`Successfully connected to ${i.name}`);
@@ -87,9 +105,9 @@ export default function IntegrationsPage() {
     }
   };
 
-  const confirmDisconnect = () => {
+  const confirmDisconnect = async () => {
     if (integrationToDisconnect !== null) {
-      const integration = integrations.find(i => i.id === integrationToDisconnect);
+      await api.resources.mutate({ resource: "integrations", action: "disconnect", id: integrationToDisconnect });
       setIntegrations(integrations.map(i => {
         if (i.id === integrationToDisconnect) {
           toast.success(`Disconnected from ${i?.name}`);
@@ -200,7 +218,7 @@ export default function IntegrationsPage() {
                 <Search className="w-8 h-8 text-grey-3" />
               </div>
               <h3 className="text-lg font-bold text-grey-1 mb-1">No integrations found</h3>
-              <p className="text-sm text-grey-2">We couldn't find any integrations matching your search.</p>
+              <p className="text-sm text-grey-2">We couldn&apos;t find any integrations matching your search.</p>
             </div>
           )}
         </div>

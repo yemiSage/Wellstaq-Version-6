@@ -49,7 +49,7 @@ const weeklyActivityData = [
   { name: 'W9', steps: 62000 },
 ];
 
-export function MonthlyStepsChart() {
+export function MonthlyStepsChart({data = monthlyStepsData}: {data?: typeof monthlyStepsData}) {
   return (
     <div className="lg:col-span-2 bg-white p-[12px] rounded-[12px]">
       <div className="flex items-center justify-between mb-6">
@@ -68,7 +68,7 @@ export function MonthlyStepsChart() {
       
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={monthlyStepsData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+          <LineChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#E4E7EC" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => `${val / 1000}k`} ticks={[0, 15000, 30000, 45000, 60000, 75000, 95000, 115000]} domain={[0, 115000]} />
@@ -82,7 +82,7 @@ export function MonthlyStepsChart() {
   );
 }
 
-export function HealthDistributionChart() {
+export function HealthDistributionChart({data = healthDistributionData}: {data?: typeof healthDistributionData}) {
   return (
     <div className="bg-white p-[12px] rounded-[12px] flex flex-col">
       <h3 className="text-[16px] font-bold text-grey-1 mb-6">Health Distribution</h3>
@@ -92,7 +92,7 @@ export function HealthDistributionChart() {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={healthDistributionData}
+                data={data}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
@@ -101,7 +101,7 @@ export function HealthDistributionChart() {
                 dataKey="value"
                 stroke="none"
               >
-                {healthDistributionData.map((entry, index) => (
+                {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -111,7 +111,7 @@ export function HealthDistributionChart() {
         </div>
 
         <div className="w-full space-y-3">
-          {healthDistributionData.map((item) => (
+          {data.map((item) => (
             <div key={item.name} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></div>
@@ -126,7 +126,7 @@ export function HealthDistributionChart() {
   );
 }
 
-export function DepartmentPerformanceChart() {
+export function DepartmentPerformanceChart({data = departmentPerformanceData}: {data?: typeof departmentPerformanceData}) {
   return (
     <div className="bg-white p-[20px] rounded-[12px]">
       <h3 className="text-[16px] font-bold text-grey-1 mb-4">Department Performance</h3>
@@ -143,7 +143,7 @@ export function DepartmentPerformanceChart() {
       
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={departmentPerformanceData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }} barSize={16}>
+          <BarChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }} barSize={16}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 10 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} domain={[0, 100]} />
@@ -156,7 +156,7 @@ export function DepartmentPerformanceChart() {
   );
 }
 
-export function WeeklyActivityChart() {
+export function WeeklyActivityChart({data = weeklyActivityData}: {data?: typeof weeklyActivityData}) {
   const [activityTab, setActivityTab] = useState("Steps");
 
   return (
@@ -182,7 +182,7 @@ export function WeeklyActivityChart() {
       
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={weeklyActivityData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+          <AreaChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
             <defs>
               <linearGradient id="colorSteps" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#F27D26" stopOpacity={0.3}/>

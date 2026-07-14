@@ -21,7 +21,7 @@ export function Step3Personal({ data, updateData, onNext, isLoading }: Step3Prop
       <div className="grid grid-cols-2 gap-6 mb-6">
         <div className="flex flex-col gap-2">
           <Label htmlFor="firstName">
-            First Name <span className="text-error-1">*</span>
+            First Name <span className="text-red-600">*</span>
           </Label>
           <Input
             id="firstName"
@@ -32,7 +32,7 @@ export function Step3Personal({ data, updateData, onNext, isLoading }: Step3Prop
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="lastName">
-            Last Name <span className="text-error-1">*</span>
+            Last Name <span className="text-red-600">*</span>
           </Label>
           <Input
             id="lastName"
@@ -45,7 +45,7 @@ export function Step3Personal({ data, updateData, onNext, isLoading }: Step3Prop
 
       <div className="flex flex-col gap-2 mb-12">
         <Label htmlFor="phone">
-          Phone Number <span className="text-error-1">*</span>
+          Phone Number <span className="text-red-600">*</span>
         </Label>
         <div className="flex gap-3">
           <div className="relative flex items-center w-28 h-[44px] rounded-[8px] border border-grey-4 bg-white px-3">

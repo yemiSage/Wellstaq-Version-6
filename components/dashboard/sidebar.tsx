@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ASSETS } from "@/lib/constants";
-import { CHALLENGES } from "@/lib/mock-data";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { 
   Home, 
   Lightbulb, 
@@ -25,28 +25,7 @@ import {
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
-
-  useEffect(() => {
-    const storedBranch = localStorage.getItem('activeBranch');
-    if (storedBranch) {
-      setActiveBranch(storedBranch);
-    }
-
-    const handleBranchChange = () => {
-      const newBranch = localStorage.getItem('activeBranch');
-      if (newBranch) {
-        setActiveBranch(newBranch);
-      }
-    };
-
-    window.addEventListener('branchChange', handleBranchChange);
-    window.addEventListener('storage', handleBranchChange);
-    return () => {
-      window.removeEventListener('branchChange', handleBranchChange);
-      window.removeEventListener('storage', handleBranchChange);
-    };
-  }, []);
+  const { challenges: CHALLENGES, activeBranch } = useDashboardData();
 
   const branchChallenges = CHALLENGES.filter(c => c.branch === activeBranch);
   const lastChallenges = branchChallenges.slice(-4).reverse();

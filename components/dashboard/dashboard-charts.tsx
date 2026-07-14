@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { ChevronDown, Plus, ArrowUpRight, ArrowDownRight, Smile, Heart, MousePointerClick } from "lucide-react";
-import { useClickOutside } from "@/hooks/use-click-outside";
+import React, { useState } from "react";
+import { ChevronDown, ArrowUpRight, ArrowDownRight, Smile, Heart, MousePointerClick } from "lucide-react";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Radar, RadarChart, PolarGrid, PolarAngleAxis
@@ -50,7 +49,7 @@ const leaderboardData = [
   { rank: 7, name: "Jack Thompson", steps: "19560 Steps", avatar: "avatar7", trend: "up" },
 ];
 
-export function DepartmentPerformanceRadar() {
+export function DepartmentPerformanceRadar({data = wellbeingData}: {data?: typeof wellbeingData}) {
   return (
     <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
       <div className="mb-6">
@@ -60,7 +59,7 @@ export function DepartmentPerformanceRadar() {
       
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={wellbeingData}>
+          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
             <PolarGrid stroke="#F2F4F7" />
             <PolarAngleAxis 
               dataKey="subject" 
@@ -82,7 +81,7 @@ export function DepartmentPerformanceRadar() {
   );
 }
 
-export function EngagementChart() {
+export function EngagementChart({data = engagementData}: {data?: typeof engagementData}) {
   const [engagementFilter, setEngagementFilter] = useState("Last week");
   const [isEngagementFilterOpen, setIsEngagementFilterOpen] = useState(false);
   const [engagementMetric, setEngagementMetric] = useState("Stress level");
@@ -141,7 +140,7 @@ export function EngagementChart() {
 
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={engagementData.map(d => ({ ...d, value: engagementMetric === 'Stress level' ? d.value : engagementMetric === 'Energy level (physical + mental)' ? d.value * 0.005 : d.value * 0.1 }))} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+          <LineChart data={data.map(d => ({ ...d, value: engagementMetric === 'Stress level' ? d.value : engagementMetric === 'Energy level (physical + mental)' ? d.value * 0.005 : d.value * 0.1 }))} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => engagementMetric === 'Stress level' ? `${val / 1000}k` : val} />
@@ -154,7 +153,7 @@ export function EngagementChart() {
   );
 }
 
-export function Leaderboard() {
+export function Leaderboard({data = leaderboardData}: {data?: typeof leaderboardData}) {
   const [leaderboardMetric, setLeaderboardMetric] = useState("Steps");
 
   return (
@@ -178,7 +177,7 @@ export function Leaderboard() {
       </div>
 
       <div className="space-y-4">
-        {leaderboardData.map((user) => (
+        {data.map((user) => (
           <div key={user.rank} className="flex items-center justify-between p-2 hover:bg-grey-5 rounded-xl transition-colors">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[8px] bg-grey-4 overflow-hidden relative shrink-0">

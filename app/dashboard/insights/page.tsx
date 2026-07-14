@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { ArrowUpRight, ArrowDownRight, Activity, Heart, Zap, Award } from "lucide-react";
 import Image from "next/image";
 import { InsightsHeader } from "@/components/dashboard/insights/header";
@@ -7,6 +10,7 @@ import {
   DepartmentPerformanceChart, 
   WeeklyActivityChart 
 } from "@/components/dashboard/insights/charts-dynamic";
+import { api } from "@/services/api";
 
 const topPerformers = [
   { id: 1, name: 'Frank Wilson', steps: '23,500', score: 98, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100&h=100&auto=format&fit=crop' },
@@ -15,7 +19,33 @@ const topPerformers = [
   { id: 4, name: 'Brian Kim', steps: '18,450', score: 88, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=100&h=100&auto=format&fit=crop' },
 ];
 
+const defaultInsights = {
+  summary: {
+    averageDailySteps: "8,432",
+    averageDailyStepsTrend: "+12%",
+    healthScore: "76.4",
+    healthScoreTrend: "+4.2pts",
+    activeEmployees: "84%",
+    activeEmployeesTrend: "-3%",
+    challengesWon: "142",
+    challengesWonTrend: "+28",
+  },
+  topPerformers,
+  charts: {} as {
+    monthlySteps?: Array<{name: string; actual: number; target: number}>;
+    healthDistribution?: Array<{name: string; value: number; color: string}>;
+    departmentPerformance?: Array<{name: string; engagement: number}>;
+    weeklyActivity?: Array<{name: string; steps: number}>;
+  },
+};
+
 export default function InsightsPage() {
+  const [insights, setInsights] = useState(defaultInsights);
+
+  useEffect(() => {
+    void api.resources.get("insights", "overview", defaultInsights).then(setInsights);
+  }, []);
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
@@ -29,11 +59,11 @@ export default function InsightsPage() {
               <Activity className="w-5 h-5" />
             </div>
             <span className="flex items-center text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> +12%
+              <ArrowUpRight className="w-3 h-3 mr-1" /> {insights.summary.averageDailyStepsTrend}
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Avg Daily Steps</p>
-          <h3 className="text-2xl font-bold text-[#373737] mb-1">8,432</h3>
+          <h3 className="text-2xl font-bold text-[#373737] mb-1">{insights.summary.averageDailySteps}</h3>
           <p className="text-xs text-grey-3">vs Last 9 month</p>
         </div>
 
@@ -43,11 +73,11 @@ export default function InsightsPage() {
               <Heart className="w-5 h-5" />
             </div>
             <span className="flex items-center text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> +4.2pts
+              <ArrowUpRight className="w-3 h-3 mr-1" /> {insights.summary.healthScoreTrend}
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Health Score</p>
-          <h3 className="text-2xl font-bold text-[#373737] mb-1">76.4</h3>
+          <h3 className="text-2xl font-bold text-[#373737] mb-1">{insights.summary.healthScore}</h3>
           <p className="text-xs text-grey-3">overall average</p>
         </div>
 
@@ -57,11 +87,11 @@ export default function InsightsPage() {
               <Zap className="w-5 h-5" />
             </div>
             <span className="flex items-center text-xs font-medium text-red-500">
-              <ArrowDownRight className="w-3 h-3 mr-1" /> -3%
+              <ArrowDownRight className="w-3 h-3 mr-1" /> {insights.summary.activeEmployeesTrend}
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Active Employees</p>
-          <h3 className="text-2xl font-bold text-[#373737] mb-1">84%</h3>
+          <h3 className="text-2xl font-bold text-[#373737] mb-1">{insights.summary.activeEmployees}</h3>
           <p className="text-xs text-grey-3">participation rate</p>
         </div>
 
@@ -71,25 +101,25 @@ export default function InsightsPage() {
               <Award className="w-5 h-5" />
             </div>
             <span className="flex items-center text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> +28
+              <ArrowUpRight className="w-3 h-3 mr-1" /> {insights.summary.challengesWonTrend}
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Challenges Won</p>
-          <h3 className="text-2xl font-bold text-[#373737] mb-1">142</h3>
+          <h3 className="text-2xl font-bold text-[#373737] mb-1">{insights.summary.challengesWon}</h3>
           <p className="text-xs text-grey-3">Last 9 month</p>
         </div>
       </div>
 
       {/* Row 1 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-[12px]">
-        <MonthlyStepsChart />
-        <HealthDistributionChart />
+        <MonthlyStepsChart data={insights.charts.monthlySteps} />
+        <HealthDistributionChart data={insights.charts.healthDistribution} />
       </div>
 
       {/* Row 2 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[12px]">
-        <DepartmentPerformanceChart />
-        <WeeklyActivityChart />
+        <DepartmentPerformanceChart data={insights.charts.departmentPerformance} />
+        <WeeklyActivityChart data={insights.charts.weeklyActivity} />
       </div>
 
       {/* Top Performers */}
@@ -102,7 +132,7 @@ export default function InsightsPage() {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[12px]">
-          {topPerformers.map((performer) => (
+          {insights.topPerformers.map((performer) => (
             <div key={performer.id} className="bg-white p-[20px] rounded-[12px] flex flex-col items-center text-center">
               <div className="relative mb-4">
                 <div className="w-16 h-16 rounded-[12px] overflow-hidden border-2 border-white">

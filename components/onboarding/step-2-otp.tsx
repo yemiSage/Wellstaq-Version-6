@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { OnboardingData } from "@/types";
+import { api } from "@/services/api";
 
 interface Step2Props {
   data: OnboardingData;
@@ -42,7 +43,7 @@ export function Step2OTP({ data, updateData, onNext, isLoading }: Step2Props) {
 
   const handleResend = () => {
     setTimeLeft(59);
-    // Add any logic to trigger resend API here if needed
+    void api.auth.sendOtp(data.email);
   };
 
   const isValid = otp.every((digit) => digit !== "");
@@ -51,7 +52,7 @@ export function Step2OTP({ data, updateData, onNext, isLoading }: Step2Props) {
     <div className="flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h2 className="mb-2 text-[24px] md:text-[30px] font-bold">Email Address</h2>
       <p className="text-sm text-grey-1 mb-8">
-        Input the OTP sent to <span className="text-primary-1 font-medium">{data.email}</span> below <span className="text-error-1">*</span>
+        Input the OTP sent to <span className="text-primary-1 font-medium">{data.email}</span> below <span className="text-red-600">*</span>
       </p>
       
       <div className="flex gap-3 mb-4">

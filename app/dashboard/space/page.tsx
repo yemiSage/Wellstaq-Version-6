@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, Plus, User, Video, MapPin, Send, Heart, Users, Flame, ChevronLeft, TrendingUp, ImageIcon, MessageCircle, Share2, Bookmark, ThumbsUp, PanelLeftClose, PanelLeftOpen, Sticker, Paperclip, MoreHorizontal, Trash2, X } from "lucide-react";
+import { Search, Plus, Video, MapPin, Send, Heart, Users, Flame, ChevronLeft, TrendingUp, ImageIcon, MessageCircle, Share2, Bookmark, ThumbsUp, PanelLeftClose, PanelLeftOpen, Sticker, Paperclip, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { api } from "@/services/api";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 
 // Mock Data
 const stories = [
@@ -56,7 +58,35 @@ const suggestedClubs = [
   }
 ];
 
-const myClubs: any[] = [];
+type CommunityClub = (typeof suggestedClubs)[number];
+
+interface PostComment {
+  id: number;
+  user: string;
+  time: string;
+  content: string;
+  avatar: string;
+  isMe: boolean;
+}
+
+interface CommunityPost {
+  id: number;
+  user: string;
+  email: string;
+  avatar: string;
+  time: string;
+  badge: string;
+  content: string;
+  hashtags: string;
+  image: string;
+  likes: number;
+  comments: number;
+  commentsList: PostComment[];
+  shares: number;
+  isLiked: boolean;
+}
+
+const myClubs: CommunityClub[] = [];
 
 const chatMessages = [
   {
@@ -106,7 +136,7 @@ const chatMessages = [
   }
 ];
 
-const initialPosts = [
+const initialPosts: CommunityPost[] = [
   {
     id: 1,
     user: "Brian Kim",
@@ -161,7 +191,7 @@ const initialPosts = [
 ];
 
 export default function SpacePage() {
-  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
+  const { activeBranch, user } = useDashboardData();
   const [activeTab, setActiveTab] = useState<"Other Clubs" | "My Clubs">("Other Clubs");
   const [selectedClub, setSelectedClub] = useState<number | null>(null);
   const [suggested, setSuggested] = useState(suggestedClubs);
@@ -184,46 +214,29 @@ export default function SpacePage() {
   const chatFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const handleBranchChange = () => {
-      const storedBranch = localStorage.getItem('activeBranch');
-      if (storedBranch) {
-        setActiveBranch(storedBranch);
-        setSelectedClub(null);
-      }
-    };
-
-    handleBranchChange();
-    window.addEventListener('branchChange', handleBranchChange);
-    window.addEventListener('storage', handleBranchChange);
-
-    return () => {
-      window.removeEventListener('branchChange', handleBranchChange);
-      window.removeEventListener('storage', handleBranchChange);
-    };
-  }, []);
+    setSelectedClub(null);
+  }, [activeBranch]);
 
   const filteredStories = stories.filter(s => s.branch === activeBranch || s.isUser);
   const filteredClubs = suggested.filter(c => c.branch === activeBranch);
   const filteredMyClubs = myClubsList.filter(c => c.branch === activeBranch);
 
   useEffect(() => {
-    const savedMessages = localStorage.getItem('chatMessages');
-    if (savedMessages) {
-      try {
-        setMessages(JSON.parse(savedMessages));
-      } catch (e) {
-        console.error("Failed to parse chat messages", e);
-      }
-    }
-  }, []);
+    void Promise.all([
+      api.resources.list("community/posts", initialPosts, `branch=${encodeURIComponent(activeBranch)}`),
+      api.resources.list("community/messages", chatMessages, `branch=${encodeURIComponent(activeBranch)}`),
+      api.resources.list("clubs", suggestedClubs, `branch=${encodeURIComponent(activeBranch)}`),
+    ]).then(([loadedPosts, loadedMessages, loadedClubs]) => {
+      setPosts(loadedPosts);
+      setMessages(loadedMessages);
+      setSuggested(loadedClubs);
+    });
+  }, [activeBranch]);
 
-  useEffect(() => {
-    localStorage.setItem('chatMessages', JSON.stringify(messages));
-  }, [messages]);
-
-  const handleJoinClub = (id: number) => {
+  const handleJoinClub = async (id: number) => {
     const club = suggested.find(c => c.id === id);
     if (club) {
+      await api.resources.mutate({ resource: "clubs", action: "join", id });
       setSuggested(suggested.filter(c => c.id !== id));
       setMyClubsList([...myClubsList, club]);
       toast.success(`Successfully joined ${club.name}!`);
@@ -231,29 +244,20 @@ export default function SpacePage() {
     setClubToJoin(null);
   };
 
-  const handleDeletePost = (id: number) => {
+  const handleDeletePost = async (id: number) => {
+    await api.resources.mutate({ resource: "community/posts", action: "delete", id });
     setPosts(posts.filter(p => p.id !== id));
     setDeleteConfirmPostId(null);
     toast.success("Post deleted successfully");
   };
 
-  const handleLikePost = (id: number) => {
-    setPosts(posts.map(p => {
-      if (p.id === id) {
-        const isLiked = !p.isLiked;
-        return { ...p, isLiked, likes: p.likes + (isLiked ? 1 : -1) };
-      }
-      return p;
-    }));
-  };
-
-  const handleCreatePost = () => {
+  const handleCreatePost = async () => {
     if (!postContent.trim() && !postImage && !postLocation) return;
     const newPost = {
       id: Date.now(),
-      user: "Opeyemi Adegboye",
-      email: "adegboyeopeyemi065@gmail.com",
-      avatar: "https://picsum.photos/seed/opeyemi/100/100",
+      user: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      avatar: user.profileImage || "https://picsum.photos/seed/wellstaq-admin/100/100",
       time: "Just now",
       badge: "",
       content: postContent + (postLocation ? `\n📍 ${postLocation}` : ""),
@@ -265,6 +269,7 @@ export default function SpacePage() {
       shares: 0,
       isLiked: false
     };
+    await api.resources.mutate({ resource: "community/posts", action: "create", payload: newPost });
     setPosts([newPost, ...posts]);
     setPostContent("");
     setPostImage(null);
@@ -272,18 +277,18 @@ export default function SpacePage() {
     toast.success("Post created successfully!");
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setPostImage(url);
+      const result = await api.resources.upload("community/posts", file);
+      setPostImage(result.url);
     }
   };
 
-  const handleChatFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChatFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
+      const upload = await api.resources.upload("community/messages", file);
       const isVideo = file.type.startsWith('video/');
       const newMessage = {
         id: Date.now(),
@@ -291,15 +296,16 @@ export default function SpacePage() {
         role: "HR Manager",
         time: "Just now",
         message: isVideo ? `[Video Attachment]` : `[Image Attachment]`,
-        avatar: "https://picsum.photos/seed/opeyemi/100/100",
+        avatar: user.profileImage || "https://picsum.photos/seed/wellstaq-admin/100/100",
         isMe: true
       };
+      await api.resources.mutate({ resource: "community/messages", action: "create", payload: { ...newMessage, attachmentUrl: upload.url } });
       setMessages([...messages, newMessage]);
       toast.success("Attachment sent!");
     }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim()) return;
     const newMessage = {
       id: Date.now(),
@@ -307,24 +313,26 @@ export default function SpacePage() {
       role: "HR Manager",
       time: "Just now",
       message: chatInput,
-      avatar: "https://picsum.photos/seed/opeyemi/100/100",
+      avatar: user.profileImage || "https://picsum.photos/seed/wellstaq-admin/100/100",
       isMe: true
     };
+    await api.resources.mutate({ resource: "community/messages", action: "create", payload: newMessage });
     setMessages([...messages, newMessage]);
     setChatInput("");
     toast.success("Message sent!");
   };
 
-  const handleAddComment = (postId: number, content: string) => {
+  const handleAddComment = async (postId: number, content: string) => {
     if (!content.trim()) return;
+    await api.resources.mutate({ resource: "community/posts", action: "comment", id: postId, payload: { content } });
     setPosts(posts.map(p => {
       if (p.id === postId) {
         const newComment = {
           id: Date.now(),
-          user: "Opeyemi Adegboye",
+          user: `${user.firstName} ${user.lastName}`,
           time: "Just now",
           content,
-          avatar: "https://picsum.photos/seed/opeyemi/100/100",
+          avatar: user.profileImage || "https://picsum.photos/seed/wellstaq-admin/100/100",
           isMe: true
         };
         return {
@@ -345,7 +353,7 @@ export default function SpacePage() {
   const [newClubData, setNewClubData] = useState({ name: "", description: "", image: "", category: "Fitness" });
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
-  const handleCreateClub = (e: React.FormEvent) => {
+  const handleCreateClub = async (e: React.FormEvent) => {
     e.preventDefault();
     const newClub = {
       id: Date.now(),
@@ -356,23 +364,26 @@ export default function SpacePage() {
       branch: activeBranch,
       image: newClubData.image || `https://picsum.photos/seed/${newClubData.name}/400/300`
     };
+    await api.resources.mutate({ resource: "clubs", action: "create", payload: newClub });
     setMyClubsList([...myClubsList, newClub]);
     setIsCreateClubModalOpen(false);
     setNewClubData({ name: "", description: "", image: "", category: "Fitness" });
     toast.success(`${newClub.name} created successfully!`);
   };
 
-  const handleDeleteMessage = (messageId: number) => {
+  const handleDeleteMessage = async (messageId: number) => {
+    await api.resources.mutate({ resource: "community/messages", action: "delete", id: messageId });
     setMessages(prev => prev.filter(msg => msg.id !== messageId));
     toast.success("Message deleted");
   };
 
-  const handleDeleteComment = (postId: number, commentId: number) => {
+  const handleDeleteComment = async (postId: number, commentId: number) => {
+    await api.resources.mutate({ resource: "community/posts/comments", action: "delete", id: commentId, payload: { postId } });
     setPosts(posts.map(p => {
       if (p.id === postId) {
         return {
           ...p,
-          commentsList: p.commentsList.filter((c: any) => c.id !== commentId),
+          commentsList: p.commentsList.filter((comment) => comment.id !== commentId),
           comments: Math.max(0, (p.comments || 0) - 1)
         };
       }
@@ -631,7 +642,7 @@ export default function SpacePage() {
                       <p className="text-xs text-grey-3">{post.email} · {post.time}</p>
                     </div>
                   </div>
-                  {post.user === "Opeyemi Adegboye" && (
+                      {post.user === `${user.firstName} ${user.lastName}` && (
                     <button onClick={() => setDeleteConfirmPostId(post.id)} className="text-grey-3 hover:text-red-500 transition-colors p-1">
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -701,7 +712,7 @@ export default function SpacePage() {
 
                 {expandedComments.includes(post.id) && post.commentsList && post.commentsList.length > 0 && (
                   <div className="mb-4 space-y-3">
-                    {post.commentsList.map((comment: any) => (
+                    {post.commentsList.map((comment) => (
                       <div key={comment.id} className="flex gap-3">
                         <div className="w-8 h-8 rounded-full overflow-hidden relative shrink-0">
                           <Image src={comment.avatar} alt={comment.user} fill className="object-cover" referrerPolicy="no-referrer" />

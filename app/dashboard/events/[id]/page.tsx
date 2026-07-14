@@ -11,7 +11,6 @@ import {
   Calendar, 
   Clock, 
   Send,
-  MoreHorizontal,
   Plus,
   X,
   Check,
@@ -19,7 +18,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { INITIAL_MEMBERS } from "@/lib/mock-data";
+import { api } from "@/services/api";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 
 const MOCK_EVENT = {
   id: 1,
@@ -70,31 +70,45 @@ const MOCK_MESSAGES = [
 ];
 
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { members: INITIAL_MEMBERS, user } = useDashboardData();
   const [id, setId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState(MOCK_MESSAGES);
+  const [event, setEvent] = useState(MOCK_EVENT);
+  const [participants, setParticipants] = useState(MOCK_PARTICIPANTS);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    params.then(p => setId(p.id));
+    params.then(async (p) => {
+      setId(p.id);
+      const [loadedEvent, loadedMessages, loadedParticipants] = await Promise.all([
+        api.resources.get("events", p.id, MOCK_EVENT),
+        api.resources.list("events/messages", MOCK_MESSAGES, `eventId=${encodeURIComponent(p.id)}`),
+        api.resources.list("events/participants", MOCK_PARTICIPANTS, `eventId=${encodeURIComponent(p.id)}`),
+      ]);
+      setEvent(loadedEvent);
+      setMessages(loadedMessages);
+      setParticipants(loadedParticipants);
+    });
   }, [params]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
 
     const newMessage = {
       id: messages.length + 1,
-      user: "Opeyemi Adegboye",
+      user: `${user.firstName} ${user.lastName}`,
       role: "Admin",
       time: "Just now",
       content: message,
       avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334436/sports-men-standing-white-wall_mz07zp.jpg"
     };
 
+    await api.resources.mutate({ resource: "events/messages", action: "create", id: id ?? undefined, payload: newMessage });
     setMessages([...messages, newMessage]);
     setMessage("");
     setTimeout(() => {
@@ -115,11 +129,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     );
   };
 
-  const handleSendInvites = () => {
+  const handleSendInvites = async () => {
     if (selectedEmployees.length === 0) {
       toast.error("Please select at least one employee to invite");
       return;
     }
+    await api.resources.mutate({ resource: "events", action: "invite", id: id ?? undefined, payload: { memberIds: selectedEmployees } });
     toast.success(`Invites sent to ${selectedEmployees.length} employees!`);
     setIsInviteModalOpen(false);
     setSelectedEmployees([]);
@@ -144,8 +159,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           <div className="bg-white rounded-2xl border border-grey-4 overflow-hidden">
             <div className="relative h-[300px] w-full">
               <Image 
-                src={MOCK_EVENT.image} 
-                alt={MOCK_EVENT.title} 
+                src={event.image}
+                alt={event.title}
                 fill 
                 className="object-cover"
                 referrerPolicy="no-referrer"
@@ -154,7 +169,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             
             <div className="p-6 space-y-4">
               <div className="flex items-start justify-between">
-                <h1 className="text-2xl font-bold text-grey-1">{MOCK_EVENT.title}</h1>
+                <h1 className="text-2xl font-bold text-grey-1">{event.title}</h1>
                 <div className="flex items-center gap-2">
                   <button className="p-2 rounded-lg border border-grey-4 text-grey-2 hover:text-primary-1 hover:border-primary-1 transition-all">
                     <Edit2 className="w-4 h-4" />
@@ -174,15 +189,15 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                       </div>
                     ))}
                   </div>
-                  <span>{MOCK_EVENT.participants} participants</span>
+                  <span>{event.participants} participants</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  <span>{MOCK_EVENT.date}</span>
+                  <span>{event.date}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  <span>{MOCK_EVENT.time}</span>
+                  <span>{event.time}</span>
                 </div>
               </div>
             </div>
@@ -257,7 +272,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             </div>
 
             <div className="space-y-4">
-              {MOCK_PARTICIPANTS.map((participant) => (
+              {participants.map((participant) => (
                 <div key={participant.id} className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full overflow-hidden relative">
                     <Image src={participant.avatar} alt={participant.name} fill className="object-cover" />

@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Image from "next/image";
 import { Search, Plus, Users, Activity, TrendingUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
-import { INITIAL_MEMBERS, MOCK_DEPARTMENTS } from "@/lib/mock-data";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { api } from "@/services/api";
 
 export default function TeamsPage() {
-  const [members, setMembers] = useState(INITIAL_MEMBERS);
-  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
+  const { members: sourceMembers, departments: MOCK_DEPARTMENTS, activeBranch } = useDashboardData();
+  const [members, setMembers] = useState(sourceMembers);
   const [searchQuery, setSearchQuery] = useState("");
   const [stats, setStats] = useState({
     totalMembers: 0,
@@ -19,29 +20,8 @@ export default function TeamsPage() {
     engagementRate: "0%"
   });
 
-  useEffect(() => {
-    const storedBranch = localStorage.getItem('activeBranch');
-    const branch = storedBranch || "Yemi Inc lokoja";
-    setActiveBranch(branch);
-    updateStats(branch);
-
-    const handleBranchChange = () => {
-      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
-      setActiveBranch(newBranch);
-      setCurrentPage(1);
-      updateStats(newBranch);
-    };
-
-    window.addEventListener('branchChange', handleBranchChange);
-    window.addEventListener('storage', handleBranchChange);
-    return () => {
-      window.removeEventListener('branchChange', handleBranchChange);
-      window.removeEventListener('storage', handleBranchChange);
-    };
-  }, []);
-
-  const updateStats = (branch: string) => {
-    const branchMembers = INITIAL_MEMBERS.filter(m => m.branch === branch);
+  const updateStats = useCallback((branch: string, memberData: typeof sourceMembers) => {
+    const branchMembers = memberData.filter(m => m.branch === branch);
     const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === branch);
     
     // Calculate engagement based on activities in departments
@@ -53,7 +33,13 @@ export default function TeamsPage() {
       activeTeams: branchDepts.length,
       engagementRate: `${engagement}%`
     });
-  };
+  }, [MOCK_DEPARTMENTS]);
+
+  useEffect(() => {
+    setMembers(sourceMembers);
+    setCurrentPage(1);
+    updateStats(activeBranch, sourceMembers);
+  }, [activeBranch, sourceMembers, updateStats]);
 
   const dashboardStats = [
     {
@@ -83,7 +69,7 @@ export default function TeamsPage() {
   ];
 
   const [memberToDelete, setMemberToDelete] = useState<number | null>(null);
-  const [memberToEdit, setMemberToEdit] = useState<typeof INITIAL_MEMBERS[0] | null>(null);
+  const [memberToEdit, setMemberToEdit] = useState<(typeof sourceMembers)[number] | null>(null);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [newMember, setNewMember] = useState({ name: "", email: "", department: "Engineering", role: "Employee" });
 
@@ -104,24 +90,26 @@ export default function TeamsPage() {
     currentPage * itemsPerPage
   );
 
-  const handleRemoveMember = () => {
+  const handleRemoveMember = async () => {
     if (memberToDelete !== null) {
+      await api.resources.mutate({ resource: "members", action: "delete", id: memberToDelete });
       setMembers(members.filter(m => m.id !== memberToDelete));
       toast.success("Team member removed successfully");
       setMemberToDelete(null);
     }
   };
 
-  const handleSaveMember = (e: React.FormEvent) => {
+  const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (memberToEdit) {
+      await api.resources.mutate({ resource: "members", action: "update", id: memberToEdit.id, payload: memberToEdit });
       setMembers(members.map(m => m.id === memberToEdit.id ? memberToEdit : m));
       toast.success("Team member updated successfully");
       setMemberToEdit(null);
     }
   };
 
-  const handleAddMember = (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     const member = {
       id: members.length + 1,
@@ -130,6 +118,7 @@ export default function TeamsPage() {
       branch: activeBranch,
       avatar: `https://picsum.photos/seed/${newMember.name}/100/100`
     };
+    await api.resources.mutate({ resource: "members", action: "create", payload: member });
     setMembers([member, ...members]);
     toast.success("Team member added successfully");
     setIsAddMemberModalOpen(false);

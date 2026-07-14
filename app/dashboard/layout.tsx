@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { TopNav } from "@/components/dashboard/top-nav";
+import { DashboardDataProvider } from "@/components/providers/dashboard-data-provider";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
+    <DashboardDataProvider>
     <div className="flex h-screen bg-[#F8F9FA] overflow-hidden">
       {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (
@@ -29,5 +31,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
     </div>
+    </DashboardDataProvider>
   );
 }

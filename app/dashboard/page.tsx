@@ -9,10 +9,11 @@ import {
   EngagementChart, 
   Leaderboard 
 } from "@/components/dashboard/dashboard-charts-dynamic";
-import { INITIAL_MEMBERS, MOCK_DEPARTMENTS, EVENTS, CHALLENGES } from "@/lib/mock-data";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { api } from "@/services/api";
 
 export default function DashboardPage() {
-  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
+  const { members: INITIAL_MEMBERS, departments: MOCK_DEPARTMENTS, events: EVENTS, activeBranch } = useDashboardData();
   const [stats, setStats] = useState({
     staff: 0,
     staffActive: 0,
@@ -24,6 +25,15 @@ export default function DashboardPage() {
     eventsGrowth: "+0",
     departmentsGrowth: "+0"
   });
+  const [chartData, setChartData] = useState<{
+    wellbeing?: Array<{subject: string; A: number; fullMark: number}>;
+    engagement?: Array<{name: string; value: number}>;
+    leaderboard?: Array<{rank: number; name: string; steps: string; avatar: string; trend: string}>;
+  }>({});
+
+  useEffect(() => {
+    void api.resources.get<typeof chartData>("dashboard", "charts", {}).then(setChartData);
+  }, [activeBranch]);
 
   useEffect(() => {
     const calculateStats = (branch: string) => {
@@ -47,23 +57,8 @@ export default function DashboardPage() {
       };
     };
 
-    const storedBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
-    setActiveBranch(storedBranch);
-    setStats(calculateStats(storedBranch));
-
-    const handleBranchChange = () => {
-      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
-      setActiveBranch(newBranch);
-      setStats(calculateStats(newBranch));
-    };
-
-    window.addEventListener('branchChange', handleBranchChange);
-    window.addEventListener('storage', handleBranchChange);
-    return () => {
-      window.removeEventListener('branchChange', handleBranchChange);
-      window.removeEventListener('storage', handleBranchChange);
-    };
-  }, []);
+    setStats(calculateStats(activeBranch));
+  }, [EVENTS, INITIAL_MEMBERS, MOCK_DEPARTMENTS, activeBranch]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -226,13 +221,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Department Performance */}
-          <DepartmentPerformanceRadar />
+          <DepartmentPerformanceRadar data={chartData.wellbeing} />
         </div>
 
         {/* Right Column (spans 2) */}
         <div className="lg:col-span-2 space-y-[12px]">
           {/* Employee Engagement */}
-          <EngagementChart />
+          <EngagementChart data={chartData.engagement} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-[12px]">
             {/* Upcoming Challenge */}
@@ -295,7 +290,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Leaderboard */}
-            <Leaderboard />
+            <Leaderboard data={chartData.leaderboard} />
           </div>
         </div>
       </div>

@@ -8,15 +8,12 @@ import {
   MapPin, 
   Send, 
   CheckCircle2,
-  ArrowLeft,
   HelpCircle,
   Clock,
-  Globe,
-  LogOut
+  Globe
 } from "lucide-react";
-import Link from "next/link";
 import { toast } from "sonner";
-import { motion } from "motion/react";
+import { api } from "@/services/api";
 
 export default function ContactPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -27,20 +24,16 @@ export default function ContactPage() {
     message: ""
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) {
       toast.error("Please fill in all required fields");
       return;
     }
     
+    await api.public.contactSupport(formData);
     setIsSubmitted(true);
     toast.success("Message sent successfully!");
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/";
   };
 
   if (isSubmitted) {

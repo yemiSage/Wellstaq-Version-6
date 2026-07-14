@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Search, Plus, X, Users, Activity, Calendar, Award, ChevronDown, Check, UserPlus, Edit2, Trash2, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import Image from "next/image";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -8,6 +8,8 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip
 } from "recharts";
+import { api } from "@/services/api";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 
 const STATS = [
   {
@@ -52,7 +54,18 @@ const STATS = [
   }
 ];
 
-const MOCK_CLUBS: any[] = [];
+interface Club {
+  id: number;
+  name: string;
+  members: number;
+  activities: number;
+  rank: number;
+  avatars?: string[];
+  description?: string;
+  category?: string;
+}
+
+const MOCK_CLUBS: Club[] = [];
 
 const MOCK_MEMBERS = [
   { id: 1, name: "Toby Forge", role: "Designer | Engineering", steps: 19875, rank: 1, trend: "up", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334436/sports-men-standing-white-wall_mz07zp.jpg" },
@@ -62,16 +75,6 @@ const MOCK_MEMBERS = [
   { id: 5, name: "Jasper Moon", role: "Designer | Engineering", steps: 12000, rank: 5, trend: "up", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334554/diverse-young-people-holding-hands_z0tupa.jpg" },
   { id: 6, name: "Ella Stone", role: "Marketer | Sales", steps: 11500, rank: 6, trend: "down", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1772170726/wellstaq_onboarding_image_les0xq.png" },
   { id: 7, name: "Finn Wilder", role: "Manager | Operations", steps: 10000, rank: 7, trend: "down", avatar: "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334436/sports-men-standing-white-wall_mz07zp.jpg" },
-];
-
-const radarData = [
-  { subject: 'Distance', A: 120, fullMark: 150 },
-  { subject: 'Step', A: 98, fullMark: 150 },
-  { subject: 'Squat', A: 86, fullMark: 150 },
-  { subject: 'Workout', A: 99, fullMark: 150 },
-  { subject: 'Run', A: 85, fullMark: 150 },
-  { subject: 'Log', A: 65, fullMark: 150 },
-  { subject: 'Water', A: 85, fullMark: 150 },
 ];
 
 const monthlyStepsData = [
@@ -90,8 +93,9 @@ const monthlyStepsData = [
 ];
 
 export default function ClubsPage() {
-  const [clubs, setClubs] = useState<any[]>(MOCK_CLUBS);
-  const [selectedClub, setSelectedClub] = useState<any | null>(null);
+  const { activeBranch } = useDashboardData();
+  const [clubs, setClubs] = useState<Club[]>(MOCK_CLUBS);
+  const [selectedClub, setSelectedClub] = useState<Club | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
@@ -102,6 +106,10 @@ export default function ClubsPage() {
   const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
   const memberDropdownRef = useRef<HTMLDivElement>(null);
   useClickOutside(memberDropdownRef, () => setIsMemberDropdownOpen(false));
+
+  useEffect(() => {
+    void api.resources.list("clubs", MOCK_CLUBS, `branch=${encodeURIComponent(activeBranch)}`).then(setClubs);
+  }, [activeBranch]);
 
   const [activeTab, setActiveTab] = useState("Overview");
   const [activeFilter, setActiveFilter] = useState("All Clubs");
@@ -114,15 +122,18 @@ export default function ClubsPage() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
-  const handleCreateDepartment = () => {
+  const handleCreateDepartment = async () => {
     const newDepartment = {
       id: clubs.length + 1,
       name: newDepartmentName || "New Department",
       members: selectedMembers.length,
       activities: 0,
       rank: clubs.length + 1,
-      avatars: selectedMembers.map(id => MOCK_MEMBERS.find(m => m.id === id)?.avatar).filter(Boolean)
+      avatars: selectedMembers
+        .map(id => MOCK_MEMBERS.find(m => m.id === id)?.avatar)
+        .filter((avatar): avatar is string => Boolean(avatar))
     };
+    await api.resources.mutate({ resource: "clubs", action: "create", payload: { ...newDepartment, branch: activeBranch } });
     setClubs([newDepartment, ...clubs]);
     setIsCreateModalOpen(false);
     setIsSuccessModalOpen(true);
@@ -132,7 +143,8 @@ export default function ClubsPage() {
     setSelectedMembers([]);
   };
 
-  const handleAddMembers = () => {
+  const handleAddMembers = async () => {
+    await api.resources.mutate({ resource: "clubs", action: "add-members", id: selectedClub?.id, payload: { memberIds: selectedMembers } });
     setIsAddMemberModalOpen(false);
     setIsAddMemberSuccessModalOpen(true);
     setSelectedMembers([]);

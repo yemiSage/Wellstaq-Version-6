@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Send, Menu, Edit, Layout, MoreHorizontal, Plus, Settings2, Scale, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus } from "lucide-react";
+import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Menu, Plus, Settings2, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus, LoaderCircle, UserPlus } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { GoogleGenAI } from "@google/genai";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
@@ -14,20 +13,28 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { INITIAL_MEMBERS, MOCK_DEPARTMENTS, EVENTS, CHALLENGES } from "@/lib/mock-data";
+import { api } from "@/services/api";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import type { BranchInvitee, UserSearchResult } from "@/types/api";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isOrgSwitcherOpen, setIsOrgSwitcherOpen] = useState(false);
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
-  const [newBranchData, setNewBranchData] = useState({ name: "", employees: "" });
+  const [branchModalStep, setBranchModalStep] = useState<"current" | "new">("current");
+  const [currentBranchName, setCurrentBranchName] = useState("");
+  const [newBranchName, setNewBranchName] = useState("");
+  const [employeeQuery, setEmployeeQuery] = useState("");
+  const [invitees, setInvitees] = useState<BranchInvitee[]>([]);
+  const [userMatches, setUserMatches] = useState<UserSearchResult[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
-  const orgSwitcherRef = useRef<HTMLDivElement>(null);
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string}[]>([]);
-  const [chatHistory, setChatHistory] = useState<{id: string, title: string, date: string}[]>([
+  const [chatHistory] = useState<{id: string, title: string, date: string}[]>([
     { id: "1", title: "Workout routine for today", date: "Today" },
     { id: "2", title: "Local wellness departments", date: "Yesterday" },
     { id: "3", title: "Feeling stressed lately", date: "Last week" }
@@ -36,6 +43,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { user: userData, activeBranch, addBranch, nameCurrentBranch } = useDashboardData();
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -47,42 +55,33 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
     }
   }, [messages, isChatOpen, isTyping]);
 
-  const [userData, setUserData] = useState({
-    firstName: "Opeyemi",
-    lastName: "Adegboye",
-    email: "adegboyeopeyemi065@gmail.com",
-    businessName: "Yemi Inc lokoja",
-    profileImage: "https://picsum.photos/seed/opeyemi/100/100"
-  });
-  const [branches, setBranches] = useState<{name: string, employees: string}[]>([]);
-  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
+  useEffect(() => {
+    const query = employeeQuery.trim();
+    if (!isAddBranchModalOpen || branchModalStep !== "new" || query.length < 2) {
+      setUserMatches([]);
+      setIsSearchingUsers(false);
+      return;
+    }
 
-  const MOCK_DATA_CONTEXT = useMemo(() => {
-    const branchMembers = INITIAL_MEMBERS.filter(m => m.branch === activeBranch);
-    const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === activeBranch);
-    const branchEvents = EVENTS.filter(e => e.branch === activeBranch);
-    const branchChallenges = CHALLENGES.filter(c => c.branch === activeBranch);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setIsSearchingUsers(true);
+      try {
+        const matches = await api.users.search(query);
+        if (!cancelled) {
+          const selectedEmails = new Set(invitees.map((invitee) => invitee.email.toLowerCase()));
+          setUserMatches(matches.filter((match) => !selectedEmails.has(match.email.toLowerCase())));
+        }
+      } finally {
+        if (!cancelled) setIsSearchingUsers(false);
+      }
+    }, 200);
 
-    return `
-You are ws-AI, an intelligent wellness coach and therapist for the Wellstaq platform.
-Your role is to answer questions about the platform, provide wellness coaching, and act as a supportive therapist.
-Always be empathetic, encouraging, and helpful.
-
-Here is the current platform data for the ${activeBranch} branch:
-- Total Staff: ${branchMembers.length}
-- Active Departments: ${branchDepts.length} (${branchDepts.map(d => d.name).join(", ") || "None yet"})
-- Upcoming Events: ${branchEvents.length} (${branchEvents.map(e => e.title).join(", ") || "None scheduled"})
-- Active Challenges: ${branchChallenges.length} (${branchChallenges.map(c => c.title).join(", ") || "None active"})
-
-Global Platform Info:
-- Total Branches: 3 (Yemi Inc lokoja, Lagos Branch, Abuja Branch)
-- Top Performers: Alex Johnson (12,450 steps), Sarah Williams (10,230 steps), Michael Brown (9,800 steps).
-- Trending Topics: #StepUpForHealth, #MindfulMovement, #LagosRuns, #CleanEating, #TeamHIIT.
-
-When the user asks for advice, provide actionable wellness tips. When they share feelings, be empathetic like a therapist.
-Keep your responses concise and conversational.
-`;
-  }, [activeBranch]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [branchModalStep, employeeQuery, invitees, isAddBranchModalOpen]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -93,23 +92,8 @@ Keep your responses concise and conversational.
     setIsTyping(true);
 
     try {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("API Key is missing. Please set NEXT_PUBLIC_GEMINI_API_KEY in your environment.");
-      }
-      
-      const ai = new GoogleGenAI({ apiKey });
-      const conversation = newMessages.map(m => `${m.role === 'user' ? 'User' : 'ws-AI'}: ${m.content}`).join('\n');
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{ parts: [{ text: `Here is the conversation history:\n${conversation}\n\nws-AI:` }] }],
-        config: {
-          systemInstruction: MOCK_DATA_CONTEXT + `\nThe user's name is ${userData.firstName}.`,
-        }
-      });
-
-      const aiResponse = response.text || "I'm here to help you with your wellness journey.";
+      const response = await api.ai.chat(newMessages, activeBranch);
+      const aiResponse = response.message;
       setMessages([...newMessages, { role: 'ai', content: aiResponse }]);
     } catch (e) {
       console.error("AI Chat Error:", e);
@@ -120,31 +104,87 @@ Keep your responses concise and conversational.
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await api.auth.logout();
     setIsLogoutModalOpen(false);
     toast.success("Logged out successfully");
     router.push("/");
   };
 
-  const handleAddBranch = () => {
-    if (!newBranchData.name || !newBranchData.employees) {
-      toast.error("Please fill in all fields");
+  const openBranchModal = () => {
+    setBranchModalStep("current");
+    setCurrentBranchName("");
+    setNewBranchName("");
+    setEmployeeQuery("");
+    setInvitees([]);
+    setUserMatches([]);
+    setIsAddBranchModalOpen(true);
+  };
+
+  const closeBranchModal = () => {
+    setIsAddBranchModalOpen(false);
+    setBranchModalStep("current");
+    setCurrentBranchName("");
+    setNewBranchName("");
+    setEmployeeQuery("");
+    setInvitees([]);
+    setUserMatches([]);
+  };
+
+  const handleNameCurrentBranch = async () => {
+    const name = currentBranchName.trim();
+    if (!name) {
+      toast.error("Please enter the current branch name");
       return;
     }
-    
-    const updatedBranches = [...branches, newBranchData];
-    setBranches(updatedBranches);
-    setActiveBranch(newBranchData.name);
-    
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('branches', JSON.stringify(updatedBranches));
-      localStorage.setItem('activeBranch', newBranchData.name);
-      window.dispatchEvent(new Event('branchChange'));
+
+    await nameCurrentBranch(name);
+    setBranchModalStep("new");
+  };
+
+  const addInvitee = (invitee: BranchInvitee) => {
+    if (invitees.some((item) => item.email.toLowerCase() === invitee.email.toLowerCase())) {
+      toast.error("This employee has already been added");
+      return;
     }
-    
+
+    setInvitees((current) => [...current, invitee]);
+    setEmployeeQuery("");
+    setUserMatches([]);
+  };
+
+  const addEmployeeQuery = () => {
+    const email = employeeQuery.trim().toLowerCase();
+    if (!EMAIL_PATTERN.test(email)) {
+      toast.error("Enter a valid email or select an existing user");
+      return;
+    }
+    addInvitee({ email });
+  };
+
+  const handleAddBranch = async () => {
+    const name = newBranchName.trim();
+    if (!name) {
+      toast.error("Please enter a branch name");
+      return;
+    }
+
+    let branchInvitees = invitees;
+    const pendingEmail = employeeQuery.trim().toLowerCase();
+    if (pendingEmail) {
+      if (!EMAIL_PATTERN.test(pendingEmail)) {
+        toast.error("Enter a valid email or select an existing user");
+        return;
+      }
+      if (!branchInvitees.some((item) => item.email.toLowerCase() === pendingEmail)) {
+        branchInvitees = [...branchInvitees, { email: pendingEmail }];
+      }
+    }
+
+    await addBranch({ name, invitees: branchInvitees });
+
     toast.success("Branch added successfully!");
-    setIsAddBranchModalOpen(false);
-    setNewBranchData({ name: "", employees: "" });
+    closeBranchModal();
   };
 
   const startNewChat = () => {
@@ -152,78 +192,7 @@ Keep your responses concise and conversational.
     setShowHistory(false);
   };
 
-  useEffect(() => {
-    const loadUserData = () => {
-      if (typeof window !== 'undefined') {
-        const storedData = localStorage.getItem('onboardingData');
-        if (storedData) {
-          try {
-            const parsed = JSON.parse(storedData);
-            setUserData({
-              firstName: parsed.firstName || "Opeyemi",
-              lastName: parsed.lastName || "Adegboye",
-              email: parsed.email || "adegboyeopeyemi065@gmail.com",
-              businessName: parsed.businessName || "Yemi Inc lokoja",
-              profileImage: parsed.profileImage || "https://picsum.photos/seed/opeyemi/100/100"
-            });
-            
-            const storedBranches = localStorage.getItem('branches');
-            if (storedBranches) {
-              setBranches(JSON.parse(storedBranches));
-            } else {
-              setBranches([{ name: parsed.businessName || "Yemi Inc lokoja", employees: "10" }]);
-            }
-            
-            const storedActiveBranch = localStorage.getItem('activeBranch');
-            if (storedActiveBranch) {
-              setActiveBranch(storedActiveBranch);
-            } else {
-              setActiveBranch(parsed.businessName || "Yemi Inc lokoja");
-            }
-          } catch (e) {
-            console.error("Failed to parse onboarding data", e);
-          }
-        } else {
-          const storedBranches = localStorage.getItem('branches');
-          if (storedBranches) {
-            setBranches(JSON.parse(storedBranches));
-          } else {
-            setBranches([{ name: "Yemi Inc lokoja", employees: "10" }]);
-          }
-          
-          const storedActiveBranch = localStorage.getItem('activeBranch');
-          if (storedActiveBranch) {
-            setActiveBranch(storedActiveBranch);
-          } else {
-            setActiveBranch("Yemi Inc lokoja");
-          }
-        }
-      }
-    };
-
-    loadUserData();
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'onboardingData' || !e.key) {
-        loadUserData();
-      }
-    };
-
-    const handleCustomStorageEvent = () => {
-      loadUserData();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('profileUpdate', handleCustomStorageEvent);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('profileUpdate', handleCustomStorageEvent);
-    };
-  }, []);
-
   useClickOutside(profileRef, () => setIsProfileOpen(false));
-  useClickOutside(orgSwitcherRef, () => setIsOrgSwitcherOpen(false));
 
   return (
     <>
@@ -237,70 +206,13 @@ Keep your responses concise and conversational.
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Organization Switcher */}
-          <div className="relative" ref={orgSwitcherRef}>
-            <button 
-              onClick={() => setIsOrgSwitcherOpen(!isOrgSwitcherOpen)}
-              className="flex items-center gap-2 px-2 lg:px-3 py-2 rounded-lg border border-grey-4 hover:bg-grey-5 transition-colors"
-            >
-              <div className="w-6 h-6 rounded bg-primary-1 text-white flex items-center justify-center text-[10px] lg:text-xs font-bold">
-                {activeBranch.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-xs lg:text-sm font-medium text-grey-1 max-w-[80px] lg:max-w-none truncate">{activeBranch}</span>
-              <ChevronDown className="w-3 h-3 lg:w-4 lg:h-4 text-grey-3" />
-            </button>
-
-            <AnimatePresence>
-            {isOrgSwitcherOpen && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="absolute left-0 mt-2 w-[240px] bg-white border border-grey-4 rounded-lg shadow-lg z-50 p-2 origin-top-left"
-              >
-                <div className="px-3 py-2">
-                  <p className="text-xs font-semibold text-grey-3 uppercase tracking-wider mb-2">Organizations</p>
-                  <div className="space-y-1">
-                    {branches.map((branch, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => {
-                          setActiveBranch(branch.name);
-                          if (typeof window !== 'undefined') {
-                            localStorage.setItem('activeBranch', branch.name);
-                            window.dispatchEvent(new Event('branchChange'));
-                          }
-                          setIsOrgSwitcherOpen(false);
-                          toast.success(`Switched to ${branch.name}`);
-                        }}
-                        className={`w-full flex items-center gap-3 p-2 rounded-md transition-colors ${activeBranch === branch.name ? 'bg-grey-5' : 'hover:bg-grey-5'}`}
-                      >
-                        <div className="w-8 h-8 rounded bg-primary-1 text-white flex items-center justify-center text-sm font-bold">
-                          {branch.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="text-sm font-medium text-grey-1">{branch.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="h-px bg-grey-4 my-1"></div>
-                <div className="p-1">
-                  <button 
-                    onClick={() => {
-                      setIsOrgSwitcherOpen(false);
-                      setIsAddBranchModalOpen(true);
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-grey-1 hover:bg-grey-5 rounded-md transition-colors"
-                  >
-                    <Plus className="w-4 h-4 text-grey-2" />
-                    Add new branch
-                  </button>
-                </div>
-              </motion.div>
-            )}
-            </AnimatePresence>
-          </div>
+          <button
+            onClick={openBranchModal}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary-1 bg-transparent text-primary-1 hover:bg-orange-50 transition-colors text-xs lg:text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            Add branch
+          </button>
 
           <div className="relative flex-1 max-w-[459px] hidden sm:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
@@ -337,7 +249,13 @@ Keep your responses concise and conversational.
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
               <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-primary-1 text-white flex items-center justify-center font-medium overflow-hidden relative border border-grey-4">
-                <Image src={userData.profileImage} alt={userData.firstName} fill className="object-cover" referrerPolicy="no-referrer" />
+                {userData.profileImage ? (
+                  <Image src={userData.profileImage} alt={userData.firstName} fill className="object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="text-xs lg:text-sm">
+                    {(userData.firstName.charAt(0) + userData.lastName.charAt(0)).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="hidden xl:block">
                 <p className="text-sm font-medium text-grey-1 leading-tight">{userData.firstName} {userData.lastName}</p>
@@ -538,39 +456,126 @@ Keep your responses concise and conversational.
 
       <Modal
         isOpen={isAddBranchModalOpen}
-        onClose={() => setIsAddBranchModalOpen(false)}
-        title="Add New Branch"
-        subtitle="Create a new branch for your organization."
+        onClose={closeBranchModal}
+        title={branchModalStep === "current" ? "Name Current Branch" : "Create New Branch"}
+        subtitle={branchModalStep === "current" ? "Give your current branch a name before adding another." : "Create another branch for your organization."}
       >
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="branchName">Branch Name</Label>
-            <Input
-              id="branchName"
-              placeholder="e.g. London Office"
-              value={newBranchData.name}
-              onChange={(e) => setNewBranchData({ ...newBranchData, name: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="employees">Number of Employees</Label>
-            <Input
-              id="employees"
-              type="number"
-              placeholder="e.g. 50"
-              value={newBranchData.employees}
-              onChange={(e) => setNewBranchData({ ...newBranchData, employees: e.target.value })}
-            />
-          </div>
-        </div>
-        <div className="flex justify-end gap-3 pt-4 border-t border-grey-4">
-          <Button variant="outline" onClick={() => setIsAddBranchModalOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleAddBranch}>
-            Add Branch
-          </Button>
-        </div>
+        {branchModalStep === "current" ? (
+          <>
+            <div className="space-y-2 py-4">
+              <Label htmlFor="currentBranchName">Current Branch Name</Label>
+              <Input
+                id="currentBranchName"
+                placeholder="e.g. Lagos Headquarters"
+                value={currentBranchName}
+                onChange={(e) => setCurrentBranchName(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-grey-4">
+              <Button variant="outline" onClick={closeBranchModal}>Cancel</Button>
+              <Button onClick={handleNameCurrentBranch}>Continue</Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="branchName">New Branch Name</Label>
+                <Input
+                  id="branchName"
+                  placeholder="e.g. Abuja Office"
+                  value={newBranchName}
+                  onChange={(e) => setNewBranchName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="employees">Add/invite employee</Label>
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <Input
+                      id="employees"
+                      type="text"
+                      autoComplete="off"
+                      placeholder="Search users or enter an email"
+                      value={employeeQuery}
+                      onChange={(e) => setEmployeeQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addEmployeeQuery();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={addEmployeeQuery}
+                      title="Add email invitation"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {(isSearchingUsers || userMatches.length > 0) && (
+                    <div className="absolute left-0 right-12 top-[48px] z-20 max-h-48 overflow-y-auto rounded-lg border border-grey-4 bg-white shadow-lg">
+                      {isSearchingUsers ? (
+                        <div className="flex items-center gap-2 px-3 py-3 text-sm text-grey-3">
+                          <LoaderCircle className="h-4 w-4 animate-spin" />
+                          Searching users
+                        </div>
+                      ) : (
+                        userMatches.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => addInvitee({
+                              userId: user.id,
+                              name: user.name,
+                              email: user.email,
+                            })}
+                            className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-grey-5"
+                          >
+                            <span>
+                              <span className="block text-sm font-medium text-grey-1">{user.name}</span>
+                              <span className="block text-xs text-grey-3">{user.email}</span>
+                            </span>
+                            <Plus className="h-4 w-4 text-primary-1" />
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {invitees.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {invitees.map((invitee) => (
+                      <span
+                        key={invitee.email}
+                        className="inline-flex max-w-full items-center gap-1 rounded-md bg-primary-5 px-2 py-1 text-xs text-primary-1"
+                      >
+                        <span className="truncate">{invitee.name ?? invitee.email}</span>
+                        <button
+                          type="button"
+                          onClick={() => setInvitees((current) => current.filter((item) => item.email !== invitee.email))}
+                          className="shrink-0"
+                          aria-label={`Remove ${invitee.name ?? invitee.email}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4 border-t border-grey-4">
+              <Button variant="outline" onClick={closeBranchModal}>Cancel</Button>
+              <Button onClick={handleAddBranch}>Add Branch</Button>
+            </div>
+          </>
+        )}
       </Modal>
     </>
   );

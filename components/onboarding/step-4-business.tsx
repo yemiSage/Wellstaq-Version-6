@@ -14,7 +14,7 @@ interface Step4Props {
 const EMPLOYEE_COUNTS = ["0 - 5", "6 - 10", "10 - 20", "20 - 30", "Over 30"];
 
 export function Step4Business({ data, updateData, onNext, isLoading }: Step4Props) {
-  const isValid = data.businessName && data.businessWebsite && data.employeeCount;
+  const isValid = data.businessName && data.employeeCount;
 
   return (
     <div className="flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -23,7 +23,7 @@ export function Step4Business({ data, updateData, onNext, isLoading }: Step4Prop
       <div className="grid grid-cols-2 gap-6 mb-6">
         <div className="flex flex-col gap-2">
           <Label htmlFor="businessName">
-            Business Name <span className="text-error-1">*</span>
+            Business Name <span className="text-red-600">*</span>
           </Label>
           <Input
             id="businessName"
@@ -34,7 +34,7 @@ export function Step4Business({ data, updateData, onNext, isLoading }: Step4Prop
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="businessWebsite">
-            Business Website <span className="text-error-1">*</span>
+            Business Website
           </Label>
           <Input
             id="businessWebsite"
@@ -47,7 +47,7 @@ export function Step4Business({ data, updateData, onNext, isLoading }: Step4Prop
 
       <div className="flex flex-col gap-3 mb-12">
         <Label>
-          Number of Employee <span className="text-error-1">*</span>
+          Number of Employee <span className="text-red-600">*</span>
         </Label>
         <div className="flex flex-wrap gap-3">
           {EMPLOYEE_COUNTS.map((count) => (

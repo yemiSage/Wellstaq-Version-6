@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
   User, 
@@ -10,9 +9,7 @@ import {
   Bell, 
   Lock, 
   Palette, 
-  Link as LinkIcon, 
   CreditCard, 
-  HelpCircle, 
   LogOut,
   Camera,
   Plus,
@@ -23,6 +20,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { api } from "@/services/api";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 
 const NAV_ITEMS = [
   { id: "profile", label: "Profile", sublabel: "Personal information", icon: <User className="w-5 h-5" /> },
@@ -36,26 +35,19 @@ const NAV_ITEMS = [
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { user, updateUser } = useDashboardData();
   const [activeTab, setActiveTab] = useState("profile");
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isEditPermissionsModalOpen, setIsEditPermissionsModalOpen] = useState(false);
   const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
-  const [selectedRoleForEdit, setSelectedRoleForEdit] = useState<any>(null);
+  const [selectedRoleForEdit, setSelectedRoleForEdit] = useState<{
+    role: string;
+    description: string;
+    users: number;
+    permissions: string[];
+  } | null>(null);
   const [newRoleData, setNewRoleData] = useState({ role: "", description: "", permissions: [] as string[] });
-  const [profileImage, setProfileImage] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const storedData = localStorage.getItem('onboardingData');
-      if (storedData) {
-        try {
-          const parsed = JSON.parse(storedData);
-          return parsed.profileImage || "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&h=200&auto=format&fit=crop";
-        } catch (e) {
-          return "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&h=200&auto=format&fit=crop";
-        }
-      }
-    }
-    return "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&h=200&auto=format&fit=crop";
-  });
+  const [profileImage, setProfileImage] = useState("https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&h=200&auto=format&fit=crop");
 
   const [rolesList, setRolesList] = useState([
     { 
@@ -84,6 +76,14 @@ export default function SettingsPage() {
     }
   ]);
 
+  useEffect(() => {
+    if (!api.isMock) {
+      void api.resources.list<typeof rolesList>("roles", []).then(setRolesList).catch(() => {
+        toast.error("Unable to load roles");
+      });
+    }
+  }, []);
+
   const ALL_PERMISSIONS = [
     "Manage Branches", "Manage Billing", "Full System Access",
     "Manage Branch Teams", "Create Events", "Manage Challenges",
@@ -92,19 +92,22 @@ export default function SettingsPage() {
     "Manage Users", "View Analytics", "Export Data", "Manage Integrations"
   ];
 
-  const handleAddRole = (e: React.FormEvent) => {
+  const handleAddRole = async (e: React.FormEvent) => {
     e.preventDefault();
     const newRole = {
       ...newRoleData,
       users: 0
     };
+    await api.resources.mutate({ resource: "roles", action: "create", payload: newRole });
     setRolesList([...rolesList, newRole]);
     setIsAddRoleModalOpen(false);
     setNewRoleData({ role: "", description: "", permissions: [] });
     toast.success(`${newRole.role} role created successfully!`);
   };
 
-  const handleUpdatePermissions = (updatedPermissions: string[]) => {
+  const handleUpdatePermissions = async (updatedPermissions: string[]) => {
+    if (!selectedRoleForEdit) return;
+    await api.resources.mutate({ resource: "roles", action: "permissions", id: selectedRoleForEdit.role, payload: { permissions: updatedPermissions } });
     setRolesList(rolesList.map(r => 
       r.role === selectedRoleForEdit.role 
         ? { ...r, permissions: updatedPermissions } 
@@ -114,66 +117,54 @@ export default function SettingsPage() {
     toast.success("Permissions updated successfully!");
   };
 
-  const [formData, setFormData] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const storedData = localStorage.getItem('onboardingData');
-      if (storedData) {
-        try {
-          const parsed = JSON.parse(storedData);
-          return {
-            firstName: parsed.firstName || "Opeyemi",
-            lastName: parsed.lastName || "Adegboye",
-            email: parsed.email || "yemi.fig@mail.com",
-            phone: parsed.phone || "+234 801 234 5678",
-            location: parsed.location || "Lagos, Nigeria",
-            website: parsed.website || "wellstaq.co/opeyemi",
-            bio: parsed.bio || "Wellness enthusiast and fitness community builder. Passionate about helping teams build healthy habits."
-          };
-        } catch (e) {
-          // fallback
-        }
-      }
-    }
-    return {
-      firstName: "Opeyemi",
-      lastName: "Adegboye",
-      email: "yemi.fig@mail.com",
-      phone: "+234 801 234 5678",
-      location: "Lagos, Nigeria",
-      website: "wellstaq.co/opeyemi",
-      bio: "Wellness enthusiast and fitness community builder. Passionate about helping teams build healthy habits."
-    };
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    location: "",
+    website: "",
+    bio: "",
   });
 
-  const handleSave = () => {
-    // Sync profile image with top nav via localStorage
-    const storedData = localStorage.getItem('onboardingData');
+  useEffect(() => {
+    setFormData({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone ?? "",
+      location: user.location ?? "",
+      website: user.website ?? "",
+      bio: user.bio ?? "",
+    });
+    if (user.profileImage) setProfileImage(user.profileImage);
+  }, [user]);
+
+  const handleSave = async () => {
     const updatedData = { ...formData, profileImage };
-    
-    if (storedData) {
-      const parsed = JSON.parse(storedData);
-      localStorage.setItem('onboardingData', JSON.stringify({ ...parsed, ...updatedData }));
-    } else {
-      localStorage.setItem('onboardingData', JSON.stringify(updatedData));
-    }
-    
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new Event('profileUpdate'));
+    await api.resources.mutate({ resource: "users", action: "profile", payload: updatedData });
+    updateUser(updatedData);
     toast.success("Settings saved successfully");
   };
 
-  const handleDeleteRole = (roleName: string) => {
+  const handleProfileUpload = async (file: File) => {
+    const result = await api.resources.upload("users/profile-image", file);
+    setProfileImage(result.url);
+  };
+
+  const handleDeleteRole = async (roleName: string) => {
     if (roleName === "Super Admin" || roleName === "Employee") {
       toast.error(`Cannot delete ${roleName} role.`);
       return;
     }
+    await api.resources.mutate({ resource: "roles", action: "delete", id: roleName });
     setRolesList(rolesList.filter(r => r.role !== roleName));
     toast.success(`${roleName} role deleted successfully.`);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsLogoutModalOpen(false);
-    localStorage.clear();
+    await api.auth.logout();
     toast.success("Logged out successfully");
     router.push("/");
   };
@@ -271,15 +262,9 @@ export default function SettingsPage() {
                       const input = document.createElement('input');
                       input.type = 'file';
                       input.accept = 'image/*';
-                      input.onchange = (e: any) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setProfileImage(reader.result as string);
-                          };
-                          reader.readAsDataURL(file);
-                        }
+                      input.onchange = () => {
+                        const file = input.files?.[0];
+                        if (file) void handleProfileUpload(file);
                       };
                       input.click();
                     }}

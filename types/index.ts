@@ -1,7 +1,8 @@
-export type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface OnboardingData {
   email: string;
+  password: string;
   otp: string;
   firstName: string;
   lastName: string;
@@ -17,10 +18,11 @@ export interface OnboardingData {
 
 export const initialData: OnboardingData = {
   email: "",
+  password: "",
   otp: "",
   firstName: "",
   lastName: "",
-  phoneCode: "NG",
+  phoneCode: "+234",
   phoneNumber: "",
   businessName: "",
   businessWebsite: "",

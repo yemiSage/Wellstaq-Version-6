@@ -1,49 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Image from "next/image";
-import { Search, Filter, Plus, Trophy, Users, Calendar, ArrowRight, CheckCircle2, Clock, MoreHorizontal, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Search, Plus, Trophy, Users, Calendar, CheckCircle2, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CHALLENGES } from "@/lib/mock-data";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { api } from "@/services/api";
 
 export default function ChallengesPage() {
   const [activeTab, setActiveTab] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
+  const { challenges: sourceChallenges, activeBranch } = useDashboardData();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [challenges, setChallenges] = useState(CHALLENGES);
+  const [challenges, setChallenges] = useState(sourceChallenges);
   const [stats, setStats] = useState({
     activeChallenges: 0,
     totalParticipants: 0,
     completionRate: "0%"
   });
 
-  useEffect(() => {
-    const storedBranch = localStorage.getItem('activeBranch');
-    const branch = storedBranch || "Yemi Inc lokoja";
-    setActiveBranch(branch);
-    updateStats(branch);
-
-    const handleBranchChange = () => {
-      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
-      setActiveBranch(newBranch);
-      setCurrentPage(1);
-      updateStats(newBranch);
-    };
-
-    window.addEventListener('branchChange', handleBranchChange);
-    window.addEventListener('storage', handleBranchChange);
-    return () => {
-      window.removeEventListener('branchChange', handleBranchChange);
-      window.removeEventListener('storage', handleBranchChange);
-    };
-  }, []);
-
-  const updateStats = (branch: string) => {
-    const branchChallenges = CHALLENGES.filter(c => c.branch === branch);
+  const updateStats = useCallback((branch: string, challengeData: typeof sourceChallenges) => {
+    const branchChallenges = challengeData.filter(c => c.branch === branch);
     const active = branchChallenges.filter(c => c.status === 'Active').length;
     const participants = branchChallenges.reduce((acc, c) => acc + c.participants, 0);
     const avgProgress = branchChallenges.length > 0 
@@ -55,7 +35,13 @@ export default function ChallengesPage() {
       totalParticipants: participants,
       completionRate: `${avgProgress}%`
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    setChallenges(sourceChallenges);
+    setCurrentPage(1);
+    updateStats(activeBranch, sourceChallenges);
+  }, [activeBranch, sourceChallenges, updateStats]);
 
   const dashboardStats = [
     { label: "Active Challenges", value: stats.activeChallenges.toString(), trend: "+2 this week", trendColor: "text-green-600", icon: <Trophy className="w-5 h-5" />, iconBg: "bg-orange-50 text-orange-600" },
@@ -69,7 +55,7 @@ export default function ChallengesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  const filteredChallenges = CHALLENGES.filter(challenge => {
+  const filteredChallenges = challenges.filter(challenge => {
     const matchesSearch = challenge.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           challenge.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === "All" || challenge.status === activeTab;
@@ -83,12 +69,9 @@ export default function ChallengesPage() {
     currentPage * itemsPerPage
   );
 
-  const handleJoin = (title: string) => {
-    toast.success(`Successfully joined "${title}" challenge!`);
-  };
-
-  const handleCreateChallenge = (e: React.FormEvent) => {
+  const handleCreateChallenge = async (e: React.FormEvent) => {
     e.preventDefault();
+    await api.resources.mutate({ resource: "challenges", action: "create", payload: { branch: activeBranch, assignType } });
     toast.success("Challenge created and assigned successfully!");
     setIsCreateModalOpen(false);
   };
@@ -233,7 +216,7 @@ export default function ChallengesPage() {
           <div className="text-center py-12 bg-[#FAFAFA] rounded-xl border border-[#F0F0F0]">
             <Trophy className="w-12 h-12 text-grey-3 mx-auto mb-3" />
             <h3 className="text-lg font-bold text-grey-1 mb-1">No challenges found</h3>
-            <p className="text-grey-2">Try adjusting your search or filters to find what you're looking for.</p>
+            <p className="text-grey-2">Try adjusting your search or filters to find what you&apos;re looking for.</p>
           </div>
         )}
 

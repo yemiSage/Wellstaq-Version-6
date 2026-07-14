@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { Search, Plus, Calendar, Users, TrendingUp, MoreHorizontal, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Clock, X, ChevronDown, Check } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { EVENTS, PARTICIPANT_OPTIONS } from "@/lib/mock-data";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { api } from "@/services/api";
 import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
 
 export default function EventsPage() {
+  const { events: sourceEvents, participantOptions: PARTICIPANT_OPTIONS, activeBranch } = useDashboardData();
   const [activeTab, setActiveTab] = useState("All Events");
   const [searchQuery, setSearchQuery] = useState("");
-  const [events, setEvents] = useState(EVENTS);
-  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
+  const [events, setEvents] = useState(sourceEvents);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [stats, setStats] = useState({
     totalEvents: 0,
@@ -22,29 +23,8 @@ export default function EventsPage() {
     totalParticipants: 0
   });
 
-  useEffect(() => {
-    const storedBranch = localStorage.getItem('activeBranch');
-    const branch = storedBranch || "Yemi Inc lokoja";
-    setActiveBranch(branch);
-    updateStats(branch);
-
-    const handleBranchChange = () => {
-      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
-      setActiveBranch(newBranch);
-      setCurrentPage(1);
-      updateStats(newBranch);
-    };
-
-    window.addEventListener('branchChange', handleBranchChange);
-    window.addEventListener('storage', handleBranchChange);
-    return () => {
-      window.removeEventListener('branchChange', handleBranchChange);
-      window.removeEventListener('storage', handleBranchChange);
-    };
-  }, []);
-
-  const updateStats = (branch: string) => {
-    const branchEvents = EVENTS.filter(e => e.branch === branch);
+  const updateStats = useCallback((branch: string, eventData: typeof sourceEvents) => {
+    const branchEvents = eventData.filter(e => e.branch === branch);
     const upcoming = branchEvents.filter(e => e.status === 'Upcoming').length;
     const completed = branchEvents.filter(e => e.status === 'Completed').length;
     const participants = branchEvents.reduce((acc, e) => acc + e.participants, 0);
@@ -55,7 +35,13 @@ export default function EventsPage() {
       completedEvents: completed,
       totalParticipants: participants
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    setEvents(sourceEvents);
+    setCurrentPage(1);
+    updateStats(activeBranch, sourceEvents);
+  }, [activeBranch, sourceEvents, updateStats]);
 
   const dashboardStats = [
     {
@@ -123,7 +109,8 @@ export default function EventsPage() {
     }
   };
 
-  const handleDeleteEvent = (id: number) => {
+  const handleDeleteEvent = async (id: number) => {
+    await api.resources.mutate({ resource: "events", action: "delete", id });
     setEvents(events.filter(e => e.id !== id));
     setDeleteConfirmEventId(null);
     toast.success("Event deleted successfully");
@@ -457,7 +444,8 @@ export default function EventsPage() {
                   Cancel
                 </button>
                 <button 
-                  onClick={() => {
+                  onClick={async () => {
+                    await api.resources.mutate({ resource: "events", action: "create", payload: { branch: activeBranch, participantIds: selectedParticipants } });
                     toast.success("Event created successfully");
                     setIsCreateModalOpen(false);
                   }}

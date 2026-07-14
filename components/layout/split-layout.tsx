@@ -5,11 +5,11 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 
 const IMAGES = [
-  "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334436/sports-men-standing-white-wall_mz07zp.jpg",
-  "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773334554/diverse-young-people-holding-hands_z0tupa.jpg",
-  "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773336671/freepik__wellness-africannigeria__84223_ia4f7l.png",
-  "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773336642/freepik__wellness-africannigeria-team__84224_kdkiow.png",
-  "https://res.cloudinary.com/dv7yvatu2/image/upload/v1773336646/freepik__wellness__84222_popnho.png"
+  "https://res.cloudinary.com/dv7yvatu2/image/upload/f_auto,q_auto:eco,w_1200,dpr_auto/v1773334436/sports-men-standing-white-wall_mz07zp.jpg",
+  "https://res.cloudinary.com/dv7yvatu2/image/upload/f_auto,q_auto:eco,w_1200,dpr_auto/v1773334554/diverse-young-people-holding-hands_z0tupa.jpg",
+  "https://res.cloudinary.com/dv7yvatu2/image/upload/f_auto,q_auto:eco,w_1200,dpr_auto/v1773336671/freepik__wellness-africannigeria__84223_ia4f7l.png",
+  "https://res.cloudinary.com/dv7yvatu2/image/upload/f_auto,q_auto:eco,w_1200,dpr_auto/v1773336642/freepik__wellness-africannigeria-team__84224_kdkiow.png",
+  "https://res.cloudinary.com/dv7yvatu2/image/upload/f_auto,q_auto:eco,w_1200,dpr_auto/v1773336646/freepik__wellness__84222_popnho.png"
 ];
 
 export function SplitLayout({ children }: { children: React.ReactNode }) {
@@ -18,9 +18,14 @@ export function SplitLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % IMAGES.length);
-    }, 5000); // Change slide every 5 seconds
+    }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const nextImage = new window.Image();
+    nextImage.src = IMAGES[(currentIndex + 1) % IMAGES.length];
+  }, [currentIndex]);
 
   return (
     <div className="flex min-h-screen w-full bg-white">
@@ -42,8 +47,8 @@ export function SplitLayout({ children }: { children: React.ReactNode }) {
               fill
               className="object-cover"
               referrerPolicy="no-referrer"
-              priority
-              quality={100}
+              priority={currentIndex === 0}
+              sizes="60vw"
             />
           </motion.div>
         </AnimatePresence>

@@ -2,20 +2,18 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  poweredByHeader: false,
   typescript: {
     ignoreBuildErrors: false,
   },
-  // Allow access to remote image placeholder.
   images: {
+    unoptimized: process.env.NODE_ENV === 'development',
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'picsum.photos',
         port: '',
-        pathname: '/**', // This allows any path under the hostname
+        pathname: '/**',
       },
       {
         protocol: 'https',
@@ -33,9 +31,21 @@ const nextConfig: NextConfig = {
   },
   output: 'standalone',
   transpilePackages: ['motion'],
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {key: 'X-Content-Type-Options', value: 'nosniff'},
+          {key: 'X-Frame-Options', value: 'DENY'},
+          {key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin'},
+          {key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)'},
+        ],
+      },
+    ];
+  },
   webpack: (config, {dev}) => {
-    // HMR is disabled in AI Studio via DISABLE_HMR env var.
-    // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
+    // File watching can be disabled while an automated editor is changing files.
     if (dev && process.env.DISABLE_HMR === 'true') {
       config.watchOptions = {
         ignored: /.*/,

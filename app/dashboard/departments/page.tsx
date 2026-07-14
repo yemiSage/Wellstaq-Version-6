@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import { Search, Plus, X, Users, Activity, Calendar, Award, ChevronDown, Check, UserPlus, Edit2, Trash2, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import Image from "next/image";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -10,17 +10,8 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip
 } from "recharts";
-import { MOCK_DEPARTMENTS, MOCK_MEMBERS, INITIAL_MEMBERS, EVENTS } from "@/lib/mock-data";
-
-const radarData = [
-  { subject: 'Distance', A: 120, fullMark: 150 },
-  { subject: 'Step', A: 98, fullMark: 150 },
-  { subject: 'Squat', A: 86, fullMark: 150 },
-  { subject: 'Workout', A: 99, fullMark: 150 },
-  { subject: 'Run', A: 85, fullMark: 150 },
-  { subject: 'Log', A: 65, fullMark: 150 },
-  { subject: 'Water', A: 85, fullMark: 150 },
-];
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { api } from "@/services/api";
 
 const monthlyStepsData = [
   { name: 'Jan', steps: 500000 },
@@ -38,8 +29,9 @@ const monthlyStepsData = [
 ];
 
 export default function DepartmentsPage() {
-  const [activeBranch, setActiveBranch] = useState("Yemi Inc lokoja");
-  const [departments, setDepartments] = useState<any[]>(MOCK_DEPARTMENTS);
+  const { departments: sourceDepartments, leaderboard: MOCK_MEMBERS, members: INITIAL_MEMBERS, events: EVENTS, activeBranch } = useDashboardData();
+  type Department = (typeof sourceDepartments)[number] & {healthScore?: number; engagement?: number};
+  const [departments, setDepartments] = useState<Department[]>(sourceDepartments);
   const [stats, setStats] = useState({
     totalStaff: 0,
     activeStaff: 0,
@@ -48,30 +40,9 @@ export default function DepartmentsPage() {
     totalDepartments: 0
   });
 
-  useEffect(() => {
-    const storedBranch = localStorage.getItem('activeBranch');
-    const branch = storedBranch || "Yemi Inc lokoja";
-    setActiveBranch(branch);
-    updateStats(branch);
-
-    const handleBranchChange = () => {
-      const newBranch = localStorage.getItem('activeBranch') || "Yemi Inc lokoja";
-      setActiveBranch(newBranch);
-      setSelectedDepartment(null);
-      updateStats(newBranch);
-    };
-
-    window.addEventListener('branchChange', handleBranchChange);
-    window.addEventListener('storage', handleBranchChange);
-    return () => {
-      window.removeEventListener('branchChange', handleBranchChange);
-      window.removeEventListener('storage', handleBranchChange);
-    };
-  }, []);
-
-  const updateStats = (branch: string) => {
+  const updateStats = useCallback((branch: string, departmentData: typeof sourceDepartments) => {
     const branchMembers = INITIAL_MEMBERS.filter(m => m.branch === branch);
-    const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === branch);
+    const branchDepts = departmentData.filter(d => d.branch === branch);
     const branchEvents = EVENTS.filter(e => e.branch === branch);
     
     const totalActivity = branchDepts.reduce((acc, dept) => acc + dept.activities, 0);
@@ -83,7 +54,13 @@ export default function DepartmentsPage() {
       eventsCreated: branchEvents.length,
       totalDepartments: branchDepts.length
     });
-  };
+  }, [EVENTS, INITIAL_MEMBERS]);
+
+  useEffect(() => {
+    setDepartments(sourceDepartments);
+    setSelectedDepartment(null);
+    updateStats(activeBranch, sourceDepartments);
+  }, [activeBranch, sourceDepartments, updateStats]);
 
   const dashboardStats = [
     {
@@ -131,12 +108,11 @@ export default function DepartmentsPage() {
   const filteredDepartments = departments.filter(d => d.branch === activeBranch);
   const filteredMembers = MOCK_MEMBERS.filter(m => m.branch === activeBranch);
 
-  const [selectedDepartment, setSelectedDepartment] = useState<any | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [editDepartmentName, setEditDepartmentName] = useState("");
   
   const [newDepartmentName, setNewDepartmentName] = useState("");
@@ -146,17 +122,7 @@ export default function DepartmentsPage() {
   useClickOutside(memberDropdownRef, () => setIsMemberDropdownOpen(false));
 
   const [activeTab, setActiveTab] = useState("Overview");
-  const [activeFilter, setActiveFilter] = useState("All Departments");
-  const [isCopied, setIsCopied] = useState(false);
-
-  const handleCopy = () => {
-    const url = `Https://wellstaq.com/departments/${departments[0]?.name?.toLowerCase().replace(/\s+/g, '_') || ''}`;
-    navigator.clipboard.writeText(url);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
-  };
-
-  const handleCreateDepartment = () => {
+  const handleCreateDepartment = async () => {
     const newDepartment = {
       id: departments.length + 1,
       name: newDepartmentName || "New Department",
@@ -164,8 +130,11 @@ export default function DepartmentsPage() {
       activities: 0,
       rank: departments.length + 1,
       branch: activeBranch,
-      avatars: selectedMembers.map(id => MOCK_MEMBERS.find(m => m.id === id)?.avatar).filter(Boolean)
+      avatars: selectedMembers
+        .map(id => MOCK_MEMBERS.find(m => m.id === id)?.avatar)
+        .filter((avatar): avatar is string => Boolean(avatar))
     };
+    await api.resources.mutate({ resource: "departments", action: "create", payload: newDepartment });
     setDepartments([newDepartment, ...departments]);
     setIsCreateModalOpen(false);
     toast.success("Department created successfully!");
@@ -175,14 +144,16 @@ export default function DepartmentsPage() {
     setSelectedMembers([]);
   };
 
-  const handleAddMembers = () => {
+  const handleAddMembers = async () => {
+    await api.resources.mutate({ resource: "departments", action: "add-members", id: selectedDepartment?.id, payload: { memberIds: selectedMembers } });
     setIsAddMemberModalOpen(false);
     toast.success("Members added successfully!");
     setSelectedMembers([]);
   };
 
-  const handleEditDepartment = () => {
+  const handleEditDepartment = async () => {
     if (!selectedDepartment) return;
+    await api.resources.mutate({ resource: "departments", action: "update", id: selectedDepartment.id, payload: { name: editDepartmentName } });
     const updatedDepartments = departments.map(dept => 
       dept.id === selectedDepartment.id ? { ...dept, name: editDepartmentName } : dept
     );
@@ -192,8 +163,9 @@ export default function DepartmentsPage() {
     toast.success("Department updated successfully!");
   };
 
-  const handleDeleteDepartment = () => {
+  const handleDeleteDepartment = async () => {
     if (!selectedDepartment) return;
+    await api.resources.mutate({ resource: "departments", action: "delete", id: selectedDepartment.id });
     const updatedDepartments = departments.filter(dept => dept.id !== selectedDepartment.id);
     setDepartments(updatedDepartments);
     setSelectedDepartment(null);

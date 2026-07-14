@@ -18,7 +18,7 @@ export function OnboardingPane({ children }: { children: React.ReactNode }) {
       {/* Header with Logo */}
       <header className="w-full flex justify-center pt-12 pb-[52px]">
         <Image
-          src="https://res.cloudinary.com/dv7yvatu2/image/upload/v1772170704/wellstaq_logo_raxmmg.png"
+          src="https://res.cloudinary.com/dv7yvatu2/image/upload/f_auto,q_auto,w_320/v1772170704/wellstaq_logo_raxmmg.png"
           alt="Wellstaq Logo"
           width={160}
           height={40}

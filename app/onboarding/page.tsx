@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SplitLayout } from "@/components/layout/split-layout";
 import { OnboardingPane } from "@/components/layout/onboarding-pane";
@@ -12,11 +12,9 @@ import { Step3Personal } from "@/components/onboarding/step-3-personal";
 import { Step4Business } from "@/components/onboarding/step-4-business";
 import { Step5Organization } from "@/components/onboarding/step-5-organization";
 import { Step6WorkModel } from "@/components/onboarding/step-6-work-model";
-import { Step7Invite } from "@/components/onboarding/step-7-invite";
 import { OnboardingData, initialData, Step } from "@/types";
 import { api } from "@/services/api";
-import { Mail, User, Briefcase, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Mail, User, Briefcase } from "lucide-react";
 
 function SkeletonLoader() {
   return (
@@ -43,51 +41,40 @@ export default function OnboardingPage() {
   const [data, setData] = useState<OnboardingData>(initialData);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
+
   const updateData = (newData: Partial<OnboardingData>) => {
     setData((prev) => ({ ...prev, ...newData }));
   };
 
   const handleNext = async () => {
     setIsLoading(true);
+    let isNavigating = false;
     try {
       if (step === 1) {
-        await api.sendOTP(data.email);
+        await api.auth.sendOtp(data.email);
         setStep(2);
       } else if (step === 2) {
-        const isValid = await api.verifyOTP(data.otp);
-        if (isValid) {
-          if (data.email.toLowerCase() === "adegboyeopeyemi065@gmail.com") {
-            localStorage.setItem('onboardingData', JSON.stringify({
-              firstName: "Opeyemi",
-              lastName: "Adegboye",
-              email: "adegboyeopeyemi065@gmail.com",
-              businessName: "Yemi Inc lokoja"
-            }));
-            router.push('/dashboard');
-            return;
-          } else {
-            setStep(3);
-          }
-        }
+        const result = await api.auth.verifyOtp(data.email, data.otp, data.password);
+        if (result.verified) setStep(3);
       } else if (step === 3) {
-        await api.submitData(data);
+        await api.onboarding.save(data);
         setStep(4);
       } else if (step === 4) {
-        await api.submitData(data);
+        await api.onboarding.save(data);
         setStep(5);
       } else if (step === 5) {
-        await api.submitData(data);
+        await api.onboarding.save(data);
         setStep(6);
       } else if (step === 6) {
-        await api.submitData(data);
-        setStep(7);
-      } else if (step === 7) {
-        await api.submitData(data);
-        router.push('/dashboard');
-        return; // Don't set isLoading to false so skeleton shows while navigating
+        await api.onboarding.complete(data);
+        isNavigating = true;
+        router.replace("/dashboard");
       }
     } finally {
-      if (step !== 7 && !(step === 2 && data.email.toLowerCase() === "adegboyeopeyemi065@gmail.com")) {
+      if (!isNavigating) {
         setIsLoading(false);
       }
     }
@@ -128,7 +115,6 @@ export default function OnboardingPage() {
               {step === 4 && <Step4Business data={data} updateData={updateData} onNext={handleNext} isLoading={isLoading} />}
               {step === 5 && <Step5Organization data={data} updateData={updateData} onNext={handleNext} isLoading={isLoading} />}
               {step === 6 && <Step6WorkModel data={data} updateData={updateData} onNext={handleNext} isLoading={isLoading} />}
-              {step === 7 && <Step7Invite data={data} updateData={updateData} onNext={handleNext} isLoading={isLoading} />}
             </>
           )}
         </div>
