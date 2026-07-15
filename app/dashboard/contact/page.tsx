@@ -40,7 +40,7 @@ export default function ContactPage() {
     return (
       <div className="max-w-7xl mx-auto pb-12">
         <div className="mb-[24px]">
-          <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Contact Support</h1>
+          <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Contact Support</h1>
           <p className="text-sm text-grey-2">Have questions about WellStaq? Our team is here to help you build a healthier workplace.</p>
         </div>
         <div className="bg-white p-12 rounded-[12px] shadow-sm border border-grey-4 text-center">
@@ -53,7 +53,7 @@ export default function ContactPage() {
           </p>
           <button 
             onClick={() => setIsSubmitted(false)}
-            className="inline-flex items-center justify-center px-8 py-3 bg-[#F27D26] text-white rounded-xl font-bold hover:bg-[#E66D16] transition-all"
+            className="inline-flex items-center justify-center px-8 py-3 bg-[#EA6A05] text-white rounded-xl font-bold hover:bg-[#C45700] transition-all"
           >
             Send Another Message
           </button>
@@ -65,7 +65,7 @@ export default function ContactPage() {
   return (
     <div className="max-w-7xl mx-auto pb-12">
       <div className="mb-[24px]">
-        <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Contact Support</h1>
+        <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Contact Support</h1>
         <p className="text-sm text-grey-2">Have questions about WellStaq? Our team is here to help you build a healthier workplace.</p>
       </div>
 
@@ -78,7 +78,7 @@ export default function ContactPage() {
               
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#F27D26]/10 text-[#F27D26] rounded-xl flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 bg-[#EA6A05]/10 text-[#EA6A05] rounded-xl flex items-center justify-center shrink-0">
                     <Mail size={20} />
                   </div>
                   <div>
@@ -88,7 +88,7 @@ export default function ContactPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#F27D26]/10 text-[#F27D26] rounded-xl flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 bg-[#EA6A05]/10 text-[#EA6A05] rounded-xl flex items-center justify-center shrink-0">
                     <Phone size={20} />
                   </div>
                   <div>
@@ -98,7 +98,7 @@ export default function ContactPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#F27D26]/10 text-[#F27D26] rounded-xl flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 bg-[#EA6A05]/10 text-[#EA6A05] rounded-xl flex items-center justify-center shrink-0">
                     <MapPin size={20} />
                   </div>
                   <div>
@@ -109,13 +109,13 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="bg-[#F27D26] p-6 rounded-[12px] text-white">
+            <div className="bg-[#EA6A05] p-6 rounded-[12px] text-white">
               <HelpCircle className="mb-4 opacity-80" size={32} />
               <h3 className="text-[18px] font-bold mb-2">Check our Help Center</h3>
               <p className="text-white/80 text-sm mb-6">
                 Find quick answers to common questions in our comprehensive documentation.
               </p>
-              <button className="w-full py-3 bg-white text-[#F27D26] rounded-xl font-bold text-sm hover:bg-white/90 transition-all">
+              <button className="w-full py-3 bg-white text-[#EA6A05] rounded-xl font-bold text-sm hover:bg-white/90 transition-all">
                 Go to Help Center
               </button>
             </div>
@@ -133,7 +133,7 @@ export default function ContactPage() {
                       placeholder="John Doe"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#F27D26]/20 focus:border-[#F27D26] transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -143,7 +143,7 @@ export default function ContactPage() {
                       placeholder="john@example.com"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#F27D26]/20 focus:border-[#F27D26] transition-all"
+                      className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all"
                     />
                   </div>
                 </div>
@@ -153,7 +153,7 @@ export default function ContactPage() {
                   <select
                     value={formData.subject}
                     onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#F27D26]/20 focus:border-[#F27D26] transition-all bg-white"
+                    className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all bg-white"
                   >
                     <option>General Inquiry</option>
                     <option>Technical Support</option>
@@ -169,13 +169,13 @@ export default function ContactPage() {
                     placeholder="How can we help you?"
                     value={formData.message}
                     onChange={(e) => setFormData({...formData, message: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#F27D26]/20 focus:border-[#F27D26] transition-all resize-none"
+                    className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all resize-none"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-[#F27D26] text-white rounded-xl font-bold text-lg hover:bg-[#E66D16] transition-all flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-[#EA6A05] text-white rounded-xl font-bold text-lg hover:bg-[#C45700] transition-all flex items-center justify-center gap-2"
                 >
                   <Send size={20} />
                   Send Message
@@ -185,21 +185,21 @@ export default function ContactPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-[12px]">
               <div className="flex items-center gap-3 p-4 bg-white rounded-[12px] border border-grey-4">
-                <Clock className="text-[#F27D26]" size={20} />
+                <Clock className="text-[#EA6A05]" size={20} />
                 <div className="text-xs">
                   <p className="font-bold text-grey-1">Response Time</p>
                   <p className="text-grey-2">Under 24 hours</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 bg-white rounded-[12px] border border-grey-4">
-                <Globe className="text-[#F27D26]" size={20} />
+                <Globe className="text-[#EA6A05]" size={20} />
                 <div className="text-xs">
                   <p className="font-bold text-grey-1">Global Support</p>
                   <p className="text-grey-2">Available 24/7</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 bg-white rounded-[12px] border border-grey-4">
-                <MessageSquare className="text-[#F27D26]" size={20} />
+                <MessageSquare className="text-[#EA6A05]" size={20} />
                 <div className="text-xs">
                   <p className="font-bold text-grey-1">Live Chat</p>
                   <p className="text-grey-2">Available for Pro</p>

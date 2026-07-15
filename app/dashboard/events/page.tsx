@@ -121,12 +121,12 @@ export default function EventsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-0">
         <div>
-          <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">My Events</h1>
+          <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">My Events</h1>
           <p className="text-sm text-grey-2">Discover, Manage and join events across your organization.</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-2 bg-[#E65100] text-white font-medium text-sm rounded-lg hover:bg-[#E65100]/90 transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg hover:bg-[#C45700]/90 transition-colors flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Create Event
@@ -157,9 +157,9 @@ export default function EventsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative w-full sm:w-[320px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
-            <input 
-              type="text" 
-              placeholder="Search Event" 
+            <input
+              type="text"
+              placeholder="Search Event"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -177,8 +177,8 @@ export default function EventsPage() {
                   setCurrentPage(1);
                 }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab 
-                    ? "bg-white border border-[#E65100] text-[#E65100]" 
+                  activeTab === tab
+                    ? "bg-white border border-[#C45700] text-[#C45700]"
                     : "bg-white border border-grey-4 text-grey-2 hover:bg-grey-5"
                 }`}
               >
@@ -229,7 +229,7 @@ export default function EventsPage() {
                         <div className="absolute bottom-full right-0 mb-1 w-36 bg-white border border-grey-4 rounded-lg shadow-lg opacity-0 invisible peer-focus:opacity-100 peer-focus:visible hover:opacity-100 hover:visible transition-all z-10 flex flex-col py-1">
                           <button className="px-3 py-1.5 text-left text-sm text-grey-1 hover:bg-grey-5 w-full">Edit event</button>
                           <button className="px-3 py-1.5 text-left text-sm text-grey-1 hover:bg-grey-5 w-full">Add member</button>
-                          <button 
+                          <button
                             onClick={() => setDeleteConfirmEventId(event.id)}
                             className="px-3 py-1.5 text-left text-sm text-red-500 hover:bg-red-50 w-full"
                           >
@@ -246,21 +246,21 @@ export default function EventsPage() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-grey-4 mt-4">
-                <div className="text-[14px] leading-[20px] text-[#373737]">
+                <div className="text-[14px] leading-[20px] text-[#1A1A1A]">
                   Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredEvents.length)} of {filteredEvents.length} events
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button 
+                  <button
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
                   >
                     <ChevronsLeft className="w-4 h-4 text-[#626262]" /> First
                   </button>
-                  <button 
+                  <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
                   >
                     <ChevronLeft className="w-4 h-4 text-[#626262]" /> Back
                   </button>
@@ -270,8 +270,8 @@ export default function EventsPage() {
                         key={page}
                         onClick={() => setCurrentPage(page)}
                         className={`w-8 h-8 rounded text-sm font-medium flex items-center justify-center transition-colors ${
-                          currentPage === page 
-                            ? "bg-[#E65100] text-white" 
+                          currentPage === page
+                            ? "bg-[#C45700] text-white"
                             : "hover:bg-grey-5 text-grey-2"
                         }`}
                       >
@@ -279,17 +279,17 @@ export default function EventsPage() {
                       </button>
                     ))}
                   </div>
-                  <button 
+                  <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
                   >
                     Next <ChevronRight className="w-4 h-4 text-[#626262]" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
                   >
                     Last <ChevronsRight className="w-4 h-4 text-[#626262]" />
                   </button>
@@ -300,7 +300,7 @@ export default function EventsPage() {
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-6">
-              <Calendar className="w-8 h-8 text-[#E65100]" />
+              <Calendar className="w-8 h-8 text-[#C45700]" />
             </div>
             <h3 className="text-xl font-bold text-grey-1 mb-2">No event found</h3>
             <p className="text-sm text-grey-2 mb-8 max-w-md text-center">
@@ -316,63 +316,63 @@ export default function EventsPage() {
           <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-grey-4 sticky top-0 bg-white z-10">
               <h2 className="text-xl font-bold text-grey-1">Create New Event</h2>
-              <button 
+              <button
                 onClick={() => setIsCreateModalOpen(false)}
                 className="p-2 hover:bg-grey-5 rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-grey-2" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-grey-1 mb-1">Event Title <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     placeholder="Enter event title"
-                    className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#E65100] text-sm"
+                    className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#C45700] text-sm"
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-grey-1 mb-1">Date <span className="text-red-500">*</span></label>
-                    <input 
-                      type="date" 
-                      className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#E65100] text-sm text-grey-2"
+                    <input
+                      type="date"
+                      className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#C45700] text-sm text-grey-2"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-grey-1 mb-1">Time <span className="text-red-500">*</span></label>
-                    <input 
-                      type="time" 
-                      className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#E65100] text-sm text-grey-2"
+                    <input
+                      type="time"
+                      className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#C45700] text-sm text-grey-2"
                     />
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-grey-1 mb-1">Description</label>
-                  <textarea 
+                  <textarea
                     placeholder="Enter event description"
-                    className="w-full p-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#E65100] text-sm min-h-[100px] resize-none"
+                    className="w-full p-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#C45700] text-sm min-h-[100px] resize-none"
                   />
                 </div>
 
                 <div className="relative" ref={participantDropdownRef}>
                   <label className="block text-sm font-medium text-grey-1 mb-1">Add Participants</label>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setIsParticipantDropdownOpen(!isParticipantDropdownOpen)}
                     className="w-full h-10 px-3 rounded-lg border border-grey-4 flex items-center justify-between text-sm text-grey-2 bg-white"
                   >
-                    {selectedParticipants.length > 0 
-                      ? `${selectedParticipants.length} selected` 
+                    {selectedParticipants.length > 0
+                      ? `${selectedParticipants.length} selected`
                       : "Select departments or individuals"}
                     <ChevronDown className="w-4 h-4" />
                   </button>
-                  
+
                   {isParticipantDropdownOpen && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-grey-4 rounded-lg shadow-xl z-20 max-h-[300px] overflow-y-auto p-2">
                       <div className="p-2 border-b border-grey-4 mb-2">
@@ -381,7 +381,7 @@ export default function EventsPage() {
                           <input type="text" placeholder="Search..." className="w-full h-8 pl-8 pr-3 text-xs border border-grey-4 rounded focus:outline-none" />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-1">
                         <div className="px-2 py-1 text-[10px] font-bold text-grey-3 uppercase tracking-wider">Departments</div>
                         {PARTICIPANT_OPTIONS.filter(o => o.type === 'department').map(option => (
@@ -396,10 +396,10 @@ export default function EventsPage() {
                               </div>
                               <span className="text-sm text-grey-1">{option.name}</span>
                             </div>
-                            {selectedParticipants.includes(option.id) && <Check className="w-4 h-4 text-[#E65100]" />}
+                            {selectedParticipants.includes(option.id) && <Check className="w-4 h-4 text-[#C45700]" />}
                           </button>
                         ))}
-                        
+
                         <div className="px-2 py-1 text-[10px] font-bold text-grey-3 uppercase tracking-wider mt-2">Individuals</div>
                         {PARTICIPANT_OPTIONS.filter(o => o.type === 'user').map(option => (
                           <button
@@ -413,7 +413,7 @@ export default function EventsPage() {
                               </div>
                               <span className="text-sm text-grey-1">{option.name}</span>
                             </div>
-                            {selectedParticipants.includes(option.id) && <Check className="w-4 h-4 text-[#E65100]" />}
+                            {selectedParticipants.includes(option.id) && <Check className="w-4 h-4 text-[#C45700]" />}
                           </button>
                         ))}
                       </div>
@@ -435,21 +435,21 @@ export default function EventsPage() {
                   </div>
                 )}
               </div>
-              
+
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-grey-4">
-                <button 
+                <button
                   onClick={() => setIsCreateModalOpen(false)}
                   className="px-4 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={async () => {
                     await api.resources.mutate({ resource: "events", action: "create", payload: { branch: activeBranch, participantIds: selectedParticipants } });
                     toast.success("Event created successfully");
                     setIsCreateModalOpen(false);
                   }}
-                  className="px-4 py-2 bg-[#E65100] text-white font-medium text-sm rounded-lg hover:bg-[#E65100]/90 transition-colors"
+                  className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg hover:bg-[#C45700]/90 transition-colors"
                 >
                   Create Event
                 </button>

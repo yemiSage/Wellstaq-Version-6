@@ -161,7 +161,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Challenge Card */}
-          <div className="bg-white rounded-2xl border border-grey-4 overflow-hidden">
+          <div className="bg-white rounded-[12px] border border-grey-4 overflow-hidden">
             <div className="relative h-[300px] w-full">
               <Image 
                 src={challenge.image} 
@@ -226,7 +226,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                 </div>
               </div>
 
-              <div className="p-6 bg-primary-1/5 rounded-2xl border border-primary-1/10">
+              <div className="p-6 bg-primary-1/5 rounded-[12px] border border-primary-1/10">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-bold text-grey-1">Your Progress</h2>
                   <span className="text-sm font-bold text-primary-1">{challenge.progress}% Complete</span>
@@ -245,7 +245,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
           </div>
 
           {/* Chat Section */}
-          <div className="bg-white rounded-2xl border border-grey-4 flex flex-col h-[500px]">
+          <div className="bg-white rounded-[12px] border border-grey-4 flex flex-col h-[500px]">
             <div className="p-4 border-b border-grey-4 flex items-center justify-between">
               <h2 className="font-bold text-grey-1">Challenge Chat</h2>
               <div className="flex items-center gap-1 text-xs text-grey-3">
@@ -266,7 +266,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                       <span className="text-xs text-grey-3">› {msg.time}</span>
                     </div>
                     <p className="text-xs text-grey-2">{msg.role}</p>
-                    <div className="mt-2 p-3 bg-grey-5/50 rounded-2xl rounded-tl-none border-l-2 border-primary-1">
+                    <div className="mt-2 p-3 bg-grey-5/50 rounded-[0_16px_16px_0] border-l-2 border-primary-1">
                       <p className="text-sm text-grey-1 leading-relaxed">
                         {msg.content}
                       </p>
@@ -301,7 +301,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Participants */}
-          <div className="bg-white rounded-2xl border border-grey-4 p-6">
+          <div className="bg-white rounded-[12px] border border-grey-4 p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-bold text-grey-1">Participants</h2>
               <button 
@@ -329,7 +329,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
           </div>
 
           {/* Leaderboard */}
-          <div className="bg-white rounded-2xl border border-grey-4 p-6">
+          <div className="bg-white rounded-[12px] border border-grey-4 p-6">
             <h2 className="font-bold text-grey-1 mb-6 flex items-center gap-2">
               <Trophy className="w-5 h-5 text-yellow-500" />
               Leaderboard

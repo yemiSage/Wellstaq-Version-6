@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { ChevronDown, ArrowUpRight, ArrowDownRight, Smile, Heart, MousePointerClick } from "lucide-react";
-import { 
+import { useClickOutside } from "@/hooks/use-click-outside";
+import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Radar, RadarChart, PolarGrid, PolarAngleAxis
 } from "recharts";
@@ -51,28 +52,28 @@ const leaderboardData = [
 
 export function DepartmentPerformanceRadar({data = wellbeingData}: {data?: typeof wellbeingData}) {
   return (
-    <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
+    <div className="dashboard-card border border-grey-4">
       <div className="mb-6">
         <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-1">Wellbeing Distribution</h3>
-        <p className="text-xs text-grey-3">Aggregated across all departments · 6 dimensions</p>
+        <p className="text-xs text-grey-3">Aggregated across all departments Â· 6 dimensions</p>
       </div>
-      
+
       <div className="h-[250px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
             <PolarGrid stroke="#F2F4F7" />
-            <PolarAngleAxis 
-              dataKey="subject" 
+            <PolarAngleAxis
+              dataKey="subject"
               tick={{ fill: '#475467', fontSize: 12, fontWeight: 500 }}
             />
-            <Radar 
-              name="Wellbeing" 
-              dataKey="A" 
-              stroke="#F27D26" 
+            <Radar
+              name="Wellbeing"
+              dataKey="A"
+              stroke="#EA6A05"
               strokeWidth={2}
-              fill="#F27D26" 
-              fillOpacity={0.1} 
-              dot={{ r: 3, fill: '#F27D26', strokeWidth: 1, stroke: '#fff' }}
+              fill="#EA6A05"
+              fillOpacity={0.1}
+              dot={{ r: 3, fill: '#EA6A05', strokeWidth: 1, stroke: '#fff' }}
             />
           </RadarChart>
         </ResponsiveContainer>
@@ -84,14 +85,16 @@ export function DepartmentPerformanceRadar({data = wellbeingData}: {data?: typeo
 export function EngagementChart({data = engagementData}: {data?: typeof engagementData}) {
   const [engagementFilter, setEngagementFilter] = useState("Last week");
   const [isEngagementFilterOpen, setIsEngagementFilterOpen] = useState(false);
+  const engagementFilterRef = useRef<HTMLDivElement>(null);
+  useClickOutside(engagementFilterRef, () => setIsEngagementFilterOpen(false));
   const [engagementMetric, setEngagementMetric] = useState("Stress level");
 
   return (
-    <div className="bg-white p-[14px] rounded-[12px]">
+    <div className="dashboard-card border border-grey-4">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-[16px] font-bold font-sans text-grey-1">Engagement & Wellbeing Trends</h3>
-        <div className="relative">
-          <button 
+        <div ref={engagementFilterRef} className="relative">
+          <button
             onClick={() => setIsEngagementFilterOpen(!isEngagementFilterOpen)}
             className="flex items-center gap-1 text-sm text-grey-2 hover:text-grey-1"
           >
@@ -115,7 +118,7 @@ export function EngagementChart({data = engagementData}: {data?: typeof engageme
           )}
         </div>
       </div>
-      
+
       <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
         {[
           { name: "Stress level", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m13 14 6.7-2.3c.8-.3 1.3.4 1 1.1l-4.6 9.2"/><path d="M6 14.5 4 17"/><path d="M6 14.5 8 12l2.5 1.5"/><path d="m10.5 13.5 2-2.5-1-2.5"/><path d="M13 14v4l-2.5 1.5"/><path d="M14 6.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg> },
@@ -145,7 +148,7 @@ export function EngagementChart({data = engagementData}: {data?: typeof engageme
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => engagementMetric === 'Stress level' ? `${val / 1000}k` : val} />
             <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#F27D26" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="value" stroke="#EA6A05" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -157,17 +160,17 @@ export function Leaderboard({data = leaderboardData}: {data?: typeof leaderboard
   const [leaderboardMetric, setLeaderboardMetric] = useState("Steps");
 
   return (
-    <div className="bg-white p-[14px] rounded-[12px]">
+    <div className="dashboard-card border border-grey-4">
       <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-4">Leaderboard</h3>
-      
+
       <div className="flex gap-4 border-b border-grey-4 mb-4 overflow-x-auto no-scrollbar">
         {["Steps", "Distance", "Run", "7 Minutes workout"].map((metric) => (
-          <button 
+          <button
             key={metric}
             onClick={() => setLeaderboardMetric(metric)}
             className={`px-3 py-1.5 text-sm whitespace-nowrap ${
-              leaderboardMetric === metric 
-                ? "border-b-2 border-primary-1 text-primary-1 font-medium" 
+              leaderboardMetric === metric
+                ? "border-b-2 border-primary-1 text-primary-1 font-medium"
                 : "text-grey-2 hover:text-grey-1"
             }`}
           >

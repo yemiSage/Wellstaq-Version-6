@@ -12,14 +12,17 @@ import {
   Clock, 
   Send,
   Plus,
-  X,
   Check,
   Search
 } from "lucide-react";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "motion/react";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { Modal } from "@/components/ui/modal";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 const MOCK_EVENT = {
   id: 1,
@@ -79,7 +82,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState(MOCK_EVENT.title);
+  const [editDate, setEditDate] = useState(MOCK_EVENT.date);
+  const [editTime, setEditTime] = useState(MOCK_EVENT.time);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     params.then(async (p) => {
@@ -90,6 +99,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         api.resources.list("events/participants", MOCK_PARTICIPANTS, `eventId=${encodeURIComponent(p.id)}`),
       ]);
       setEvent(loadedEvent);
+      setEditTitle(loadedEvent.title);
+      setEditDate(loadedEvent.date);
+      setEditTime(loadedEvent.time);
       setMessages(loadedMessages);
       setParticipants(loadedParticipants);
     });
@@ -141,6 +153,21 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     setSearchQuery("");
   };
 
+  const handleEditEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const updates = { title: editTitle.trim(), date: editDate.trim(), time: editTime.trim() };
+    await api.resources.mutate({ resource: "events", action: "update", id: id ?? undefined, payload: updates });
+    setEvent((current) => ({ ...current, ...updates }));
+    setIsEditModalOpen(false);
+    toast.success("Event updated successfully");
+  };
+
+  const handleDeleteEvent = async () => {
+    await api.resources.mutate({ resource: "events", action: "delete", id: id ?? undefined });
+    toast.success("Event deleted successfully");
+    router.push("/dashboard/events");
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Back Link */}
@@ -156,7 +183,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Event Card */}
-          <div className="bg-white rounded-2xl border border-grey-4 overflow-hidden">
+          <div className="bg-white rounded-[12px] border border-grey-4 overflow-hidden">
             <div className="relative h-[300px] w-full">
               <Image 
                 src={event.image}
@@ -171,10 +198,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               <div className="flex items-start justify-between">
                 <h1 className="text-2xl font-bold text-grey-1">{event.title}</h1>
                 <div className="flex items-center gap-2">
-                  <button className="p-2 rounded-lg border border-grey-4 text-grey-2 hover:text-primary-1 hover:border-primary-1 transition-all">
+                  <button onClick={() => setIsEditModalOpen(true)} className="p-2 rounded-lg border border-grey-4 text-grey-2 hover:text-primary-1 hover:border-primary-1 transition-all">
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button className="p-2 rounded-lg border border-grey-4 text-grey-2 hover:text-red-500 hover:border-red-500 transition-all">
+                  <button onClick={() => setIsDeleteModalOpen(true)} className="p-2 rounded-lg border border-grey-4 text-grey-2 hover:text-red-500 hover:border-red-500 transition-all">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -204,7 +231,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Chat Section */}
-          <div className="bg-white rounded-2xl border border-grey-4 flex flex-col h-[600px]">
+          <div className="bg-white rounded-[12px] border border-grey-4 flex flex-col h-[600px]">
             <div className="p-4 border-b border-grey-4 flex items-center justify-between">
               <h2 className="font-bold text-grey-1">Chat</h2>
               <div className="flex items-center gap-1 text-xs text-grey-3">
@@ -225,7 +252,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                       <span className="text-xs text-grey-3">› {msg.time}</span>
                     </div>
                     <p className="text-xs text-grey-2">{msg.role}</p>
-                    <div className="mt-2 p-3 bg-grey-5/50 rounded-2xl rounded-tl-none border-l-2 border-primary-1">
+                    <div className="mt-2 p-3 bg-grey-5/50 rounded-[0_16px_16px_0] border-l-2 border-primary-1">
                       <p className="text-sm text-grey-1 leading-relaxed">
                         {msg.content}
                       </p>
@@ -259,7 +286,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-grey-4 p-6">
+          <div className="bg-white rounded-[12px] border border-grey-4 p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="font-bold text-grey-1">Participants</h2>
               <button 
@@ -288,105 +315,54 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       </div>
 
-      {/* Invite Modal */}
-      <AnimatePresence>
-        {isInviteModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsInviteModalOpen(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden"
-            >
-              <div className="p-6 border-b border-grey-4 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-grey-1">Invite Employees</h3>
-                <button 
-                  onClick={() => setIsInviteModalOpen(false)}
-                  className="p-2 hover:bg-grey-5 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-grey-2" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
-                  <input 
-                    type="text" 
-                    placeholder="Search employees..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
-                  />
-                </div>
-
-                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2 no-scrollbar">
-                  {filteredEmployees.map((emp) => (
-                    <div 
-                      key={emp.id}
-                      onClick={() => toggleEmployeeSelection(emp.id)}
-                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
-                        selectedEmployees.includes(emp.id)
-                          ? "border-primary-1 bg-primary-1/5"
-                          : "border-grey-4 hover:border-grey-3"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden relative">
-                          <Image src={emp.avatar} alt={emp.name} fill className="object-cover" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-grey-1">{emp.name}</p>
-                          <p className="text-xs text-grey-2">{emp.department}</p>
-                        </div>
-                      </div>
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
-                        selectedEmployees.includes(emp.id)
-                          ? "bg-primary-1 border-primary-1 text-white"
-                          : "border-grey-4"
-                      }`}>
-                        {selectedEmployees.includes(emp.id) && <Check className="w-3 h-3" />}
-                      </div>
-                    </div>
-                  ))}
-                  {filteredEmployees.length === 0 && (
-                    <div className="text-center py-8">
-                      <p className="text-sm text-grey-3">No employees found</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-6 bg-grey-5/50 border-t border-grey-4 flex items-center justify-between">
-                <span className="text-sm text-grey-2">
-                  {selectedEmployees.length} selected
-                </span>
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => setIsInviteModalOpen(false)}
-                    className="px-4 py-2 text-sm font-bold text-grey-2 hover:text-grey-1 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={handleSendInvites}
-                    className="px-6 py-2 bg-primary-1 text-white rounded-xl text-sm font-bold hover:bg-primary-2 transition-colors"
-                  >
-                    Send Invites
-                  </button>
-                </div>
-              </div>
-            </motion.div>
+      <Modal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        title="Invite Employees"
+        subtitle="Select team members to invite to this event."
+        footer={
+          <>
+            <span className="mr-auto text-sm text-grey-2">{selectedEmployees.length} selected</span>
+            <Button variant="outline" className="border-grey-4 bg-white text-grey-2 hover:bg-grey-5" onClick={() => setIsInviteModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSendInvites}>Send Invites</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-grey-3" />
+            <Input className="pl-10" placeholder="Search employees..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
-        )}
-      </AnimatePresence>
+          <div className="max-h-[300px] space-y-2 overflow-y-auto pr-2 no-scrollbar">
+            {filteredEmployees.map((emp) => (
+              <button key={emp.id} type="button" onClick={() => toggleEmployeeSelection(emp.id)} className={`flex w-full items-center justify-between rounded-[8px] border p-3 text-left transition-all ${selectedEmployees.includes(emp.id) ? "border-primary-1 bg-primary-1/5" : "border-grey-4 hover:border-grey-3"}`}>
+                <span className="flex items-center gap-3">
+                  <span className="relative h-10 w-10 overflow-hidden rounded-full"><Image src={emp.avatar} alt={emp.name} fill className="object-cover" /></span>
+                  <span><span className="block text-sm font-bold text-grey-1">{emp.name}</span><span className="block text-xs text-grey-2">{emp.department}</span></span>
+                </span>
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${selectedEmployees.includes(emp.id) ? "border-primary-1 bg-primary-1 text-white" : "border-grey-4"}`}>
+                  {selectedEmployees.includes(emp.id) && <Check className="h-3 w-3" />}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Event"
+        subtitle="Update the event details."
+        footer={<><Button variant="outline" className="border-grey-4 bg-white text-grey-2 hover:bg-grey-5" onClick={() => setIsEditModalOpen(false)}>Cancel</Button><Button type="submit" form="edit-event-form">Save Changes</Button></>}
+      >
+        <form id="edit-event-form" onSubmit={handleEditEvent} className="space-y-4">
+          <div className="space-y-2"><label className="text-xs text-grey-2">Event title</label><Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required /></div>
+          <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><label className="text-xs text-grey-2">Date</label><Input value={editDate} onChange={(e) => setEditDate(e.target.value)} required /></div><div className="space-y-2"><label className="text-xs text-grey-2">Time</label><Input value={editTime} onChange={(e) => setEditTime(e.target.value)} required /></div></div>
+        </form>
+      </Modal>
+
+      <ConfirmModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleDeleteEvent} title="Delete Event" description="Are you sure you want to delete this event? This action cannot be undone." confirmText="Delete Event" isDestructive />
     </div>
   );
 }

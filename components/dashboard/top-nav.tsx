@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Menu, Plus, Settings2, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus, LoaderCircle, UserPlus } from "lucide-react";
+import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Menu, Plus, Settings2, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus, LoaderCircle, UserPlus, Moon, Sun } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -15,13 +15,21 @@ import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { useTheme } from "@/components/providers/theme-provider";
+import { notificationGroups } from "@/lib/workspace-activity";
 import type { BranchInvitee, UserSearchResult } from "@/types/api";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function truncateProfileText(value: string) {
+  return value.length > 14 ? `${value.slice(0, 14)}...` : value;
+}
+
 export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [activeNotificationGroup, setActiveNotificationGroup] = useState(notificationGroups[0].group);
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
   const [branchModalStep, setBranchModalStep] = useState<"current" | "new">("current");
   const [currentBranchName, setCurrentBranchName] = useState("");
@@ -42,8 +50,16 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isTyping, setIsTyping] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const branchSearchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { user: userData, activeBranch, addBranch, nameCurrentBranch } = useDashboardData();
+  const { user: userData, activeBranch, addBranch, nameCurrentBranch, members } = useDashboardData();
+  const { theme, toggleTheme } = useTheme();
+
+  const currentUserRole = members.find((member) => member.email.toLowerCase() === userData.email.toLowerCase() && member.branch === activeBranch)?.role;
+  const isAdmin = !currentUserRole || ["Super Admin", "Branch Manager"].includes(currentUserRole) || userData.email.toLowerCase().includes("admin");
+  const selectedNotificationGroup = notificationGroups.find((group) => group.group === activeNotificationGroup) ?? notificationGroups[0];
+  const signedInUserName = `${userData.firstName} ${userData.lastName}`.trim();
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -112,7 +128,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   };
 
   const openBranchModal = () => {
-    setBranchModalStep("current");
+    setBranchModalStep("new");
     setCurrentBranchName("");
     setNewBranchName("");
     setEmployeeQuery("");
@@ -193,10 +209,17 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   };
 
   useClickOutside(profileRef, () => setIsProfileOpen(false));
+  useClickOutside(notificationsRef, () => setIsNotificationsOpen(false));
+  useClickOutside(branchSearchRef, () => setUserMatches([]));
+
+  useEffect(() => {
+    window.addEventListener("wellstaq:open-add-branch", openBranchModal);
+    return () => window.removeEventListener("wellstaq:open-add-branch", openBranchModal);
+  }, []);
 
   return (
     <>
-      <header className="h-16 bg-white border-b border-grey-4 flex items-center justify-between px-4 lg:px-6 relative z-40">
+      <header className="h-[72px] bg-white border-b border-grey-4 flex items-center justify-between px-4 lg:px-5 relative z-40">
         <div className="flex-1 flex items-center gap-2 lg:gap-4">
           {/* Mobile Menu Button */}
           <button 
@@ -206,20 +229,12 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
             <Menu className="w-5 h-5" />
           </button>
 
-          <button
-            onClick={openBranchModal}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary-1 bg-transparent text-primary-1 hover:bg-orange-50 transition-colors text-xs lg:text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            Add branch
-          </button>
-
-          <div className="relative flex-1 max-w-[459px] hidden sm:block">
+          <div className="relative hidden sm:block sm:flex-1 sm:max-w-[460px] lg:w-[460px] lg:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
             <input 
               type="text" 
               placeholder="Search..." 
-              className="h-10 pl-[40px] pr-16 w-full rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
+              className="h-11 w-full rounded-[8px] border border-grey-4 bg-white pl-10 pr-16 text-sm focus:border-primary-1 focus:outline-none focus:ring-2 focus:ring-primary-1/20"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">⌘</kbd>
@@ -229,11 +244,97 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
         </div>
 
         <div className="flex items-center gap-2 lg:gap-4 ml-2 lg:ml-4">
-          <button className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5 hidden sm:flex">
+          <button
+            onClick={() => {
+              if (!isAdmin) {
+                toast.error("Messaging is only available to admins.");
+                return;
+              }
+              router.push("/dashboard/messages");
+            }}
+            className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5 hidden sm:flex"
+            title="Messages"
+          >
             <MessageSquare className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
-          <button className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5">
-            <Bell className="w-4 h-4 lg:w-5 lg:h-5" />
+          <div className="relative" ref={notificationsRef}>
+            <button
+              onClick={() => setIsNotificationsOpen((current) => !current)}
+              className="relative w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4 lg:w-5 lg:h-5" />
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary-1" />
+            </button>
+            <AnimatePresence>
+              {isNotificationsOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  className="absolute right-0 z-50 mt-2 w-[340px] max-w-[calc(100vw-32px)] overflow-hidden rounded-[12px] border border-grey-4 bg-white shadow-lg"
+                >
+                  <div className="px-4 py-3 border-b border-grey-4 flex items-center justify-between">
+                    <p className="text-sm font-medium text-grey-1">Notifications</p>
+                    <Link
+                      href="/dashboard/notifications"
+                      onClick={() => setIsNotificationsOpen(false)}
+                      className="text-xs font-medium text-primary-1 hover:text-primary-1/80"
+                    >
+                      View all
+                    </Link>
+                  </div>
+                  <div className="border-b border-grey-4 px-4">
+                    <div className="flex gap-2" role="tablist" aria-label="Notification categories">
+                      {notificationGroups.map((group) => (
+                        (() => {
+                          const Icon = group.icon;
+                          return (
+                            <button
+                              key={group.group}
+                              type="button"
+                              role="tab"
+                              aria-selected={activeNotificationGroup === group.group}
+                              onClick={() => setActiveNotificationGroup(group.group)}
+                              className={`flex items-center gap-1.5 border-b-2 py-3 text-xs font-medium transition-colors ${
+                                activeNotificationGroup === group.group
+                                  ? "border-primary-1 text-primary-1"
+                                  : "border-transparent text-grey-2 hover:text-grey-1"
+                              }`}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                              {group.group}
+                            </button>
+                          );
+                        })()
+                      ))}
+                    </div>
+                  </div>
+                  <div className="max-h-[360px] overflow-y-auto p-2">
+                    {selectedNotificationGroup.items.map((item) => (
+                      <div key={`${selectedNotificationGroup.group}-${item.title}`} className="flex items-start gap-3 rounded-lg px-2 py-3 hover:bg-grey-5">
+                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.unread ? "bg-primary-1" : "bg-grey-4"}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm font-medium text-grey-1">{item.title}</p>
+                            <p className="shrink-0 text-xs text-grey-3">{item.time}</p>
+                          </div>
+                          <p className="mt-1 text-xs text-grey-2">{item.body}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="w-4 h-4 lg:w-5 lg:h-5" /> : <Moon className="w-4 h-4 lg:w-5 lg:h-5" />}
           </button>
           <button 
             onClick={() => setIsChatOpen(true)}
@@ -258,11 +359,11 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                 )}
               </div>
               <div className="hidden xl:block">
-                <p className="text-sm font-medium text-grey-1 leading-tight">{userData.firstName} {userData.lastName}</p>
-                <p className="text-xs text-grey-3">
-                  {userData.email.split('@')[0].length > 7 
-                    ? `${userData.email.substring(0, 4)}....${userData.email.split('@')[0].slice(-3)}@${userData.email.split('@')[1]}`
-                    : userData.email}
+                <p className="text-sm font-medium text-grey-1 leading-tight" title={signedInUserName}>
+                  {truncateProfileText(signedInUserName)}
+                </p>
+                <p className="text-xs text-grey-3" title={userData.email}>
+                  {truncateProfileText(userData.email)}
                 </p>
               </div>
               <ChevronDown className="w-3 h-3 lg:w-4 lg:h-4 text-grey-3" />
@@ -365,7 +466,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                   </div>
                 ) : messages.length === 0 ? (
                   <>
-                    <div className="w-16 h-16 relative mb-6 flex items-center justify-center text-[#F27D26]">
+                    <div className="w-16 h-16 relative mb-6 flex items-center justify-center text-[#EA6A05]">
                       <Sparkles className="w-10 h-10" />
                     </div>
                     
@@ -459,10 +560,18 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
         onClose={closeBranchModal}
         title={branchModalStep === "current" ? "Name Current Branch" : "Create New Branch"}
         subtitle={branchModalStep === "current" ? "Give your current branch a name before adding another." : "Create another branch for your organization."}
+        footer={
+          <>
+            <Button variant="outline" className="border-grey-4 bg-white text-grey-2 hover:bg-grey-5" onClick={closeBranchModal}>Cancel</Button>
+            <Button onClick={branchModalStep === "current" ? handleNameCurrentBranch : handleAddBranch}>
+              {branchModalStep === "current" ? "Continue" : "Add Branch"}
+            </Button>
+          </>
+        }
       >
         {branchModalStep === "current" ? (
-          <>
-            <div className="space-y-2 py-4">
+          <div>
+            <div className="space-y-2">
               <Label htmlFor="currentBranchName">Current Branch Name</Label>
               <Input
                 id="currentBranchName"
@@ -471,14 +580,10 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                 onChange={(e) => setCurrentBranchName(e.target.value)}
               />
             </div>
-            <div className="flex justify-end gap-3 pt-4 border-t border-grey-4">
-              <Button variant="outline" onClick={closeBranchModal}>Cancel</Button>
-              <Button onClick={handleNameCurrentBranch}>Continue</Button>
-            </div>
-          </>
+          </div>
         ) : (
-          <>
-            <div className="space-y-4 py-4">
+          <div>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="branchName">New Branch Name</Label>
                 <Input
@@ -490,7 +595,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="employees">Add/invite employee</Label>
-                <div className="relative">
+                <div ref={branchSearchRef} className="relative">
                   <div className="flex gap-2">
                     <Input
                       id="employees"
@@ -570,11 +675,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                 )}
               </div>
             </div>
-            <div className="flex justify-end gap-3 pt-4 border-t border-grey-4">
-              <Button variant="outline" onClick={closeBranchModal}>Cancel</Button>
-              <Button onClick={handleAddBranch}>Add Branch</Button>
-            </div>
-          </>
+          </div>
         )}
       </Modal>
     </>

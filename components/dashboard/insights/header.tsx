@@ -1,19 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useClickOutside } from "@/hooks/use-click-outside";
 
 export function InsightsHeader() {
   const [timeFilter, setTimeFilter] = useState("Last 9 Months");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+  useClickOutside(filterRef, () => setIsFilterOpen(false));
 
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Insights</h1>
+        <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Insights</h1>
         <p className="text-sm text-grey-2">Deep dive into your team&apos;s health & performance data.</p>
       </div>
-      <div className="relative">
+      <div ref={filterRef} className="relative">
         <button 
           onClick={() => setIsFilterOpen(!isFilterOpen)}
           className="flex items-center gap-2 px-4 py-2 bg-white border border-grey-4 rounded-lg text-sm font-medium text-grey-1 hover:bg-grey-5"

@@ -4,15 +4,18 @@ import './globals.css'; // Global styles
 import { Toaster } from 'sonner';
 import { ApiErrorNotifier } from '@/components/providers/api-error-notifier';
 import { NavigationProgress } from '@/components/providers/navigation-progress';
+import { ThemeProvider } from '@/components/providers/theme-provider';
 
 const inter = Inter({
   subsets: ['latin'],
-  variable: '--font-sans',
+  variable: '--font-inter',
+  display: 'swap',
 });
 
 const funnelDisplay = Funnel_Display({
   subsets: ['latin'],
-  variable: '--font-display',
+  variable: '--font-funnel',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -39,10 +42,12 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en">
       <body className={`${inter.variable} ${funnelDisplay.variable}`} suppressHydrationWarning>
-        <NavigationProgress />
-        {children}
-        <ApiErrorNotifier />
-        <Toaster position="top-center" />
+        <ThemeProvider>
+          <NavigationProgress />
+          {children}
+          <ApiErrorNotifier />
+          <Toaster position="top-center" />
+        </ThemeProvider>
       </body>
     </html>
   );

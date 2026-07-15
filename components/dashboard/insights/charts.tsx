@@ -56,7 +56,7 @@ export function MonthlyStepsChart({data = monthlyStepsData}: {data?: typeof mont
         <h3 className="text-[16px] font-bold text-grey-1">Monthly Steps Trend</h3>
         <div className="flex items-center gap-4 text-xs text-grey-2">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-0.5 bg-[#F27D26]"></div>
+            <div className="w-3 h-0.5 bg-[#EA6A05]"></div>
             <span>Actual</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -73,7 +73,7 @@ export function MonthlyStepsChart({data = monthlyStepsData}: {data?: typeof mont
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => `${val / 1000}k`} ticks={[0, 15000, 30000, 45000, 60000, 75000, 95000, 115000]} domain={[0, 115000]} />
             <Tooltip />
-            <Line type="monotone" dataKey="actual" stroke="#F27D26" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+            <Line type="monotone" dataKey="actual" stroke="#EA6A05" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
             <Line type="monotone" dataKey="target" stroke="#98A2B3" strokeWidth={2} strokeDasharray="5 5" dot={false} />
           </LineChart>
         </ResponsiveContainer>
@@ -132,7 +132,7 @@ export function DepartmentPerformanceChart({data = departmentPerformanceData}: {
       <h3 className="text-[16px] font-bold text-grey-1 mb-4">Department Performance</h3>
       <div className="flex items-center gap-4 text-xs text-grey-2 mb-6">
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#F27D26]"></div>
+          <div className="w-2.5 h-2.5 rounded-full bg-[#EA6A05]"></div>
           <span>Health Score</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -185,15 +185,15 @@ export function WeeklyActivityChart({data = weeklyActivityData}: {data?: typeof 
           <AreaChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
             <defs>
               <linearGradient id="colorSteps" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#F27D26" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#F27D26" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#EA6A05" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#EA6A05" stopOpacity={0}/>
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#E4E7EC" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} ticks={[0, 20000, 40000, 60000, 80000]} domain={[0, 80000]} />
             <Tooltip />
-            <Area type="monotone" dataKey="steps" stroke="#F27D26" strokeWidth={2} fillOpacity={1} fill="url(#colorSteps)" dot={{ r: 4, fill: '#F27D26', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+            <Area type="monotone" dataKey="steps" stroke="#EA6A05" strokeWidth={2} fillOpacity={1} fill="url(#colorSteps)" dot={{ r: 4, fill: '#EA6A05', strokeWidth: 0 }} activeDot={{ r: 6 }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
