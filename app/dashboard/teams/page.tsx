@@ -23,7 +23,7 @@ export default function TeamsPage() {
   const updateStats = useCallback((branch: string, memberData: typeof sourceMembers) => {
     const branchMembers = memberData.filter(m => m.branch === branch);
     const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === branch);
-    
+
     // Calculate engagement based on activities in departments
     const totalActivities = branchDepts.reduce((acc, dept) => acc + dept.activities, 0);
     const engagement = branchMembers.length > 0 ? Math.min(100, Math.round((totalActivities / (branchMembers.length * 100)) * 100)) : 0;
@@ -77,8 +77,8 @@ export default function TeamsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  const filteredMembers = members.filter(m => 
-    (m.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredMembers = members.filter(m =>
+    (m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.department.toLowerCase().includes(searchQuery.toLowerCase())) &&
     m.branch === activeBranch
@@ -139,12 +139,12 @@ export default function TeamsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-0">
         <div>
-          <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">My Teams</h1>
+          <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">My Teams</h1>
           <p className="text-sm text-grey-2">Manage your team members, view their wellness status, and organize departments.</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsAddMemberModalOpen(true)}
-          className="px-4 py-2 bg-[#E65100] text-white font-medium text-sm rounded-lg hover:bg-[#E65100]/90 transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg hover:bg-[#C45700]/90 transition-colors flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Add Member
@@ -176,9 +176,9 @@ export default function TeamsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative w-full sm:w-[320px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
-            <input 
-              type="text" 
-              placeholder="Search members..." 
+            <input
+              type="text"
+              placeholder="Search members..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -227,14 +227,14 @@ export default function TeamsPage() {
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button 
+                      <button
                         onClick={() => setMemberToEdit(member)}
                         className="p-1.5 text-grey-3 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
                         title="Edit Member"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => setMemberToDelete(member.id)}
                         className="p-1.5 text-grey-3 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
                         title="Remove Member"
@@ -271,14 +271,14 @@ export default function TeamsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setMemberToEdit(member)} 
+                  <button
+                    onClick={() => setMemberToEdit(member)}
                     className="p-2 text-grey-3 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button 
-                    onClick={() => setMemberToDelete(member.id)} 
+                  <button
+                    onClick={() => setMemberToDelete(member.id)}
                     className="p-2 text-grey-3 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -315,21 +315,21 @@ export default function TeamsPage() {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-grey-4 mt-4">
-            <div className="text-[14px] leading-[20px] text-[#373737]">
+            <div className="text-[14px] leading-[20px] text-[#1A1A1A]">
               Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
             </div>
             <div className="flex items-center gap-1.5">
-              <button 
+              <button
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
               >
                 <ChevronsLeft className="w-4 h-4 text-[#626262]" /> First
               </button>
-              <button 
+              <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
               >
                 <ChevronLeft className="w-4 h-4 text-[#626262]" /> Prev
               </button>
@@ -339,8 +339,8 @@ export default function TeamsPage() {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`w-8 h-8 rounded text-sm font-medium flex items-center justify-center transition-colors ${
-                      currentPage === page 
-                        ? "bg-[#E65100] text-white" 
+                      currentPage === page
+                        ? "bg-[#C45700] text-white"
                         : "hover:bg-grey-5 text-grey-2"
                     }`}
                   >
@@ -348,17 +348,17 @@ export default function TeamsPage() {
                   </button>
                 ))}
               </div>
-              <button 
+              <button
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
               >
                 Next <ChevronRight className="w-4 h-4 text-[#626262]" />
               </button>
-              <button 
+              <button
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#373737] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
+                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
               >
                 Last <ChevronsRight className="w-4 h-4 text-[#626262]" />
               </button>
@@ -381,12 +381,11 @@ export default function TeamsPage() {
         isOpen={isAddMemberModalOpen}
         onClose={() => setIsAddMemberModalOpen(false)}
         title="Add Team Member"
-        maxWidth="max-w-md"
       >
-        <form onSubmit={handleAddMember} className="p-6 space-y-4">
+        <form onSubmit={handleAddMember} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-grey-1 mb-1">Full Name</label>
-            <Input 
+            <Input
               value={newMember.name}
               onChange={(e) => setNewMember({...newMember, name: e.target.value})}
               placeholder="e.g. John Doe"
@@ -395,7 +394,7 @@ export default function TeamsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-grey-1 mb-1">Email Address</label>
-            <Input 
+            <Input
               type="email"
               value={newMember.email}
               onChange={(e) => setNewMember({...newMember, email: e.target.value})}
@@ -405,7 +404,7 @@ export default function TeamsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-grey-1 mb-1">Department</label>
-            <select 
+            <select
               value={newMember.department}
               onChange={(e) => setNewMember({...newMember, department: e.target.value})}
               className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
@@ -419,7 +418,7 @@ export default function TeamsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-grey-1 mb-1">Role</label>
-            <select 
+            <select
               value={newMember.role}
               onChange={(e) => setNewMember({...newMember, role: e.target.value})}
               className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
@@ -431,14 +430,14 @@ export default function TeamsPage() {
             </select>
           </div>
           <div className="pt-4 flex justify-end gap-3">
-            <button 
+            <button
               type="button"
               onClick={() => setIsAddMemberModalOpen(false)}
               className="px-4 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors"
             >
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               className="px-4 py-2 bg-primary-1 text-white text-sm font-medium rounded-lg hover:bg-primary-1/90 transition-colors"
             >
@@ -452,14 +451,13 @@ export default function TeamsPage() {
         isOpen={memberToEdit !== null}
         onClose={() => setMemberToEdit(null)}
         title="Edit Team Member"
-        maxWidth="max-w-md"
       >
         {memberToEdit && (
           <form onSubmit={handleSaveMember} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-grey-1 mb-1">Name</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={memberToEdit.name}
                 onChange={(e) => setMemberToEdit({...memberToEdit, name: e.target.value})}
                 className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm"
@@ -468,8 +466,8 @@ export default function TeamsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-grey-1 mb-1">Email</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 value={memberToEdit.email}
                 onChange={(e) => setMemberToEdit({...memberToEdit, email: e.target.value})}
                 className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm"
@@ -478,7 +476,7 @@ export default function TeamsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-grey-1 mb-1">Department</label>
-              <select 
+              <select
                 value={memberToEdit.department}
                 onChange={(e) => setMemberToEdit({...memberToEdit, department: e.target.value})}
                 className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
@@ -492,7 +490,7 @@ export default function TeamsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-grey-1 mb-1">Role</label>
-              <select 
+              <select
                 value={memberToEdit.role || "Employee"}
                 onChange={(e) => setMemberToEdit({...memberToEdit, role: e.target.value})}
                 className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
@@ -504,14 +502,14 @@ export default function TeamsPage() {
               </select>
             </div>
             <div className="pt-4 flex justify-end gap-3">
-              <button 
+              <button
                 type="button"
                 onClick={() => setMemberToEdit(null)}
                 className="px-4 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="submit"
                 className="px-4 py-2 bg-primary-1 text-white text-sm font-medium rounded-lg hover:bg-primary-1/90 transition-colors"
               >

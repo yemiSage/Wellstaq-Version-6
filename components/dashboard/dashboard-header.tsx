@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
@@ -9,14 +9,20 @@ export function DashboardHeader() {
   const [timeFilter, setTimeFilter] = useState("Last 9 Months");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { user } = useDashboardData();
+  const [greeting, setGreeting] = useState("Good morning");
   const filterRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(filterRef, () => setIsFilterOpen(false));
 
+  useEffect(() => {
+    const hour = new Date().getHours();
+    setGreeting(hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening");
+  }, []);
+
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Good morning, {user.firstName}</h1>
+        <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">{greeting}, {user.firstName}</h1>
         <p className="text-grey-2">Here is how your team is doing today.</p>
       </div>
       <div className="relative" ref={filterRef}>

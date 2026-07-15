@@ -27,6 +27,7 @@ interface DashboardDataContextValue extends DashboardBootstrap {
   refresh: () => Promise<void>;
   nameCurrentBranch: (name: string) => Promise<Branch>;
   addBranch: (branch: Omit<Branch, "id">) => Promise<Branch>;
+  setActiveBranch: (name: string) => Promise<void>;
   updateUser: (user: Partial<UserProfile>) => void;
 }
 
@@ -84,6 +85,11 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     return created;
   }, []);
 
+  const setActiveBranch = useCallback(async (name: string) => {
+    await api.branches.select(name);
+    setData((current) => ({ ...current, activeBranch: name }));
+  }, []);
+
   const updateUser = useCallback((updates: Partial<UserProfile>) => {
     setData((current) => ({ ...current, user: { ...current.user, ...updates } }));
   }, []);
@@ -95,8 +101,9 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     refresh,
     nameCurrentBranch,
     addBranch,
+    setActiveBranch,
     updateUser,
-  }), [addBranch, data, error, isLoading, nameCurrentBranch, refresh, updateUser]);
+  }), [addBranch, data, error, isLoading, nameCurrentBranch, refresh, setActiveBranch, updateUser]);
 
   return <DashboardDataContext.Provider value={value}>{children}</DashboardDataContext.Provider>;
 }

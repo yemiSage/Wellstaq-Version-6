@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Search, Plus, Video, MapPin, Send, Heart, Users, Flame, ChevronLeft, TrendingUp, ImageIcon, MessageCircle, Share2, Bookmark, ThumbsUp, PanelLeftClose, PanelLeftOpen, Sticker, Paperclip, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { useClickOutside } from "@/hooks/use-click-outside";
 
 // Mock Data
 const stories = [
@@ -18,14 +19,6 @@ const stories = [
   { id: 5, name: "Segun", image: "https://picsum.photos/seed/segun/100/100", branch: "Abuja Branch" },
   { id: 6, name: "Tunde", image: "https://picsum.photos/seed/tunde/100/100", branch: "Abuja Branch" },
   { id: 7, name: "Ngozi", image: "https://picsum.photos/seed/ngozi/100/100", branch: "Yemi Inc lokoja" },
-];
-
-const trendingTopics = [
-  { id: 1, tag: "#StepUpForHealth", posts: "2.4k" },
-  { id: 2, tag: "#MindfulMovement", posts: "1.8k" },
-  { id: 3, tag: "#LagosRuns", posts: "1.2k" },
-  { id: 4, tag: "#CleanEating", posts: "987" },
-  { id: 5, tag: "#TeamHIIT", posts: "743" },
 ];
 
 const suggestedClubs = [
@@ -220,6 +213,26 @@ export default function SpacePage() {
   const filteredStories = stories.filter(s => s.branch === activeBranch || s.isUser);
   const filteredClubs = suggested.filter(c => c.branch === activeBranch);
   const filteredMyClubs = myClubsList.filter(c => c.branch === activeBranch);
+  const activityStats = useMemo(() => ({
+    steps: 42800,
+    posts: posts.length,
+    likes: posts.filter((post) => post.isLiked).length,
+    groups: myClubsList.length,
+  }), [myClubsList.length, posts]);
+  const trendingTopics = useMemo(() => {
+    const hashtagCounts = new Map<string, number>();
+
+    posts.forEach((post) => {
+      const hashtags = post.hashtags.match(/#[\w-]+/g) ?? [];
+      hashtags.forEach((hashtag) => {
+        hashtagCounts.set(hashtag, (hashtagCounts.get(hashtag) ?? 0) + 1);
+      });
+    });
+
+    return Array.from(hashtagCounts, ([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+      .slice(0, 5);
+  }, [posts]);
 
   useEffect(() => {
     void Promise.all([
@@ -352,6 +365,8 @@ export default function SpacePage() {
   const [isCreateClubModalOpen, setIsCreateClubModalOpen] = useState(false);
   const [newClubData, setNewClubData] = useState({ name: "", description: "", image: "", category: "Fitness" });
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  useClickOutside(emojiPickerRef, () => setIsEmojiPickerOpen(false));
 
   const handleCreateClub = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -416,7 +431,10 @@ export default function SpacePage() {
     return (
       <div className="w-full border-r border-grey-4 bg-white flex flex-col h-full shrink-0">
       <div className="pt-4 px-4 pb-0 border-b border-grey-4">
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <button onClick={() => setIsLeftColumnOpen(false)} className="text-grey-2 hover:text-grey-1 p-1 border border-grey-4 rounded-md bg-white flex-shrink-0">
+            <PanelLeftClose size={14} strokeWidth={1.5} />
+          </button>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
             <input 
@@ -429,17 +447,14 @@ export default function SpacePage() {
               <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">K</kbd>
             </div>
           </div>
-          <button onClick={() => setIsLeftColumnOpen(false)} className="text-grey-2 hover:text-grey-1 p-1 border border-grey-4 rounded-md bg-white flex-shrink-0">
-            <PanelLeftClose size={14} strokeWidth={1.5} />
-          </button>
         </div>
 
-        <div>
-          <h2 className="text-[16px] font-bold text-grey-1">Clubs</h2>
+        <div className="space-y-0">
+          <h2 className="text-[16px] font-bold leading-6 text-grey-1">Clubs</h2>
           <p className="text-[12px] text-grey-3">Join communities that match your goals</p>
         </div>
 
-        <div className="flex border-b border-grey-4">
+        <div className="mt-3 flex border-b border-grey-4">
           <button 
             className={`flex-1 pb-2 text-sm font-medium ${activeTab === "Other Clubs" ? "text-primary-1 border-b-2 border-primary-1" : "text-grey-2"}`}
             onClick={() => setActiveTab("Other Clubs")}
@@ -459,14 +474,14 @@ export default function SpacePage() {
         {activeTab === "Other Clubs" ? (
           <div className="space-y-4">
             {filteredClubs.map(club => (
-              <div key={club.id} className="p-4 border border-grey-4 rounded-xl hover:border-primary-1 cursor-pointer transition-colors" onClick={() => setSelectedClub(club.id)}>
+              <div key={club.id} className="p-4 border border-grey-4 rounded-[12px] hover:border-primary-1 cursor-pointer transition-colors" onClick={() => setSelectedClub(club.id)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden relative">
                       <Image src={club.image} alt={club.name} fill className="object-cover" referrerPolicy="no-referrer" />
                     </div>
-                    <div className="flex flex-col items-start gap-1">
-                      <h3 className="text-sm font-bold text-grey-1">{club.name}</h3>
+                    <div className="flex flex-col items-start gap-0">
+                      <h3 className="text-sm font-bold leading-6 text-grey-1">{club.name}</h3>
                       <span className="text-[10px] font-medium text-grey-2 bg-grey-5 px-2 py-0.5 rounded-full">{club.category}</span>
                     </div>
                   </div>
@@ -488,14 +503,14 @@ export default function SpacePage() {
         ) : filteredMyClubs.length > 0 ? (
           <div className="space-y-4">
             {filteredMyClubs.map(club => (
-              <div key={club.id} className="p-4 border border-grey-4 rounded-xl hover:border-primary-1 cursor-pointer transition-colors" onClick={() => setSelectedClub(club.id)}>
+              <div key={club.id} className="p-4 border border-grey-4 rounded-[12px] hover:border-primary-1 cursor-pointer transition-colors" onClick={() => setSelectedClub(club.id)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full overflow-hidden relative">
                       <Image src={club.image} alt={club.name} fill className="object-cover" referrerPolicy="no-referrer" />
                     </div>
-                    <div className="flex flex-col items-start gap-1">
-                      <h3 className="text-sm font-bold text-grey-1">{club.name}</h3>
+                    <div className="flex flex-col items-start gap-0">
+                      <h3 className="text-sm font-bold leading-6 text-grey-1">{club.name}</h3>
                       <span className="text-[10px] font-medium text-grey-2 bg-grey-5 px-2 py-0.5 rounded-full">{club.category}</span>
                     </div>
                   </div>
@@ -536,8 +551,8 @@ export default function SpacePage() {
   };
 
   const renderFeed = () => (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#F8F9FA]">
-      <div className="p-4 bg-white border-b border-grey-4 flex items-center gap-3">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#FAFAFA]">
+      <div className="px-4 pt-4 pb-2 bg-white border-b border-grey-4 flex items-center gap-3">
         {!isLeftColumnOpen && (
           <button onClick={() => setIsLeftColumnOpen(true)} className="text-grey-2 hover:text-grey-1 p-1 border border-grey-4 rounded-md bg-white flex-shrink-0">
             <PanelLeftOpen size={14} strokeWidth={1.5} />
@@ -549,7 +564,7 @@ export default function SpacePage() {
         )}
       </div>
       
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-3">
         <div className="max-w-[600px] mx-auto space-y-6">
           {/* Stories */}
           <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
@@ -566,7 +581,7 @@ export default function SpacePage() {
           </div>
 
           {/* Create Post */}
-          <div className="bg-white p-4 rounded-xl border border-grey-4">
+          <div className="bg-white p-4 rounded-[12px] border border-grey-4">
             <div className="flex gap-3 mb-4">
               <div className="w-10 h-10 rounded-full overflow-hidden relative shrink-0">
                 <Image src="https://picsum.photos/seed/opeyemi/100/100" alt="User" fill className="object-cover" referrerPolicy="no-referrer" />
@@ -623,7 +638,7 @@ export default function SpacePage() {
 
           {/* Feed Posts */}
           {posts.filter(post => !activeHashtag || post.hashtags.includes(activeHashtag)).map(post => (
-            <div key={post.id} className="bg-white rounded-xl border border-grey-4 overflow-hidden">
+            <div key={post.id} className="bg-white rounded-[12px] border border-grey-4 overflow-hidden">
               <div className="p-4">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
@@ -786,9 +801,9 @@ export default function SpacePage() {
       
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative">
         {/* Sticky Club Header */}
-        <div className="sticky top-[61px] z-10 bg-white border-b border-grey-4 pb-[12px] pt-[20px] px-[20px]">
+        <div className="sticky top-0 z-10 w-full self-start bg-white border-b border-grey-4 pb-[12px] pt-[20px] px-[20px]">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-[20px] font-medium text-grey-1 leading-[30px]">Yogo Club</h1>
+            <h1 className="text-[20px] font-bold text-grey-1 leading-[30px]">Yogo Club</h1>
             <div className="flex items-center gap-1 text-xs text-grey-3">
               <Users className="w-3 h-3" />
               30 members
@@ -862,7 +877,7 @@ export default function SpacePage() {
                 accept="image/*,video/*" 
                 onChange={handleChatFileUpload} 
               />
-              <div className="relative">
+              <div ref={emojiPickerRef} className="relative">
                 <button 
                   onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
                   className={`w-10 h-10 rounded-xl border border-grey-4 flex items-center justify-center transition-colors shrink-0 ${isEmojiPickerOpen ? 'bg-primary-1/10 text-primary-1 border-primary-1' : 'text-grey-3 hover:bg-grey-5'}`}
@@ -977,49 +992,51 @@ export default function SpacePage() {
   const renderRightColumn = () => (
     <div className="w-full border-l border-grey-4 bg-[#ffffff] p-6 overflow-y-auto no-scrollbar h-full">
       {/* Activity Card */}
-      <div className="bg-gradient-to-br from-[#F27D26] to-[#FFB780] rounded-xl p-5 mb-6 text-white shadow-sm">
-        <h3 className="text-[16px] font-bold mb-1">Your Activity This Week</h3>
-        <p className="text-xs text-white/80 mb-6">Keep the momentum going!</p>
+      <div className="bg-gradient-to-br from-[#EA6A05] to-[#FFB780] rounded-[12px] p-5 mb-6 text-white shadow-sm">
+        <div className="space-y-1 mb-6">
+          <h3 className="text-[16px] font-bold">Your Activity This Week</h3>
+          <p className="text-xs text-white/80">Keep the momentum going!</p>
+        </div>
         
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white/20 rounded-lg p-3">
             <div className="text-lg mb-1">🏃</div>
-            <div className="text-lg font-bold">42,800</div>
+            <div className="text-lg font-bold">{activityStats.steps.toLocaleString()}</div>
             <div className="text-[10px] text-white/80">Steps</div>
           </div>
           <div className="bg-white/20 rounded-lg p-3">
             <div className="text-lg mb-1">✍️</div>
-            <div className="text-lg font-bold">3</div>
+            <div className="text-lg font-bold">{activityStats.posts}</div>
             <div className="text-[10px] text-white/80">Posts</div>
           </div>
           <div className="bg-white/20 rounded-lg p-3">
             <div className="text-lg mb-1">🤍</div>
-            <div className="text-lg font-bold">28</div>
+            <div className="text-lg font-bold">{activityStats.likes}</div>
             <div className="text-[10px] text-white/80">Likes Given</div>
           </div>
           <div className="bg-white/20 rounded-lg p-3">
             <div className="text-lg mb-1">👥</div>
-            <div className="text-lg font-bold">2 joined</div>
+            <div className="text-lg font-bold">{activityStats.groups} joined</div>
             <div className="text-[10px] text-white/80">Groups</div>
           </div>
         </div>
       </div>
 
       {/* Trending Card */}
-      <div className="bg-white rounded-xl border border-grey-4 p-5">
+      <div className="bg-white rounded-[12px] border border-grey-4 p-5">
         <div className="flex items-center gap-2 mb-6">
           <TrendingUp className="w-5 h-5 text-primary-1" />
-          <h3 className="text-[16px] font-bold text-grey-1">Trending in Wellness</h3>
+          <h3 className="text-[16px] font-bold text-grey-1">Trending across spaces</h3>
         </div>
         
         <div className="space-y-5">
           {trendingTopics.map((topic, index) => (
-            <div key={topic.id} className="flex items-start justify-between cursor-pointer group" onClick={() => { setActiveHashtag(topic.tag); setSelectedClub(null); }}>
+            <div key={topic.tag} className="flex items-start justify-between cursor-pointer group" onClick={() => { setActiveHashtag(topic.tag); setSelectedClub(null); }}>
               <div className="flex gap-3">
                 <span className="text-sm font-medium text-grey-3 w-4">{index + 1}</span>
                 <div>
                   <div className="text-sm font-bold text-grey-1 group-hover:text-primary-1 transition-colors">{topic.tag}</div>
-                  <div className="text-xs text-grey-3">{topic.posts} posts</div>
+                  <div className="text-xs text-grey-3">{topic.count} {topic.count === 1 ? "post" : "posts"}</div>
                 </div>
               </div>
               <Flame className={`w-4 h-4 ${index === 0 ? 'text-primary-1' : index === 1 ? 'text-purple-500' : index === 2 || index === 3 ? 'text-green-500' : 'text-red-500'}`} />
@@ -1056,7 +1073,7 @@ export default function SpacePage() {
         </div>
 
         {/* Columns */}
-        <div className={`w-full md:w-[320px] shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "clubs" ? "block" : "hidden md:block"}`}>
+        <div className={`w-full md:w-[320px] shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${!isLeftColumnOpen ? "hidden" : activeMobileTab === "clubs" ? "block" : "hidden md:block"}`}>
           {renderLeftColumn()}
         </div>
         

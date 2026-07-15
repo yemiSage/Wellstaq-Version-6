@@ -28,7 +28,6 @@ export function ConfirmModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
-      maxWidth="max-w-md"
       footer={
         <>
           <button

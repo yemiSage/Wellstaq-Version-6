@@ -100,7 +100,7 @@ export default function ClubsPage() {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
   const [isAddMemberSuccessModalOpen, setIsAddMemberSuccessModalOpen] = useState(false);
-  
+
   const [newDepartmentName, setNewDepartmentName] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
@@ -137,7 +137,7 @@ export default function ClubsPage() {
     setClubs([newDepartment, ...clubs]);
     setIsCreateModalOpen(false);
     setIsSuccessModalOpen(true);
-    
+
     // Reset form
     setNewDepartmentName("");
     setSelectedMembers([]);
@@ -163,12 +163,12 @@ export default function ClubsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-[12px]">
         <div>
-          <h1 className="text-[20px] font-medium text-grey-1 mb-[6px] leading-[30px]">Clubs</h1>
+          <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Clubs</h1>
           <p className="text-sm text-grey-2">Join communities that match your goals</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#F27D26] text-white rounded-lg text-sm font-medium hover:bg-[#E66D16]"
+          className="flex items-center gap-2 px-4 py-2 bg-[#EA6A05] text-white rounded-lg text-sm font-medium hover:bg-[#C45700]"
         >
           <Plus className="w-4 h-4" />
           Create Club
@@ -182,8 +182,8 @@ export default function ClubsPage() {
             key={tab}
             onClick={() => setActiveFilter(tab)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeFilter === tab 
-                ? "bg-white border border-[#F27D26] text-[#F27D26]" 
+              activeFilter === tab
+                ? "bg-white border border-[#EA6A05] text-[#EA6A05]"
                 : "bg-white border border-grey-4 text-grey-2 hover:bg-grey-5"
             }`}
           >
@@ -195,7 +195,7 @@ export default function ClubsPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[12px]">
         {STATS.map((stat, i) => (
-          <div key={i} className="bg-white p-[14px] rounded-[12px]">
+          <div key={i} className="dashboard-card">
             <div className="flex items-start justify-between mb-4">
               <div className={`w-10 h-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
                 <stat.icon className="w-5 h-5" />
@@ -205,7 +205,7 @@ export default function ClubsPage() {
               </span>
             </div>
             <p className="text-sm text-[#4D4D4D] mb-1 font-medium">{stat.title}</p>
-            <h3 className="text-2xl font-bold text-[#373737] mb-1">{stat.value}</h3>
+            <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{stat.value}</h3>
             <p className="text-xs text-grey-3">{stat.subtitle}</p>
           </div>
         ))}
@@ -216,9 +216,9 @@ export default function ClubsPage() {
         <div className={`w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-4 rounded-[12px] border-[1.5px] border-[#E6E6E6] p-[12px] ${selectedClub ? 'hidden lg:flex' : 'flex'}`}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
-            <input 
-              type="text" 
-              placeholder="Search departments..." 
+            <input
+              type="text"
+              placeholder="Search departments..."
               className="w-full h-10 pl-9 pr-4 rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
             />
           </div>
@@ -228,9 +228,9 @@ export default function ClubsPage() {
               <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white rounded-[12px]">
                 <h3 className="text-lg font-bold text-grey-1 mb-2">No Clubs Available</h3>
                 <p className="text-sm text-grey-2 mb-6">You haven&apos;t created any clubs yet. Start by creating clubs and adding team members!</p>
-                <button 
+                <button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="flex items-center gap-2 px-6 py-2 bg-white border border-[#F27D26] text-[#F27D26] rounded-lg text-sm font-medium hover:bg-orange-50"
+                  className="flex items-center gap-2 px-6 py-2 bg-white border border-[#EA6A05] text-[#EA6A05] rounded-lg text-sm font-medium hover:bg-orange-50"
                 >
                   <Plus className="w-4 h-4" />
                   Create Club
@@ -238,14 +238,14 @@ export default function ClubsPage() {
               </div>
             ) : (
               clubs.map((club) => (
-                <div 
+                <div
                   key={club.id}
                   onClick={() => setSelectedClub(club)}
-                  className={`p-[12px] rounded-[12px] cursor-pointer transition-all border-[1.5px] ${selectedClub?.id === club.id ? 'bg-white border-[#F27D26] shadow-sm' : 'bg-white border-[#E6E6E6] hover:bg-grey-5'}`}
+                  className={`p-[12px] rounded-[12px] cursor-pointer transition-all border-[1.5px] ${selectedClub?.id === club.id ? 'bg-white border-[#EA6A05] shadow-sm' : 'bg-white border-[#E6E6E6] hover:bg-grey-5'}`}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold ${selectedClub?.id === club.id ? 'bg-orange-50 text-[#F27D26]' : 'bg-grey-5 text-grey-2'}`}>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold ${selectedClub?.id === club.id ? 'bg-orange-50 text-[#EA6A05]' : 'bg-grey-5 text-grey-2'}`}>
                         {club.name.charAt(0)}
                       </div>
                       <span className={`font-bold text-sm text-grey-1`}>{club.name}</span>
@@ -290,7 +290,7 @@ export default function ClubsPage() {
             <div className="flex-1 overflow-y-auto border-[#E6E6E6] rounded-[12px] border-[1.5px] no-scrollbar">
               <div className="m-[12px] bg-[#FAFAFA] rounded-[12px] p-[12px]">
                 {/* Mobile Back Button */}
-                <button 
+                <button
                   onClick={() => setSelectedClub(null)}
                   className="lg:hidden flex items-center gap-2 text-sm font-medium text-grey-2 mb-4 hover:text-grey-1"
                 >
@@ -309,13 +309,13 @@ export default function ClubsPage() {
                         <span className="text-xs font-bold text-green-600">Rank #{selectedClub.rank}</span>
                       </div>
                       <p className="text-sm text-grey-2 mb-2">{selectedClub.description}</p>
-                      <span className="px-2 py-1 bg-orange-50 text-[#F27D26] text-[10px] font-medium rounded-full">
+                      <span className="px-2 py-1 bg-orange-50 text-[#EA6A05] text-[10px] font-medium rounded-full">
                         {selectedClub.category}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setIsAddMemberModalOpen(true)} className="w-8 h-8 rounded-lg bg-[#F27D26] text-white flex items-center justify-center hover:bg-[#E66D16]">
+                    <button onClick={() => setIsAddMemberModalOpen(true)} className="w-8 h-8 rounded-lg bg-[#EA6A05] text-white flex items-center justify-center hover:bg-[#C45700]">
                       <UserPlus className="w-4 h-4" />
                     </button>
                     <button className="w-8 h-8 rounded-lg border border-grey-4 text-grey-2 flex items-center justify-center hover:bg-grey-5">
@@ -350,7 +350,7 @@ export default function ClubsPage() {
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#F27D26] text-[#F27D26]' : 'border-transparent text-grey-2 hover:text-grey-1'}`}
+                      className={`pb-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab ? 'border-[#EA6A05] text-[#EA6A05]' : 'border-transparent text-grey-2 hover:text-grey-1'}`}
                     >
                       {tab}
                     </button>
@@ -363,7 +363,7 @@ export default function ClubsPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
                       <h3 className="text-sm font-bold text-grey-1 mb-4">Club Performance</h3>
-                      <div className="bg-[#F8F9FA] rounded-xl p-4 h-[250px] relative group">
+                      <div className="bg-[#FAFAFA] rounded-xl p-4 h-[250px] relative group">
                         <ResponsiveContainer width="100%" height="100%">
                           <RadarChart cx="50%" cy="50%" outerRadius="80%" data={[
                             { subject: 'Health Score', A: 85, fullMark: 100 },
@@ -374,15 +374,15 @@ export default function ClubsPage() {
                           ]}>
                             <PolarGrid stroke="#F2F4F7" />
                             <PolarAngleAxis dataKey="subject" tick={{ fill: '#475467', fontSize: 10, fontWeight: 500 }} />
-                            <Radar name="Performance" dataKey="A" stroke="#F27D26" strokeWidth={2} fill="#F27D26" fillOpacity={0.1} dot={{ r: 3, fill: '#F27D26', strokeWidth: 1, stroke: '#fff' }} />
-                            <Tooltip 
+                            <Radar name="Performance" dataKey="A" stroke="#EA6A05" strokeWidth={2} fill="#EA6A05" fillOpacity={0.1} dot={{ r: 3, fill: '#EA6A05', strokeWidth: 1, stroke: '#fff' }} />
+                            <Tooltip
                               content={({ active, payload }) => {
                                 if (active && payload && payload.length) {
                                   const data = payload[0].payload;
                                   let description = "";
                                   if (data.subject === 'Health Score') description = "Physical well-being and health metrics of members.";
                                   if (data.subject === 'Engagement') description = "Participation rate in challenges and activities.";
-                                  
+
                                   return (
                                     <div className="bg-white p-2 border border-grey-4 rounded-lg shadow-sm">
                                       <p className="text-xs font-bold text-grey-1">{data.subject}: {data.A}%</p>
@@ -399,13 +399,13 @@ export default function ClubsPage() {
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-grey-1 mb-4">Wellness Engagement Index</h3>
-                      <div className="bg-[#F8F9FA] rounded-xl p-4 h-[250px]">
+                      <div className="bg-[#FAFAFA] rounded-xl p-4 h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={monthlyStepsData.map(d => ({ ...d, score: d.steps / 10000 }))} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 10 }} dy={10} />
                             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 10 }} tickFormatter={(val) => `${val}`} ticks={[0, 20, 40, 60, 80, 100]} domain={[0, 100]} />
-                            <Tooltip 
+                            <Tooltip
                               cursor={{ fill: '#F2F4F7' }}
                               formatter={(value) => [`${value}`, 'Engagement Index']}
                               labelStyle={{ color: '#667085', fontSize: '12px' }}
@@ -477,7 +477,7 @@ export default function ClubsPage() {
                           </div>
                           <div>
                             <p className="text-sm font-bold text-grey-1">{activity.title}</p>
-                            <p className="text-xs text-grey-3">{activity.type} • {activity.date}</p>
+                            <p className="text-xs text-grey-3">{activity.type} â€¢ {activity.date}</p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -507,39 +507,39 @@ export default function ClubsPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 flex-1 space-y-5 overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-grey-1 mb-1.5">Department Name <span className="text-red-500">*</span></label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={newDepartmentName}
                   onChange={(e) => setNewDepartmentName(e.target.value)}
-                  placeholder="e.g. Mongo Warriors" 
-                  className="w-full h-11 px-4 rounded-lg border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#F27D26]"
+                  placeholder="e.g. Mongo Warriors"
+                  className="w-full h-11 px-4 rounded-lg border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#EA6A05]"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-grey-1 mb-1.5">Add Team Member <span className="text-red-500">*</span></label>
                 <div className="relative" ref={memberDropdownRef}>
-                  <div 
+                  <div
                     onClick={() => setIsMemberDropdownOpen(!isMemberDropdownOpen)}
                     className="w-full min-h-[44px] px-4 py-2 rounded-lg border border-grey-4 text-sm text-grey-2 cursor-pointer flex items-center justify-between bg-white"
                   >
                     <span>Select team member to add, you can select multiple</span>
                     <ChevronDown className="w-4 h-4 text-grey-3" />
                   </div>
-                  
+
                   {isMemberDropdownOpen && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-grey-4 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto p-2">
                       {MOCK_MEMBERS.map(member => (
-                        <div 
-                          key={member.id} 
+                        <div
+                          key={member.id}
                           onClick={() => toggleMemberSelection(member.id)}
                           className="flex items-center gap-3 p-2 hover:bg-grey-5 rounded-md cursor-pointer"
                         >
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedMembers.includes(member.id) ? 'bg-[#F27D26] border-[#F27D26]' : 'border-grey-3'}`}>
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedMembers.includes(member.id) ? 'bg-[#EA6A05] border-[#EA6A05]' : 'border-grey-3'}`}>
                             {selectedMembers.includes(member.id) && <Check className="w-3 h-3 text-white" />}
                           </div>
                           <div className="w-6 h-6 rounded-full overflow-hidden relative">
@@ -551,7 +551,7 @@ export default function ClubsPage() {
                     </div>
                   )}
                 </div>
-                
+
                 {selectedMembers.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {selectedMembers.map(id => {
@@ -575,15 +575,15 @@ export default function ClubsPage() {
             </div>
 
             <div className="p-6 border-t border-grey-4 flex justify-end gap-3 bg-grey-5/30">
-              <button 
+              <button
                 onClick={() => setIsCreateModalOpen(false)}
                 className="px-6 py-2 rounded-lg border border-grey-4 text-sm font-medium text-grey-1 bg-white hover:bg-grey-5"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleCreateDepartment}
-                className="px-6 py-2 rounded-lg bg-[#F27D26] text-white text-sm font-medium hover:bg-[#E66D16]"
+                className="px-6 py-2 rounded-lg bg-[#EA6A05] text-white text-sm font-medium hover:bg-[#C45700]"
               >
                 Create Department
               </button>
@@ -599,19 +599,19 @@ export default function ClubsPage() {
             <button onClick={() => setIsSuccessModalOpen(false)} className="absolute top-4 right-4 text-grey-3 hover:text-grey-1">
               <X className="w-5 h-5" />
             </button>
-            
-            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-6 text-[#F27D26]">
+
+            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-6 text-[#EA6A05]">
               <Check className="w-10 h-10" strokeWidth={3} />
             </div>
-            
+
             <h2 className="text-xl font-bold text-grey-1 mb-2">Club successfully created</h2>
             <p className="text-sm text-grey-2 mb-8">
               Your club <span className="font-bold text-grey-1">{clubs[0]?.name}</span> have been successfully created
             </p>
-            
+
             <div className="w-full flex items-center justify-between p-3 border border-grey-4 rounded-lg bg-white">
               <span className="text-sm text-grey-2 truncate mr-2">Https://wellstaq.com/clubs/{clubs[0]?.name.toLowerCase().replace(/\s+/g, '_')}...</span>
-              <button 
+              <button
                 onClick={() => handleCopy(`Https://wellstaq.com/clubs/${clubs[0]?.name.toLowerCase().replace(/\s+/g, '_')}`)}
                 className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors ${isCopied ? 'text-green-600' : 'text-grey-1'}`}
               >
@@ -639,34 +639,34 @@ export default function ClubsPage() {
             <div className="p-6 border-b border-grey-4 flex justify-between items-start">
               <div>
                 <h2 className="text-xl font-bold text-grey-1 mb-1">Add a team member</h2>
-                <p className="text-sm text-grey-2">Adding to {selectedClub?.name} · {selectedClub?.members} current members</p>
+                <p className="text-sm text-grey-2">Adding to {selectedClub?.name} Â· {selectedClub?.members} current members</p>
               </div>
               <button onClick={() => setIsAddMemberModalOpen(false)} className="text-grey-3 hover:text-grey-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto flex-1 space-y-5">
               <div>
                 <label className="block text-sm font-medium text-grey-1 mb-1.5">Add Team Member <span className="text-red-500">*</span></label>
                 <div className="relative" ref={memberDropdownRef}>
-                  <div 
+                  <div
                     onClick={() => setIsMemberDropdownOpen(!isMemberDropdownOpen)}
                     className="w-full min-h-[44px] px-4 py-2 rounded-lg border border-grey-4 text-sm text-grey-2 cursor-pointer flex items-center justify-between bg-white"
                   >
                     <span>Select team member to add, you can select multiple</span>
                     <ChevronDown className="w-4 h-4 text-grey-3" />
                   </div>
-                  
+
                   {isMemberDropdownOpen && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-grey-4 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto p-2">
                       {MOCK_MEMBERS.map(member => (
-                        <div 
-                          key={member.id} 
+                        <div
+                          key={member.id}
                           onClick={() => toggleMemberSelection(member.id)}
                           className="flex items-center gap-3 p-2 hover:bg-grey-5 rounded-md cursor-pointer"
                         >
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedMembers.includes(member.id) ? 'bg-[#F27D26] border-[#F27D26]' : 'border-grey-3'}`}>
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedMembers.includes(member.id) ? 'bg-[#EA6A05] border-[#EA6A05]' : 'border-grey-3'}`}>
                             {selectedMembers.includes(member.id) && <Check className="w-3 h-3 text-white" />}
                           </div>
                           <div className="w-6 h-6 rounded-full overflow-hidden relative">
@@ -678,7 +678,7 @@ export default function ClubsPage() {
                     </div>
                   )}
                 </div>
-                
+
                 {selectedMembers.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-3">
                     {selectedMembers.map(id => {
@@ -704,15 +704,15 @@ export default function ClubsPage() {
             <div className="p-6 border-t border-grey-4 flex justify-between items-center bg-grey-5/30">
               <span className="text-sm font-medium text-grey-1">{selectedMembers.length} Selected</span>
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => setIsAddMemberModalOpen(false)}
                   className="px-6 py-2 rounded-lg border border-grey-4 text-sm font-medium text-grey-1 bg-white hover:bg-grey-5"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleAddMembers}
-                  className="px-6 py-2 rounded-lg bg-[#F27D26] text-white text-sm font-medium hover:bg-[#E66D16]"
+                  className="px-6 py-2 rounded-lg bg-[#EA6A05] text-white text-sm font-medium hover:bg-[#C45700]"
                 >
                   Add Member
                 </button>
@@ -729,11 +729,11 @@ export default function ClubsPage() {
             <button onClick={() => setIsAddMemberSuccessModalOpen(false)} className="absolute top-4 right-4 text-grey-3 hover:text-grey-1">
               <X className="w-5 h-5" />
             </button>
-            
-            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-6 text-[#F27D26]">
+
+            <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-6 text-[#EA6A05]">
               <Check className="w-10 h-10" strokeWidth={3} />
             </div>
-            
+
             <h2 className="text-xl font-bold text-grey-1 mb-2">Members have been added successfully!</h2>
             <p className="text-sm text-grey-2">
               New members have been added successfully! They will be notified and added to the department.

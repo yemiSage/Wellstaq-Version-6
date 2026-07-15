@@ -10,7 +10,6 @@ interface ModalProps {
   subtitle?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  maxWidth?: string;
 }
 
 export function Modal({
@@ -20,7 +19,6 @@ export function Modal({
   subtitle,
   children,
   footer,
-  maxWidth = "max-w-[612px]",
 }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
@@ -37,25 +35,25 @@ export function Modal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className={`bg-white rounded-2xl w-full ${maxWidth} overflow-hidden flex flex-col max-h-[90vh]`}>
+      <div className="flex h-[75dvh] w-full max-w-[840px] flex-col overflow-hidden rounded-[12px] bg-white shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)]">
         {(title || subtitle) && (
-          <div className="p-6 border-b border-grey-4 flex justify-between items-start">
+          <div className="flex h-[75px] shrink-0 items-center justify-between border-b border-grey-4 px-6">
             <div>
-              {title && <h2 className="text-xl font-bold text-grey-1 mb-1">{title}</h2>}
-              {subtitle && <p className="text-sm text-grey-2">{subtitle}</p>}
+              {title && <h2 className="!text-base !leading-6 font-sans font-bold text-grey-1">{title}</h2>}
+              {subtitle && <p className="text-xs leading-[18px] text-grey-3">{subtitle}</p>}
             </div>
-            <button onClick={onClose} className="text-grey-3 hover:text-grey-1">
-              <X className="w-5 h-5" />
+            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-[12px] text-grey-3 hover:bg-grey-5 hover:text-grey-1" aria-label="Close modal">
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
         
-        <div className="p-6 overflow-y-auto flex-1 scrollbar-hide">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 scrollbar-hide">
           {children}
         </div>
 
         {footer && (
-          <div className="p-6 border-t border-grey-4 flex justify-end gap-3 bg-grey-5/30">
+          <div className="flex h-[75px] shrink-0 items-center justify-end gap-3 border-t border-grey-4 bg-grey-5 px-6">
             {footer}
           </div>
         )}

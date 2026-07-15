@@ -10,7 +10,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <DashboardDataProvider>
-    <div className="flex h-screen bg-[#F8F9FA] overflow-hidden">
+    <div className="flex h-screen bg-grey-5 overflow-hidden">
       {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (
         <div 
@@ -26,7 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div className="flex-1 flex flex-col overflow-hidden w-full">
         <TopNav onMenuClick={() => setIsSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-[20px] no-scrollbar">
+        <main className="flex-1 overflow-y-auto p-3 no-scrollbar">
           {children}
         </main>
       </div>
