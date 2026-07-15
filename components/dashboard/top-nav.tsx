@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Menu, Plus, Settings2, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus, LoaderCircle, UserPlus, Moon, Sun } from "lucide-react";
+import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Menu, Plus, Settings2, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus, LoaderCircle, UserPlus } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
-import { useTheme } from "@/components/providers/theme-provider";
 import { notificationGroups } from "@/lib/workspace-activity";
 import type { BranchInvitee, UserSearchResult } from "@/types/api";
 
@@ -54,7 +53,6 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const branchSearchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { user: userData, activeBranch, addBranch, nameCurrentBranch, members } = useDashboardData();
-  const { theme, toggleTheme } = useTheme();
 
   const currentUserRole = members.find((member) => member.email.toLowerCase() === userData.email.toLowerCase() && member.branch === activeBranch)?.role;
   const isAdmin = !currentUserRole || ["Super Admin", "Branch Manager"].includes(currentUserRole) || userData.email.toLowerCase().includes("admin");
@@ -329,13 +327,6 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               )}
             </AnimatePresence>
           </div>
-          <button
-            onClick={toggleTheme}
-            className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5"
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? <Sun className="w-4 h-4 lg:w-5 lg:h-5" /> : <Moon className="w-4 h-4 lg:w-5 lg:h-5" />}
-          </button>
           <button 
             onClick={() => setIsChatOpen(true)}
             className="h-8 lg:h-10 px-2 lg:px-4 rounded-[12px] border border-grey-4 flex items-center gap-2 text-xs lg:text-sm font-medium text-grey-1 hover:bg-grey-5 transition-colors"

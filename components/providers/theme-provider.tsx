@@ -17,8 +17,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("wellstaq-theme");
-    const preferredTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    setThemeState(savedTheme === "dark" || savedTheme === "light" ? savedTheme : preferredTheme);
+    setThemeState(savedTheme === "dark" || savedTheme === "light" ? savedTheme : "light");
   }, []);
 
   useEffect(() => {
