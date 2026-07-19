@@ -169,7 +169,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-12">
+    <div className="max-w-7xl mx-auto space-y-6 rounded-[12px] p-[12px]">
       {/* Back Link */}
       <Link 
         href="/dashboard/events" 
