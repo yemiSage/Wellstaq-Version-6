@@ -53,11 +53,9 @@ export function Step1Email({ data, updateData, onNext, isLoading }: Step1Props) 
             />
             <LockKeyhole className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-grey-3" />
           </div>
-          {data.password.length > 0 && (
-            <p className={`text-xs ${data.password.length >= 8 ? "text-secondary-green" : "text-grey-3"}`}>
-              {data.password.length >= 8
-                ? "Password meets the minimum requirement."
-                : "Use at least 8 characters for your password."}
+          {data.password.length > 0 && data.password.length < 8 && (
+            <p className="text-xs text-grey-3">
+              Use at least 8 characters for your password.
             </p>
           )}
         </div>
