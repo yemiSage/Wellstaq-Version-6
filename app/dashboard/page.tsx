@@ -12,6 +12,14 @@ import {
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { api } from "@/services/api";
 
+const WELLBEING_PULSE_METRICS = [
+  { name: "Stress Manageability", status: "Priority focus", value: 58, barClass: "bg-[#D84315]" },
+  { name: "Energy & Recovery", status: "Needs attention", value: 64, barClass: "bg-[#FF9800]" },
+  { name: "Connection & Belonging", status: "Looks good", value: 82, barClass: "bg-[#4CAF50]" },
+  { name: "Workload Sustainability", status: "Priority focus", value: 54, barClass: "bg-[#D84315]" },
+  { name: "Workplace Comfort", status: "Looks good", value: 76, barClass: "bg-[#4CAF50]" },
+] as const;
+
 export default function DashboardPage() {
   const { members: INITIAL_MEMBERS, departments: MOCK_DEPARTMENTS, events: EVENTS, activeBranch } = useDashboardData();
   const [stats, setStats] = useState({
@@ -127,96 +135,46 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-[12px]">
         {/* Left Column */}
         <div className="space-y-[12px]">
-          {/* Overall Health */}
+          {/* Wellbeing Pulse */}
           <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
-            <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-4">Overall Health</h3>
+            <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-4">Wellbeing Pulse</h3>
             
             {/* Progress Bar */}
             <div className="flex h-4 mb-4 gap-0.5">
-              {Array.from({ length: 15 }).map((_, i) => (
+              {Array.from({ length: 9 }).map((_, i) => (
                 <div key={`red-${i}`} className="bg-[#E64A19] w-1.5 h-full rounded-sm" />
               ))}
-              {Array.from({ length: 25 }).map((_, i) => (
+              {Array.from({ length: 24 }).map((_, i) => (
                 <div key={`orange-${i}`} className="bg-[#FFCC80] w-1.5 h-full rounded-sm" />
               ))}
-              {Array.from({ length: 45 }).map((_, i) => (
+              {Array.from({ length: 67 }).map((_, i) => (
                 <div key={`green-${i}`} className="bg-[#4CAF50] w-1.5 h-full rounded-sm" />
               ))}
             </div>
             
             <div className="flex items-center gap-3 text-sm text-grey-2 mb-6">
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#E64A19]" /> <span className="text-[12px] text-left text-[#4D4D4D] font-medium">12 needs attention</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#E64A19]" /> <span className="text-[12px] text-left text-[#4D4D4D] font-medium">9% Priority support</span></div>
               <div className="w-px h-4 bg-grey-4" />
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#FFCC80]" /> <span className="text-[12px] text-left text-[#4D4D4D] font-medium">34 Normal</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#FFCC80]" /> <span className="text-[12px] text-left text-[#4D4D4D] font-medium">24% Needs attention</span></div>
               <div className="w-px h-4 bg-grey-4" />
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#4CAF50]" /> <span className="text-[12px] text-left text-[#4D4D4D] font-medium">145 Doing so great</span></div>
+              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#4CAF50]" /> <span className="text-[12px] text-left text-[#4D4D4D] font-medium">67% Doing well</span></div>
             </div>
 
             <div className="bg-[#FAFAFA] rounded-[12px] p-4 space-y-6">
-              <div>
-                <div className="flex justify-between text-[16px] text-grey-1 font-medium mb-1">
-                  <span className="text-[#4D4D4D] text-[14px] leading-[20px] font-bold">Heart Disease</span>
+              {WELLBEING_PULSE_METRICS.map((metric) => (
+                <div key={metric.name}>
+                  <div className="flex justify-between text-[16px] text-grey-1 font-medium mb-1">
+                    <span className="text-[#4D4D4D] text-[14px] leading-[20px] font-bold">{metric.name}</span>
+                  </div>
+                  <div className="flex justify-between text-[12px] text-grey-2 mb-2">
+                    <span>{metric.status}</span>
+                    <span className="text-grey-1 font-medium">{metric.value}%</span>
+                  </div>
+                  <div className="h-1.5 bg-grey-4 rounded-full overflow-hidden">
+                    <div className={`h-full ${metric.barClass}`} style={{ width: `${metric.value}%` }} />
+                  </div>
                 </div>
-                <div className="flex justify-between text-[12px] text-grey-2 mb-2">
-                  <span>Looks good</span>
-                  <span className="text-grey-1 font-medium">0.2%</span>
-                </div>
-                <div className="h-1.5 bg-grey-4 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#4CAF50] w-[10%]" />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[16px] text-grey-1 font-medium mb-1">
-                  <span className="text-[#4D4D4D] text-[14px] leading-[20px] font-bold">Kidney Disease</span>
-                </div>
-                <div className="flex justify-between text-[12px] text-grey-2 mb-2">
-                  <span>Looks good</span>
-                  <span className="text-grey-1 font-medium">32%</span>
-                </div>
-                <div className="h-1.5 bg-grey-4 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#FF9800] w-[32%]" />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[16px] text-grey-1 font-medium mb-1">
-                  <span className="text-[#4D4D4D] text-[14px] leading-[20px] font-bold">High Cholesterol</span>
-                </div>
-                <div className="flex justify-between text-[12px] text-grey-2 mb-2">
-                  <span>Need serious attention</span>
-                  <span className="text-grey-1 font-medium">0.2%</span>
-                </div>
-                <div className="h-1.5 bg-grey-4 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#D84315] w-[90%]" />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[16px] text-grey-1 font-medium mb-1">
-                  <span className="text-[#4D4D4D] text-[14px] leading-[20px] font-bold">Iron Deficiency</span>
-                </div>
-                <div className="flex justify-between text-[12px] text-grey-2 mb-2">
-                  <span>Looks good</span>
-                  <span className="text-grey-1 font-medium">0.2%</span>
-                </div>
-                <div className="h-1.5 bg-grey-4 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#4CAF50] w-[10%]" />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[16px] text-grey-1 font-medium mb-1">
-                  <span className="text-[#4D4D4D] text-[14px] leading-[20px] font-bold">Diabetes</span>
-                </div>
-                <div className="flex justify-between text-[12px] text-grey-2 mb-2">
-                  <span>Looks good</span>
-                  <span className="text-grey-1 font-medium">0.2%</span>
-                </div>
-                <div className="h-1.5 bg-grey-4 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#4CAF50] w-[5%]" />
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
