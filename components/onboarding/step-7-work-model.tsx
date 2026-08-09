@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { SelectablePill } from "@/components/ui/selectable-pill";
 import { OnboardingData } from "@/types";
 
-interface Step6Props {
+interface Step7Props {
   data: OnboardingData;
   updateData: (data: Partial<OnboardingData>) => void;
   onNext: () => void;
@@ -11,7 +11,7 @@ interface Step6Props {
 
 const WORK_MODELS = ["Fully Remote", "Hybrid", "On-site"];
 
-export function Step6WorkModel({ data, updateData, onNext, isLoading }: Step6Props) {
+export function Step7WorkModel({ data, updateData, onNext, isLoading }: Step7Props) {
   const isValid = !!data.workModel;
 
   return (

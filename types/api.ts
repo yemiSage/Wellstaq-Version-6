@@ -1,3 +1,5 @@
+// path: types/api.ts
+
 export type DataSource = "mock" | "api";
 
 export interface ApiErrorBody {
@@ -23,11 +25,12 @@ export interface UserProfile {
   website?: string;
   bio?: string;
 }
-
 export interface Branch {
-  id?: string;
+  id: string;
+  organizationId: string;
   name: string;
-  invitees: BranchInvitee[];
+  managerId: string | null;
+  createdBy: string;
 }
 
 export interface BranchInvitee {
@@ -72,4 +75,429 @@ export interface ResourceMutation {
   action: string;
   id?: string | number;
   payload?: unknown;
+}
+
+export interface AvailabilityResponse {
+  available: boolean;
+}
+
+export interface AuthTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+}
+
+export interface FastApiValidationItem {
+  loc: (string | number)[];
+  msg: string;
+  type: string;
+}
+
+
+export interface PermissionGrant {
+  name: string;
+  branchId: string | null;
+}
+
+export interface CurrentUserResponse {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  organizationId: string;
+  branchId: string;
+  departmentId: string;
+  permissions: PermissionGrant[];
+  avatarUrl?: string;
+  twoFaEnabled: boolean;
+  twoFaMethod?: string;
+}
+export interface StatTrend {
+  current: number;
+  previous: number | null;
+  changePct: number | null;
+}
+export interface OrgStatsResponse {
+  totalUsers: number;
+  usersTrend: StatTrend;
+  totalBranches: number;
+  branchesTrend: StatTrend;
+  totalDepartments: number;
+  departmentsTrend: StatTrend;
+  totalClubs: number;
+  clubsTrend: StatTrend;
+  totalEvents: number;
+  eventsTrend: StatTrend;
+  totalChallenges: number;
+  challengesTrend: StatTrend;
+  activeChallenges: number;
+  totalPosts: number;
+  postsTrend: StatTrend;
+}
+export interface ActivitySummaryResponse {
+  totalCount: number;
+  byType: Array<{ activityType: string; count: number }>;
+  trend: StatTrend | null;
+}
+export type ChallengeStatus = "upcoming" | "active" | "completed" | "cancelled" | "archived";
+
+export interface WellbeingChallenge {
+  id: string;
+  name: string;
+}
+
+export interface WellbeingChallengeListResponse {
+  items: WellbeingChallenge[];
+}
+export interface ChallengeItem {
+  id: string;
+  organizationId: string;
+  branchId: string | null;
+  wellbeingChallengeId: string | null;
+  name: string;
+  description: string;
+  imageUrl: string | null;
+  startDate: string;
+  endDate: string;
+  status: string;
+  metricType: string;
+  targetType: string;
+  targetValue: string;
+  createdBy: string;
+  createdAt: string;
+  participantCount: number;
+  completionRate: number | null;
+}
+
+export interface ChallengeStatsResponse {
+  activeChallenges: number;
+  totalParticipants: number;
+  completionRate: number;
+}
+export interface ChallengeListResponse {
+  items: ChallengeItem[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface ChallengeParticipant {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  rank: number;
+  completedAt: string | null;
+  joinedAt: string;
+}
+
+export interface ChallengeParticipantListResponse {
+  items: ChallengeParticipant[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CreateChallengePayload {
+  branchId?: string;
+  wellbeingChallengeId?: string;
+  name: string;
+  description: string;
+  imageUrl?: string;
+  startDate: string;
+  endDate: string;
+  metricType: string;
+  targetType: string;
+  targetValue: number;
+}
+
+export interface UpdateChallengePayload {
+  name?: string;
+  description?: string;
+  imageUrl?: string;
+  startDate?: string;
+  endDate?: string;
+  metricType?: string;
+  targetType?: string;
+  targetValue?: number;
+  status?: string;
+}
+
+export interface JoinChallengeResponse {
+  challengeId: string;
+  userId: string;
+  message: string;
+}
+
+
+export interface TrendData { current: number; previous: number; changePct: number; }
+export interface ChallengeStatsResponse {
+  activeChallenges: number;
+  activeChallengesTrend: TrendData | null;
+  totalParticipants: number;
+  totalParticipantsTrend: TrendData | null;
+  completionRate: number;
+  completionRateTrend: TrendData | null;
+}
+
+export type ChallengeStatsPeriod = "week" | "month" | "six_months" | "custom";
+
+
+export interface PulseQuestionResult {
+  percent: number | null;
+  status: string | null; // "Priority focus" | "Needs attention" | "Doing well" | null
+}
+
+export interface LivePulseResponse {
+  windowId: string;
+  respondentCount: number;
+  stressManageability: PulseQuestionResult;
+  energyRecovery: PulseQuestionResult;
+  connectionBelonging: PulseQuestionResult;
+  workloadSustainability: PulseQuestionResult;
+  workplaceComfort: PulseQuestionResult;
+  prioritySupportPct: number | null;
+  needsAttentionPct: number | null;
+  doingWellPct: number | null;
+}
+
+export type DashboardTrendPeriod = "week" | "month" | "three_months";
+export type DashboardTrendMetric = "stressLevel" | "energyLevel" | "socialInteraction" | "productivity";
+export interface DashboardTrendPoint { date: string; value: number; }
+export interface DashboardTrendsResponse {
+  period: DashboardTrendPeriod;
+  scope: "organization" | "branch";
+  branchId: string | null;
+  startDate: string;
+  endDate: string;
+  series: Record<DashboardTrendMetric, DashboardTrendPoint[]>;
+}
+export interface WellbeingDistributionItem {
+  dimensionId: string;
+  key: string;
+  label: string;
+  value: number | null;
+  participantCount: number;
+  suppressed: boolean;
+}
+export interface WellbeingDistributionResponse {
+  scope: "organization" | "branch";
+  branchId: string | null;
+  period: string | null;
+  computedAt: string | null;
+  dimensions: WellbeingDistributionItem[];
+}
+
+
+export type ClubCategory =
+  | "fitness"
+  | "creativity"
+  | "team_bonding"
+  | "mental_health"
+  | "nutrition";
+
+export const CLUB_CATEGORIES: { value: ClubCategory; label: string }[] = [
+  { value: "fitness", label: "Fitness" },
+  { value: "creativity", label: "Creativity" },
+  { value: "team_bonding", label: "Team Bonding" },
+  { value: "mental_health", label: "Mental Health" },
+  { value: "nutrition", label: "Nutrition" },
+];
+
+export interface Club {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  privacy: "public" | "private";
+  organizationId: string;
+  branchId: string;
+  category: ClubCategory;
+  memberCount: number;
+  createdBy: string | null;
+  leaderId: string | null;
+  isMember: boolean;
+}
+
+export interface CreateClubPayload {
+  name: string;
+  description: string;
+  imageUrl?: string;
+  privacy: "public" | "private";
+  category: ClubCategory;
+}
+
+export interface UpdateClubPayload {
+  name?: string;
+  description?: string;
+  imageUrl?: string;
+  privacy?: "public" | "private";
+  category?: ClubCategory;
+}
+
+export interface ClubListResponse {
+  items: Club[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+
+export interface Post {
+  id: string;
+  userId: string;
+  organizationId: string;
+  branchId: string | null;
+  content: string | null;
+  mediaUrl: string | null;
+  mediaType: string | null;
+  likeCount: number;
+  commentCount: number;
+  shareCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PostListResponse {
+  items: Post[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CreatePostPayload {
+  branchId?: string | null;
+  content?: string;
+  mediaUrl?: string;
+  mediaType?: string;
+}
+
+export interface CommentReply {
+  id: string;
+  postId: string;
+  userId: string;
+  content: string | null;
+  parentCommentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Comment {
+  id: string;
+  postId: string;
+  userId: string;
+  content: string | null;
+  parentCommentId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  replies: CommentReply[];
+}
+
+export interface CommentListResponse {
+  items: Comment[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface LikeActionResponse {
+  postId: string;
+  userId: string;
+  liked: boolean;
+  likeCount: number;
+  message: string;
+}
+
+export interface Story {
+  id: string;
+  userId: string;
+  organizationId: string;
+  branchId: string | null;
+  mediaUrl: string;
+  mediaType: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface StoryListResponse {
+  items: Story[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CreateStoryPayload {
+  branchId?: string | null;
+  mediaUrl: string;
+  mediaType: string;
+}
+
+
+export interface OrganizationMemberInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string | null;
+  status: string;
+  roleId: string | null;
+  branchId: string | null;
+}
+export interface OrganizationMembersListResponse {
+  items: OrganizationMemberInfo[]; total: number; offset: number; limit: number;
+}
+
+export interface ClubMemberInfo {
+  id: string; firstName: string; lastName: string; email: string; avatarUrl: string | null; status: string;
+}
+export interface ClubMembersListResponse {
+  items: ClubMemberInfo[]; total: number; offset: number; limit: number;
+}
+
+export interface LeaderboardEntry {
+  userId: string; firstName: string; lastName: string; value: number;
+  avatarUrl?: string | null;
+  rank: number; previousRank: number | null; orgRank: number; previousOrgRank: number | null;
+}
+export interface LeaderboardResponse {
+  metricType: string; periodType: string; periodStart: string; periodEnd: string;
+  scope: "branch" | "org"; items: LeaderboardEntry[];
+}
+
+export interface ChatMessageItem {
+  id: string; organizationId: string; conversationType: string; conversationId: string;
+  userId: string; content: string | null; mediaUrl: string | null; mediaType: string | null;
+  isPinned: boolean; pinnedBy: string | null; pinnedAt: string | null; createdAt: string;
+}
+export interface MessageResponse extends ChatMessageItem {}
+export interface MessageListResponse { items: MessageResponse[]; total: number; offset: number; limit: number; }
+export interface PinActionResponse { messageId: string; isPinned: boolean; message: string; }
+
+export interface TrendingHashtagItem {
+  tagName: string;
+  totalPostCount: number;
+  trendScore: string;
+  windowEnd: string;
+}
+export interface TrendingHashtagListResponse {
+  items: TrendingHashtagItem[];
+}
+export interface HashtagPostListResponse {
+  items: Post[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface ActivityTrendPoint {
+  period: string;
+  value: string;
+}
+export interface ActivityTrendResponse {
+  metricType: string;
+  granularity: string;
+  points: ActivityTrendPoint[];
+}
+export interface LikesGivenCountResponse {
+  count: number;
 }

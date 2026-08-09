@@ -1,257 +1,487 @@
+// path: app/dashboard/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { Lock } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { 
-  DepartmentPerformanceRadar, 
-  EngagementChart, 
-  Leaderboard 
+import {
+  DepartmentPerformanceRadar,
+  EngagementChart,
+  Leaderboard
 } from "@/components/dashboard/dashboard-charts-dynamic";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
-import { api } from "@/services/api";
+import { api, type StatsPeriod } from "@/services/api";
+import { TrendBadge } from "@/components/dashboard/trend-badge";
+import { useDashboardScope } from "@/lib/scope";
+import { hasPermission } from "@/lib/permissions";
+import type { DashboardTrendPeriod, DashboardTrendsResponse, StatTrend, ChallengeItem, ChallengeListResponse, LeaderboardEntry, LivePulseResponse, WellbeingDistributionResponse } from "@/types/api";
 
-const WELLBEING_PULSE_METRICS = [
-  { name: "Stress Manageability", status: "Priority focus", value: 58, barClass: "bg-[#D84315]" },
-  { name: "Energy & Recovery", status: "Needs attention", value: 64, barClass: "bg-[#FF9800]" },
-  { name: "Connection & Belonging", status: "Looks good", value: 82, barClass: "bg-[#4CAF50]" },
-  { name: "Workload Sustainability", status: "Priority focus", value: 54, barClass: "bg-[#D84315]" },
-  { name: "Workplace Comfort", status: "Looks good", value: 76, barClass: "bg-[#4CAF50]" },
-] as const;
+const EMPTY_TRENDS: DashboardTrendsResponse["series"] = {
+  stressLevel: [], energyLevel: [], socialInteraction: [], productivity: [],
+};
+
+const PULSE_QUESTION_META: {
+  key: keyof Omit<LivePulseResponse, "windowId" | "respondentCount" | "prioritySupportPct" | "needsAttentionPct" | "doingWellPct">;
+  name: string;
+}[] = [
+  { key: "stressManageability", name: "Stress Manageability" },
+  { key: "energyRecovery", name: "Energy & Recovery" },
+  { key: "connectionBelonging", name: "Connection & Belonging" },
+  { key: "workloadSustainability", name: "Workload Sustainability" },
+  { key: "workplaceComfort", name: "Workplace Comfort" },
+];
+
+function statusBarClass(status: string | null): string {
+  if (status === "Priority focus") return "bg-[#D84315]";
+  if (status === "Needs attention") return "bg-[#FF9800]";
+  if (status === "Doing well") return "bg-[#4CAF50]";
+  return "bg-grey-4"; // no data yet
+}
 
 export default function DashboardPage() {
-  const { members: INITIAL_MEMBERS, departments: MOCK_DEPARTMENTS, events: EVENTS, activeBranch } = useDashboardData();
-  const [stats, setStats] = useState({
-    staff: 0,
-    staffActive: 0,
-    activity: 0,
-    events: 0,
-    departments: 0,
-    staffGrowth: "+0",
-    activityGrowth: "+0%",
-    eventsGrowth: "+0",
-    departmentsGrowth: "+0"
-  });
-  const [chartData, setChartData] = useState<{
-    wellbeing?: Array<{subject: string; A: number; fullMark: number}>;
-    engagement?: Array<{name: string; value: number}>;
-    leaderboard?: Array<{rank: number; name: string; steps: string; avatar: string; trend: string}>;
-  }>({});
+  const {
+    isLoading: isDashboardLoading,
+    error: dashboardError,
+    organizationId,
+    currentUser,
+  } = useDashboardData();
+  const { scope } = useDashboardScope();
+
+  const [period, setPeriod] = useState<StatsPeriod | "">("");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+
+  const [stats, setStats] = useState<{
+    staff: number;
+    staffActive: number;
+    activity: number;
+    events: number;
+    departments: number;
+    usersTrend: StatTrend;
+    activityTrend: StatTrend | null;
+    eventsTrend: StatTrend;
+    departmentsTrend: StatTrend;
+  } | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
+
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardMetric, setLeaderboardMetric] = useState("steps");
+  const [trendPeriod, setTrendPeriod] = useState<DashboardTrendPeriod>("week");
+  const [trendSeries, setTrendSeries] = useState<DashboardTrendsResponse["series"]>(EMPTY_TRENDS);
+  const [distribution, setDistribution] = useState<WellbeingDistributionResponse | null>(null);
+  const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
+  const [challengesLoading, setChallengesLoading] = useState(true);
+
+  // Wellbeing pulse — permission-gated before any request is made, not
+  // caught after a 403. hasPermission is checked against the branch
+  // currently in scope (undefined in Overview = org-wide check).
+  const canViewPulse = currentUser
+    ? hasPermission(currentUser.permissions, "wellbeing.view_team", scope.type === "branch" ? scope.branchId : undefined)
+    : false;
+  const [pulse, setPulse] = useState<LivePulseResponse | null>(null);
+  const [pulseLoading, setPulseLoading] = useState(true);
 
   useEffect(() => {
-    void api.resources.get<typeof chartData>("dashboard", "charts", {}).then(setChartData);
-  }, [activeBranch]);
+    if (!organizationId) return;
+    let cancelled = false;
+    const leaderboardRequest = scope.type === "overview"
+      ? api.leaderboard.getOrg(organizationId, leaderboardMetric)
+      : api.leaderboard.getBranch(organizationId, leaderboardMetric, scope.branchId);
+    void leaderboardRequest
+      .then((response) => { if (!cancelled) setLeaderboard(response.items); })
+      .catch(() => { if (!cancelled) setLeaderboard([]); });
+    return () => { cancelled = true; };
+  }, [organizationId, scope, leaderboardMetric]);
 
   useEffect(() => {
-    const calculateStats = (branch: string) => {
-      const branchMembers = INITIAL_MEMBERS.filter(m => m.branch === branch);
-      const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === branch);
-      const branchEvents = EVENTS.filter(e => e.branch === branch);
-      
-      const totalActivity = branchDepts.reduce((acc, dept) => acc + dept.activities, 0);
-      const activeStaff = branchMembers.filter(m => m.status === 'Excellent' || m.status === 'Good').length;
+    if (!organizationId) return;
+    if (period === "custom" && !customStart) return;
+    let cancelled = false;
 
-      return {
-        staff: branchMembers.length,
-        staffActive: activeStaff,
-        activity: totalActivity,
-        events: branchEvents.length,
-        departments: branchDepts.length,
-        staffGrowth: branchMembers.length > 0 ? "+4" : "+0", // Mock growth for now
-        activityGrowth: totalActivity > 0 ? "+21%" : "+0%",
-        eventsGrowth: branchEvents.length > 0 ? "12" : "0",
-        departmentsGrowth: branchDepts.length > 0 ? "8" : "0"
-      };
+    async function loadStats(orgId: string) {
+      setStatsLoading(true);
+      setStatsError(null);
+      try {
+        const statsParams = {
+          period: period || undefined,
+          startDate: period === "custom" ? customStart : undefined,
+          endDate: period === "custom" && customEnd ? customEnd : undefined,
+        };
+
+        const [orgStats, activeStats, activitySummary] =
+          scope.type === "overview"
+            ? await Promise.all([
+              api.organization.getStats(orgId, statsParams),
+              api.organization.getActiveUserStats(orgId),
+              api.organization.getActivitySummary(orgId, statsParams),
+            ])
+            : await Promise.all([
+              api.organization.getBranchStats(orgId, scope.branchId, statsParams),
+              api.organization.getBranchActiveUserStats(orgId, scope.branchId),
+              api.organization.getBranchActivitySummary(orgId, scope.branchId, statsParams),
+            ]);
+
+        if (cancelled) return;
+
+        setStats({
+          staff: orgStats.totalUsers,
+          staffActive: activeStats.totalUsers,
+          activity: activitySummary.totalCount,
+          events: orgStats.totalEvents,
+          departments: orgStats.totalDepartments,
+          usersTrend: orgStats.usersTrend,
+          activityTrend: activitySummary.trend,
+          eventsTrend: orgStats.eventsTrend,
+          departmentsTrend: orgStats.departmentsTrend,
+        });
+      } catch {
+        if (!cancelled) setStatsError("Unable to load organization stats.");
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    }
+
+    void loadStats(organizationId);
+    return () => {
+      cancelled = true;
     };
+  }, [organizationId, scope, period, customStart, customEnd]);
 
-    setStats(calculateStats(activeBranch));
-  }, [EVENTS, INITIAL_MEMBERS, MOCK_DEPARTMENTS, activeBranch]);
+  useEffect(() => {
+    if (!organizationId) return;
+    let cancelled = false;
+
+    async function loadChallenges(orgId: string) {
+      setChallengesLoading(true);
+      try {
+        const response: ChallengeListResponse =
+          scope.type === "overview"
+            ? await api.organization.getChallenges(orgId, { scope: "all", status: "upcoming" })
+            : await api.organization.getChallenges(orgId, {
+              branchId: scope.branchId,
+              scope: "organization",
+              status: "upcoming",
+            });
+
+        if (cancelled) return;
+
+        const upcoming = [...response.items].sort(
+          (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+        );
+
+        setChallenges(upcoming);
+      } catch {
+        if (!cancelled) setChallenges([]);
+      } finally {
+        if (!cancelled) setChallengesLoading(false);
+      }
+    }
+
+    void loadChallenges(organizationId);
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId, scope]);
+
+  useEffect(() => {
+    if (!organizationId) return;
+    if (!canViewPulse) {
+      // No permission for this scope — never fire the request, just
+      // stop "loading" so the restricted-access message renders.
+      setPulse(null);
+      setPulseLoading(false);
+      return;
+    }
+    let cancelled = false;
+
+    async function loadPulse(orgId: string) {
+      setPulseLoading(true);
+      try {
+        const result = await api.organization.getLivePulse(
+          orgId,
+          scope.type === "branch" ? scope.branchId : undefined,
+        );
+        if (!cancelled) setPulse(result);
+      } catch {
+        if (!cancelled) setPulse(null);
+      } finally {
+        if (!cancelled) setPulseLoading(false);
+      }
+    }
+
+    void loadPulse(organizationId);
+    return () => { cancelled = true; };
+  }, [organizationId, scope, canViewPulse]);
+
+  useEffect(() => {
+    if (!organizationId || !canViewPulse) {
+      setTrendSeries(EMPTY_TRENDS);
+      setDistribution(null);
+      return;
+    }
+    let cancelled = false;
+    const branchId = scope.type === "branch" ? scope.branchId : undefined;
+    void Promise.all([
+      api.dashboard.getTrends(organizationId, trendPeriod, branchId),
+      api.dashboard.getWellbeingDistribution(organizationId, branchId),
+    ]).then(([trends, wellbeing]) => {
+      if (!cancelled) {
+        setTrendSeries(trends.series);
+        setDistribution(wellbeing);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setTrendSeries(EMPTY_TRENDS);
+        setDistribution(null);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [organizationId, scope, canViewPulse, trendPeriod]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
-      <DashboardHeader />
+      <DashboardHeader
+        period={period}
+        onPeriodChange={setPeriod}
+        customStart={customStart}
+        customEnd={customEnd}
+        onCustomStartChange={setCustomStart}
+        onCustomEndChange={setCustomEnd}
+      />
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-[12px]">
-        <div className="dashboard-card border border-grey-4">
-          <div className="flex items-start justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-red-100 text-red-500 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <span className="hidden sm:flex items-center text-[10px] sm:text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> {stats.staffGrowth}
-            </span>
-          </div>
-          <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Total Staff</p>
-          <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.staff}</h3>
-          <p className="text-[10px] text-grey-3 truncate">{stats.staffActive} active</p>
-        </div>
+      {isDashboardLoading && (
+        <div className="text-center py-16 text-grey-3">Loading your dashboard...</div>
+      )}
 
-        <div className="dashboard-card border border-grey-4">
-          <div className="flex items-start justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-100 text-purple-500 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
-            <span className="hidden sm:flex items-center text-[10px] sm:text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> {stats.activityGrowth}
-            </span>
-          </div>
-          <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Total Activity</p>
-          <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.activity.toLocaleString()}</h3>
-          <p className="text-[10px] text-grey-3 truncate">From last week</p>
-        </div>
+      {!isDashboardLoading && (
+        <>
+          {dashboardError && (
+            <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+              Some dashboard data couldn&apos;t load. Stats and other sections below are still live.
+            </p>
+          )}
 
-        <div className="dashboard-card border border-grey-4">
-          <div className="flex items-start justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-100 text-blue-500 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-            </div>
-            <span className="hidden sm:flex items-center text-[10px] sm:text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> +{stats.eventsGrowth}
-            </span>
-          </div>
-          <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Events Created</p>
-          <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.events}</h3>
-          <p className="text-[10px] text-grey-3 truncate">Scheduled</p>
-        </div>
-
-        <div className="dashboard-card border border-grey-4">
-          <div className="flex items-start justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-lime-100 text-lime-600 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/></svg>
-            </div>
-            <span className="hidden sm:flex items-center text-[10px] sm:text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> +{stats.departmentsGrowth}
-            </span>
-          </div>
-          <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Departments</p>
-          <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.departments}</h3>
-          <p className="text-[10px] text-grey-3 truncate">Wellness</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-[12px]">
-        {/* Left Column */}
-        <div className="space-y-[12px]">
-          {/* Wellbeing Pulse */}
-          <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
-            <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-4">Wellbeing Pulse</h3>
-            
-            {/* Progress Bar */}
-            <div className="flex h-4 mb-4 gap-0.5">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <div key={`red-${i}`} className="bg-[#E64A19] w-1.5 h-full rounded-sm" />
-              ))}
-              {Array.from({ length: 24 }).map((_, i) => (
-                <div key={`orange-${i}`} className="bg-[#FFCC80] w-1.5 h-full rounded-sm" />
-              ))}
-              {Array.from({ length: 67 }).map((_, i) => (
-                <div key={`green-${i}`} className="bg-[#4CAF50] w-1.5 h-full rounded-sm" />
+          {/* Stats Cards */}
+          {statsLoading && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-[12px]">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="dashboard-card border border-grey-4 animate-pulse h-24" />
               ))}
             </div>
-            
-            <div className="flex items-center gap-3 text-sm text-grey-2 mb-6">
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#E64A19]" /> <span className="text-[12px] text-left text-[#4D4D4D] font-medium">9% Priority support</span></div>
-              <div className="w-px h-4 bg-grey-4" />
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#FFCC80]" /> <span className="text-[12px] text-left text-[#4D4D4D] font-medium">24% Needs attention</span></div>
-              <div className="w-px h-4 bg-grey-4" />
-              <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-[#4CAF50]" /> <span className="text-[12px] text-left text-[#4D4D4D] font-medium">67% Doing well</span></div>
-            </div>
+          )}
 
-            <div className="bg-[#FAFAFA] rounded-[12px] p-4 space-y-6">
-              {WELLBEING_PULSE_METRICS.map((metric) => (
-                <div key={metric.name}>
-                  <div className="flex justify-between text-[16px] text-grey-1 font-medium mb-1">
-                    <span className="text-[#4D4D4D] text-[14px] leading-[20px] font-bold">{metric.name}</span>
+          {!statsLoading && statsError && (
+            <p className="text-sm text-red-600">{statsError}</p>
+          )}
+
+          {!statsLoading && !statsError && stats && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-[12px]">
+              <div className="dashboard-card border border-grey-4">
+                <div className="flex items-start justify-between mb-2 sm:mb-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-red-100 text-red-500 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                   </div>
-                  <div className="flex justify-between text-[12px] text-grey-2 mb-2">
-                    <span>{metric.status}</span>
-                    <span className="text-grey-1 font-medium">{metric.value}%</span>
-                  </div>
-                  <div className="h-1.5 bg-grey-4 rounded-full overflow-hidden">
-                    <div className={`h-full ${metric.barClass}`} style={{ width: `${metric.value}%` }} />
-                  </div>
+                  <TrendBadge trend={stats.usersTrend} />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Department Performance */}
-          <DepartmentPerformanceRadar data={chartData.wellbeing} />
-        </div>
-
-        {/* Right Column (spans 2) */}
-        <div className="lg:col-span-2 space-y-[12px]">
-          {/* Employee Engagement */}
-          <EngagementChart data={chartData.engagement} />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-[12px]">
-            {/* Upcoming Challenge */}
-            <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
-              <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-6">Upcoming Challenge</h3>
-              
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <div className="text-center min-w-[50px]">
-                    <div className="text-[16px] font-normal text-[#4D4D4D] border-[#4D4D4D]">15th</div>
-                    <div className="text-xs text-green-600 font-medium">Oct, 2025</div>
-                  </div>
-                  <div className="w-0.5 bg-grey-4" />
-                  <div>
-                    <h4 className="font-bold text-[#4D4D4D] text-sm leading-[20px] mb-1">Charity run for health awareness</h4>
-                    <p className="text-xs text-grey-3 line-clamp-1">Participate in a fun run to raise funds...</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="text-center min-w-[50px]">
-                    <div className="text-[16px] font-normal text-[#4D4D4D] border-[#4D4D4D]">20th</div>
-                    <div className="text-xs text-green-600 font-medium">Oct, 2025</div>
-                  </div>
-                  <div className="w-0.5 bg-grey-4" />
-                  <div>
-                    <h4 className="font-bold text-[#4D4D4D] text-sm leading-[20px] mb-1">Local farmers market</h4>
-                    <p className="text-xs text-grey-3 line-clamp-1">Explore fresh produce and handmad...</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="text-center min-w-[50px]">
-                    <div className="text-[16px] font-normal text-[#4D4D4D] border-[#4D4D4D]">30th</div>
-                    <div className="text-xs text-green-600 font-medium">Oct, 2025</div>
-                  </div>
-                  <div className="w-0.5 bg-grey-4" />
-                  <div>
-                    <h4 className="font-bold text-[#4D4D4D] text-sm leading-[20px] mb-1">Idumota boys cycling the ridge</h4>
-                    <p className="text-xs text-grey-3 line-clamp-1">This bla bla bla bla bla bla bla bla bla...</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="text-center min-w-[50px]">
-                    <div className="text-[16px] font-normal text-[#4D4D4D] border-[#4D4D4D]">31st</div>
-                    <div className="text-xs text-green-600 font-medium">Oct, 2025</div>
-                  </div>
-                  <div className="w-0.5 bg-grey-4" />
-                  <div>
-                    <h4 className="font-bold text-[#4D4D4D] text-sm leading-[20px] mb-1">Community music festival</h4>
-                    <p className="text-xs text-grey-3 line-clamp-1">Enjoy live music from various bands...</p>
-                  </div>
-                </div>
+                <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Total Staff</p>
+                <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.staff}</h3>
+                <p className="text-[10px] text-grey-3 truncate">{stats.staffActive} active</p>
               </div>
 
-              <div className="mt-6 text-center">
-                <Link href="/dashboard/challenges" className="text-sm font-bold text-primary-1 hover:underline">View all challenge</Link>
+              <div className="dashboard-card border border-grey-4">
+                <div className="flex items-start justify-between mb-2 sm:mb-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-100 text-purple-500 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                  </div>
+                  <TrendBadge trend={stats.activityTrend} />
+                </div>
+                <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Total Activity</p>
+                <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.activity.toLocaleString()}</h3>
+                <p className="text-[10px] text-grey-3 truncate">All recorded activity</p>
+              </div>
+
+              <div className="dashboard-card border border-grey-4">
+                <div className="flex items-start justify-between mb-2 sm:mb-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-100 text-blue-500 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
+                  </div>
+                  <TrendBadge trend={stats.eventsTrend} />
+                </div>
+                <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Events Created</p>
+                <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.events}</h3>
+                <p className="text-[10px] text-grey-3 truncate">Scheduled</p>
+              </div>
+
+              <div className="dashboard-card border border-grey-4">
+                <div className="flex items-start justify-between mb-2 sm:mb-4">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-lime-100 text-lime-600 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" /><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" /><path d="M12 2v2" /><path d="M12 22v-2" /><path d="m17 20.66-1-1.73" /><path d="M11 10.27 7 3.34" /><path d="m20.66 17-1.73-1" /><path d="m3.34 7 1.73 1" /><path d="M14 12h8" /><path d="M2 12h2" /><path d="m20.66 7-1.73 1" /><path d="m3.34 17 1.73-1" /><path d="m17 3.34-1 1.73" /><path d="m11 13.73-4 6.93" /></svg>
+                  </div>
+                  <TrendBadge trend={stats.departmentsTrend} />
+                </div>
+                <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Departments</p>
+                <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.departments}</h3>
+                <p className="text-[10px] text-grey-3 truncate">Wellness</p>
               </div>
             </div>
+          )}
 
-            {/* Leaderboard */}
-            <Leaderboard data={chartData.leaderboard} />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-[12px]">
+            {/* Left Column */}
+            <div className="space-y-[12px]">
+              {/* Wellbeing Pulse */}
+              <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
+                <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-4">Wellbeing Pulse</h3>
+
+                {!canViewPulse && (
+                  <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
+                    <Lock className="w-6 h-6 text-grey-3" />
+                    <p className="text-sm text-grey-3">You don&apos;t have permission to view this resource.</p>
+                  </div>
+                )}
+
+                {canViewPulse && pulseLoading && (
+                  <div className="h-40 bg-grey-5 rounded-md animate-pulse" />
+                )}
+
+                {canViewPulse && !pulseLoading && !pulse && (
+                  <p className="text-sm text-grey-3 italic">No open survey window right now — check back once the next pulse survey opens.</p>
+                )}
+
+                {canViewPulse && !pulseLoading && pulse && (
+                  <>
+                    {/* Progress Bar */}
+                    <div className="flex h-4 mb-4 gap-0.5">
+                      {Array.from({ length: Math.round(pulse.prioritySupportPct ?? 0) }).map((_, i) => (
+                        <div key={`red-${i}`} className="bg-[#E64A19] w-1.5 h-full rounded-sm" />
+                      ))}
+                      {Array.from({ length: Math.round(pulse.needsAttentionPct ?? 0) }).map((_, i) => (
+                        <div key={`orange-${i}`} className="bg-[#FFCC80] w-1.5 h-full rounded-sm" />
+                      ))}
+                      {Array.from({ length: Math.round(pulse.doingWellPct ?? 0) }).map((_, i) => (
+                        <div key={`green-${i}`} className="bg-[#4CAF50] w-1.5 h-full rounded-sm" />
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-3 text-sm text-grey-2 mb-6">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#E64A19]" />
+                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulse.prioritySupportPct ?? 0}% Priority support</span>
+                      </div>
+                      <div className="w-px h-4 bg-grey-4" />
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#FFCC80]" />
+                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulse.needsAttentionPct ?? 0}% Needs attention</span>
+                      </div>
+                      <div className="w-px h-4 bg-grey-4" />
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#4CAF50]" />
+                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulse.doingWellPct ?? 0}% Doing well</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#FAFAFA] rounded-[12px] p-4 space-y-6">
+                      {PULSE_QUESTION_META.map(({ key, name }) => {
+                        const q = pulse[key];
+                        return (
+                          <div key={key}>
+                            <div className="flex justify-between text-[16px] text-grey-1 font-medium mb-1">
+                              <span className="text-[#4D4D4D] text-[14px] leading-[20px] font-bold">{name}</span>
+                            </div>
+                            <div className="flex justify-between text-[12px] text-grey-2 mb-2">
+                              <span>{q.status ?? "No data yet"}</span>
+                              <span className="text-grey-1 font-medium">{q.percent ?? 0}%</span>
+                            </div>
+                            <div className="h-1.5 bg-grey-4 rounded-full overflow-hidden">
+                              <div className={`h-full ${statusBarClass(q.status)}`} style={{ width: `${q.percent ?? 0}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Department Performance */}
+              <DepartmentPerformanceRadar
+                period={distribution?.period ?? null}
+                data={(distribution?.dimensions ?? [])
+                  .filter((dimension) => dimension.value !== null)
+                  .map((dimension) => ({ subject: dimension.label, A: Number(dimension.value), fullMark: 100 }))}
+              />
+            </div>
+
+            {/* Right Column (spans 2) */}
+            <div className="lg:col-span-2 space-y-[12px]">
+              {/* Employee Engagement */}
+              <EngagementChart series={trendSeries} period={trendPeriod} onPeriodChange={setTrendPeriod} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-[12px]">
+                {/* Upcoming Challenge */}
+                <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
+                  <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-6">Upcoming Challenge</h3>
+
+                  {challengesLoading && (
+                    <div className="space-y-6">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="h-12 bg-grey-5 rounded-md animate-pulse" />
+                      ))}
+                    </div>
+                  )}
+
+                  {!challengesLoading && challenges.length === 0 && (
+                    <p className="text-sm text-grey-3 italic">No upcoming challenges yet.</p>
+                  )}
+
+                  {!challengesLoading && challenges.length > 0 && (
+                    <div className="space-y-6">
+                      {challenges.slice(0, 4).map((challenge) => {
+                        const date = new Date(challenge.startDate);
+                        const day = date.getDate();
+                        const suffix =
+                          day % 10 === 1 && day !== 11 ? "st" :
+                            day % 10 === 2 && day !== 12 ? "nd" :
+                              day % 10 === 3 && day !== 13 ? "rd" : "th";
+                        const monthYear = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+
+                        return (
+                          <div key={challenge.id} className="flex gap-4">
+                            <div className="text-center min-w-[50px]">
+                              <div className="text-[16px] font-normal text-[#4D4D4D] border-[#4D4D4D]">{day}{suffix}</div>
+                              <div className="text-xs text-green-600 font-medium">{monthYear}</div>
+                            </div>
+                            <div className="w-0.5 bg-grey-4" />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-bold text-[#4D4D4D] text-sm leading-[20px] truncate">{challenge.name}</h4>
+                                {scope.type === "overview" && !challenge.branchId && (
+                                  <span className="shrink-0 text-[10px] font-medium text-primary-1 bg-primary-5 px-1.5 py-0.5 rounded">Org-wide</span>
+                                )}
+                              </div>
+                              <p className="text-xs text-grey-3 line-clamp-1">{challenge.description}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="mt-6 text-center">
+                    <Link href="/dashboard/challenges" className="text-sm font-bold text-primary-1 hover:underline">View all challenge</Link>
+                  </div>
+                </div>
+
+                {/* Leaderboard */}
+                <Leaderboard data={leaderboard} metric={leaderboardMetric} onMetricChange={setLeaderboardMetric} />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

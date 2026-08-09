@@ -18,6 +18,7 @@ import { useDashboardData } from "@/components/providers/dashboard-data-provider
 import { notificationGroups } from "@/lib/workspace-activity";
 import type { BranchInvitee, UserSearchResult } from "@/types/api";
 
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function truncateProfileText(value: string) {
@@ -40,8 +41,8 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [showHistory, setShowHistory] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const [chatInput, setChatInput] = useState("");
-  const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string}[]>([]);
-  const [chatHistory] = useState<{id: string, title: string, date: string}[]>([
+  const [messages, setMessages] = useState<{ role: 'user' | 'ai', content: string }[]>([]);
+  const [chatHistory] = useState<{ id: string, title: string, date: string }[]>([
     { id: "1", title: "Workout routine for today", date: "Today" },
     { id: "2", title: "Local wellness departments", date: "Yesterday" },
     { id: "3", title: "Feeling stressed lately", date: "Last week" }
@@ -99,7 +100,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
-    
+
     const newMessages = [...messages, { role: 'user' as const, content: text }];
     setMessages(newMessages);
     setChatInput("");
@@ -119,12 +120,18 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   };
 
   const handleLogout = async () => {
-    await api.auth.logout();
-    setIsLogoutModalOpen(false);
-    toast.success("Logged out successfully");
-    router.push("/");
+    try {
+      await api.auth.logout();
+      toast.success("Logged out successfully");
+    } catch {
+      // Tokens are cleared locally regardless (see api.auth.logout's finally
+      // block) — a failed server call shouldn't block the user from leaving.
+      toast.success("Logged out successfully");
+    } finally {
+      setIsLogoutModalOpen(false);
+      router.push("/login");
+    }
   };
-
   const openBranchModal = () => {
     setBranchModalStep("new");
     setCurrentBranchName("");
@@ -220,7 +227,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
       <header className="h-[72px] bg-white border-b border-grey-4 flex items-center justify-between px-4 lg:px-5 relative z-40">
         <div className="flex-1 flex items-center gap-2 lg:gap-4">
           {/* Mobile Menu Button */}
-          <button 
+          <button
             onClick={onMenuClick}
             className="lg:hidden p-2 text-grey-2 hover:bg-grey-5 rounded-lg"
           >
@@ -229,9 +236,9 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
 
           <div className="relative hidden sm:block sm:flex-1 sm:max-w-[460px] lg:w-[460px] lg:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
-            <input 
-              type="text" 
-              placeholder="Search..." 
+            <input
+              type="text"
+              placeholder="Search..."
               className="h-11 w-full rounded-[8px] border border-grey-4 bg-white pl-10 pr-16 text-sm focus:border-primary-1 focus:outline-none focus:ring-2 focus:ring-primary-1/20"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1">
@@ -239,6 +246,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">K</kbd>
             </div>
           </div>
+
         </div>
 
         <div className="flex items-center gap-2 lg:gap-4 ml-2 lg:ml-4">
@@ -295,11 +303,10 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                               role="tab"
                               aria-selected={activeNotificationGroup === group.group}
                               onClick={() => setActiveNotificationGroup(group.group)}
-                              className={`flex items-center gap-1.5 border-b-2 py-3 text-xs font-medium transition-colors ${
-                                activeNotificationGroup === group.group
-                                  ? "border-primary-1 text-primary-1"
-                                  : "border-transparent text-grey-2 hover:text-grey-1"
-                              }`}
+                              className={`flex items-center gap-1.5 border-b-2 py-3 text-xs font-medium transition-colors ${activeNotificationGroup === group.group
+                                ? "border-primary-1 text-primary-1"
+                                : "border-transparent text-grey-2 hover:text-grey-1"
+                                }`}
                             >
                               <Icon className="h-3.5 w-3.5" />
                               {group.group}
@@ -327,16 +334,16 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               )}
             </AnimatePresence>
           </div>
-          <button 
+          <button
             onClick={() => setIsChatOpen(true)}
             className="h-8 lg:h-10 px-2 lg:px-4 rounded-[12px] border border-grey-4 flex items-center gap-2 text-xs lg:text-sm font-medium text-grey-1 hover:bg-grey-5 transition-colors"
           >
             <Sparkles className="w-3 h-3 lg:w-4 lg:h-4" />
             <span className="hidden sm:inline">Ask ws-AI</span>
           </button>
-          
+
           <div className="relative" ref={profileRef}>
-            <div 
+            <div
               className="flex items-center gap-2 lg:gap-3 ml-1 lg:ml-2 cursor-pointer"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
@@ -361,34 +368,34 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
             </div>
 
             <AnimatePresence>
-            {isProfileOpen && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="absolute right-0 mt-2 w-48 bg-white border border-grey-4 rounded-lg shadow-lg z-50 py-1 origin-top-right"
-              >
-                <Link
-                  href="/dashboard/settings"
-                  onClick={() => setIsProfileOpen(false)}
-                  className="w-full text-left px-4 py-2 text-sm text-grey-1 hover:bg-grey-5 flex items-center gap-2"
+              {isProfileOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="absolute right-0 mt-2 w-48 bg-white border border-grey-4 rounded-lg shadow-lg z-50 py-1 origin-top-right"
                 >
-                  <Settings2 className="w-4 h-4" />
-                  Settings
-                </Link>
-                <button
-                  onClick={() => {
-                    setIsProfileOpen(false);
-                    setIsLogoutModalOpen(true);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-grey-4"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              </motion.div>
-            )}
+                  <Link
+                    href="/dashboard/settings"
+                    onClick={() => setIsProfileOpen(false)}
+                    className="w-full text-left px-4 py-2 text-sm text-grey-1 hover:bg-grey-5 flex items-center gap-2"
+                  >
+                    <Settings2 className="w-4 h-4" />
+                    Settings
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      setIsLogoutModalOpen(true);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-grey-4"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </motion.div>
+              )}
             </AnimatePresence>
           </div>
         </div>
@@ -420,14 +427,14 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     onClick={() => setShowHistory(!showHistory)}
                     className={`p-1.5 rounded-md transition-colors ${showHistory ? 'bg-grey-5 text-grey-1' : 'text-grey-2 hover:bg-grey-5 hover:text-grey-1'}`}
                     title="History"
                   >
                     <History className="w-4 h-4" />
                   </button>
-                  <button 
+                  <button
                     onClick={startNewChat}
                     className="p-1.5 rounded-md text-grey-2 hover:bg-grey-5 hover:text-grey-1 transition-colors"
                     title="New Chat"
@@ -435,7 +442,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                     <MessageCirclePlus className="w-4 h-4" />
                   </button>
                   <div className="w-px h-4 bg-grey-4 mx-1"></div>
-                  <button 
+                  <button
                     onClick={() => setIsChatOpen(false)}
                     className="text-grey-2 hover:text-grey-1 p-1.5 rounded-md hover:bg-grey-5 transition-colors"
                   >
@@ -460,9 +467,9 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                     <div className="w-16 h-16 relative mb-6 flex items-center justify-center text-[#EA6A05]">
                       <Sparkles className="w-10 h-10" />
                     </div>
-                    
+
                     <h2 className="text-2xl font-bold text-grey-1 mb-8">How can I help, {userData.firstName}?</h2>
-                    
+
                     <div className="w-full space-y-3 max-w-[380px]">
                       <button onClick={() => handleSendMessage("Suggest a workout routine for today.")} className="w-full flex items-center gap-3 p-3 bg-white border border-grey-4 rounded-lg text-sm text-grey-1 hover:bg-grey-5 transition-colors text-left">
                         <MessageSquare className="w-4 h-4 text-grey-2" />
@@ -504,8 +511,8 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               {/* Chat Input */}
               <div className="p-6 bg-white">
                 <div className="border-b border-grey-4 p-3 shadow-none focus-within:border-primary-1 transition-all flex items-center gap-2">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -513,10 +520,10 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                         handleSendMessage(chatInput);
                       }
                     }}
-                    placeholder="Ask anything..." 
+                    placeholder="Ask anything..."
                     className="w-full bg-transparent text-sm focus:outline-none text-grey-1 placeholder:text-grey-3"
                   />
-                  <button 
+                  <button
                     onClick={() => handleSendMessage(chatInput)}
                     disabled={!chatInput.trim()}
                     className="w-8 h-8 bg-primary-1 text-white rounded-lg flex shrink-0 items-center justify-center hover:bg-primary-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
