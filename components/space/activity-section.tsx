@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/services/api";
+import { ApiError } from "@/services/http";
+import { Lock } from "lucide-react";
 
 interface WeeklyStats {
   steps: number;
@@ -9,6 +11,7 @@ interface WeeklyStats {
   likes: number;
   groups: number;
 }
+type StatKey = keyof WeeklyStats;
 
 function currentWeekBounds(): { periodStart: string; periodEnd: string } {
   const now = new Date();
@@ -18,7 +21,12 @@ function currentWeekBounds(): { periodStart: string; periodEnd: string } {
   monday.setDate(now.getDate() + diffToMonday);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-  const toISODate = (d: Date) => d.toISOString().slice(0, 10);
+  const toISODate = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const date = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${date}`;
+  };
   return { periodStart: toISODate(monday), periodEnd: toISODate(sunday) };
 }
 
@@ -27,58 +35,81 @@ const STEPS_POLL_MS = 60_000;
 export function ActivitySection({
   organizationId,
   userId,
+  groupsJoined,
+  groupsRestricted,
   postDelta,
   likeDelta,
-  groupDelta,
 }: {
-  organizationId: string | null | undefined;
+  organizationId: string | undefined;
   userId: string | undefined;
+  groupsJoined: number;
+  groupsRestricted?: boolean;
   /** Bump this number (e.g. Date.now()) whenever the user creates a post,
    *  so this component knows to bump its local post count optimistically. */
   postDelta: number;
   /** Bump this number whenever the user likes a post (increments only —
    *  should NOT be bumped on unlike, see SpacePage wiring). */
   likeDelta: number;
-  /** Bump whenever the user successfully joins a club. */
-  groupDelta: number;
 }) {
   const [stats, setStats] = useState<WeeklyStats>({ steps: 0, posts: 0, likes: 0, groups: 0 });
   const [loading, setLoading] = useState(true);
+  const [restricted, setRestricted] = useState<Set<StatKey>>(new Set());
 
   const loadStats = useCallback(async () => {
-  if (!organizationId || !userId) {
-    setLoading(false);
-    return;
-  }
-  const { periodStart, periodEnd } = currentWeekBounds();
-  try {
-    const [trendResult, postsResult, likesResult, clubsResult] = await Promise.allSettled([
-      api.activity.getWeeklyStepsTrend(organizationId),
-      api.post.getPostsByUser(organizationId, userId, { periodStart, periodEnd, limit: 1 }),
-      api.post.getLikesGivenCount(organizationId, { periodStart, periodEnd }),
-      api.club.getAllClubsForUser(organizationId, userId),
-    ]);
-    const trendPoints = trendResult.status === "fulfilled" ? trendResult.value.points : [];
-    const currentWeekPoint = trendPoints.find((p) => p.period.startsWith(periodStart)) ?? trendPoints.at(-1);
-    const stepsValue = currentWeekPoint ? Number(currentWeekPoint.value) : 0;
-    setStats({
-      steps: Number.isFinite(stepsValue) ? stepsValue : 0,
-      posts: postsResult.status === "fulfilled" ? postsResult.value.total : 0,
-      likes: likesResult.status === "fulfilled" ? likesResult.value.count : 0,
-      groups: clubsResult.status === "fulfilled"
-        ? clubsResult.value.filter((club) => club.isMember).length
-        : 0,
-    });
+    if (!organizationId || !userId) {
+      setLoading(false);
+      return;
+    }
+    const { periodStart, periodEnd } = currentWeekBounds();
+    try {
+      const [trendResult, postsResult, likesResult] = await Promise.allSettled([
+        api.activity.getWeeklyStepsTrend(organizationId),
+        api.post.getPostsByUser(organizationId, userId, { periodStart, periodEnd, limit: 1 }),
+        api.post.getLikesGivenCount(organizationId, { periodStart, periodEnd }),
+      ]);
 
-    [trendResult, postsResult, likesResult, clubsResult].forEach((result) => {
-      if (result.status === "rejected") console.error("Activity metric load error:", result.reason);
-    });
-  } catch (err) {
-    console.error("ActivitySection load error:", err); // was silently swallowed — add this so future failures are visible in devtools instead of just showing 0s forever
-  } finally {
-    setLoading(false);
-  }
-}, [organizationId, userId]);
+      // FIX: Promise.allSettled never rejects, so the outer try/catch below
+      // was dead code — any failure in postsResult/likesResult that wasn't
+      // a 403 (wrong param name, bad response shape, 500, network error,
+      // etc.) was silently swallowed and just fell through to "keep
+      // showing 0". Log every rejection here so real failures are visible
+      // in devtools instead of looking like permanently-empty stats.
+      const labels: StatKey[] = ["steps", "posts", "likes"];
+      [trendResult, postsResult, likesResult].forEach((result, i) => {
+        if (result.status === "rejected") {
+          console.error(`ActivitySection: "${labels[i]}" fetch failed:`, result.reason);
+        }
+      });
+
+      const nextRestricted = new Set<StatKey>();
+      const forbidden = (result: PromiseSettledResult<unknown>) =>
+        result.status === "rejected" && result.reason instanceof ApiError && result.reason.status === 403;
+      if (forbidden(trendResult)) nextRestricted.add("steps");
+      if (forbidden(postsResult)) nextRestricted.add("posts");
+      if (forbidden(likesResult)) nextRestricted.add("likes");
+      if (groupsRestricted) nextRestricted.add("groups");
+      setRestricted(nextRestricted);
+
+      setStats((current) => {
+        const point = trendResult.status === "fulfilled"
+          ? trendResult.value.points.find((item) => item.period === periodStart) ?? trendResult.value.points.at(-1)
+          : undefined;
+        const steps = point ? Number(point.value) : current.steps;
+        return {
+          steps: Number.isFinite(steps) ? steps : current.steps,
+          posts: postsResult.status === "fulfilled" ? postsResult.value.total : current.posts,
+          likes: likesResult.status === "fulfilled" ? likesResult.value.count : current.likes,
+          groups: groupsJoined,
+        };
+      });
+    } catch (err) {
+      // Kept as a defensive net for anything outside the allSettled calls
+      // (e.g. currentWeekBounds throwing), though this should rarely fire.
+      console.error("ActivitySection load error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [organizationId, userId, groupsJoined, groupsRestricted]);
 
   useEffect(() => {
     void loadStats();
@@ -104,10 +135,10 @@ export function ActivitySection({
     setStats((prev) => ({ ...prev, likes: prev.likes + 1 }));
   }, [likeDelta]);
 
+  // Groups: always trust the parent's live count directly.
   useEffect(() => {
-    if (groupDelta === 0) return;
-    setStats((prev) => ({ ...prev, groups: prev.groups + 1 }));
-  }, [groupDelta]);
+    setStats((prev) => ({ ...prev, groups: groupsJoined }));
+  }, [groupsJoined]);
 
   if (loading) {
     return (
@@ -134,23 +165,27 @@ export function ActivitySection({
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white/20 rounded-lg p-3">
           <div className="text-lg mb-1">🏃</div>
-          <div className="text-lg font-bold">{stats.steps.toLocaleString()}</div>
+          <div className="text-lg font-bold">{restricted.has("steps") ? <Lock className="h-4 w-4" /> : stats.steps.toLocaleString()}</div>
           <div className="text-[10px] text-white/80">Steps</div>
+          {restricted.has("steps") && <div className="mt-1 text-[9px] text-white/90">No permission to view</div>}
         </div>
         <div className="bg-white/20 rounded-lg p-3">
           <div className="text-lg mb-1">✍️</div>
-          <div className="text-lg font-bold">{stats.posts}</div>
+          <div className="text-lg font-bold">{restricted.has("posts") ? <Lock className="h-4 w-4" /> : stats.posts}</div>
           <div className="text-[10px] text-white/80">Posts</div>
+          {restricted.has("posts") && <div className="mt-1 text-[9px] text-white/90">No permission to view</div>}
         </div>
         <div className="bg-white/20 rounded-lg p-3">
           <div className="text-lg mb-1">🤍</div>
-          <div className="text-lg font-bold">{stats.likes}</div>
+          <div className="text-lg font-bold">{restricted.has("likes") ? <Lock className="h-4 w-4" /> : stats.likes}</div>
           <div className="text-[10px] text-white/80">Likes Given</div>
+          {restricted.has("likes") && <div className="mt-1 text-[9px] text-white/90">No permission to view</div>}
         </div>
         <div className="bg-white/20 rounded-lg p-3">
           <div className="text-lg mb-1">👥</div>
-          <div className="text-lg font-bold">{stats.groups} joined</div>
+          <div className="text-lg font-bold">{restricted.has("groups") ? <Lock className="h-4 w-4" /> : `${stats.groups} joined`}</div>
           <div className="text-[10px] text-white/80">Groups</div>
+          {restricted.has("groups") && <div className="mt-1 text-[9px] text-white/90">No permission to view</div>}
         </div>
       </div>
     </div>

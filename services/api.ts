@@ -21,15 +21,13 @@ import type {
   WellbeingChallengeListResponse,
   ChallengeStatsResponse,
   LivePulseResponse,
-  DashboardTrendPeriod,
-  DashboardTrendsResponse,
-  WellbeingDistributionResponse,
   Club, 
   ClubListResponse,
   CreateClubPayload,
   Post, 
   PostListResponse, 
   CreatePostPayload, 
+  UpdatePostPayload,
   Comment, 
   CommentListResponse, 
   LikeActionResponse,
@@ -39,6 +37,7 @@ import type {
    OrganizationMembersListResponse,
   ClubMembersListResponse,
   LeaderboardResponse,
+  LeaderboardEntry,
   MessageListResponse,
   MessageResponse,
   PinActionResponse,
@@ -46,6 +45,18 @@ import type {
   HashtagPostListResponse,
   ActivityTrendResponse,
   LikesGivenCountResponse,
+  EngagementWellbeingTrendPeriod,
+  EngagementWellbeingTrendsResponse,
+  InsightsOverviewResponse,
+  InsightsPeriod,
+  KPIOverviewApiResponse,
+  DepartmentItem,
+  DepartmentListResponse,
+  DepartmentRankListResponse,
+  DepartmentMembersListResponse,
+  EventItem,
+  EventListResponse,
+  EventParticipantsListResponse,
 
 } from "@/types/api";
 import { request, type RequestOptions, ApiError } from "@/services/http";
@@ -53,10 +64,7 @@ import { backendPath } from "@/services/config";
 import { getAuthTokens, clearAuthTokens } from "@/services/auth-token";
 
 
-// The application is backend-connected by default. Mock mode must be an
-// explicit development choice; otherwise valid FastAPI routes (including
-// chat) silently return their local fallback without making a request.
-const dataSource = (process.env.NEXT_PUBLIC_DATA_SOURCE ?? "api") as "mock" | "api";
+const dataSource = (process.env.NEXT_PUBLIC_DATA_SOURCE ?? "mock") as "mock" | "api";
 const usingMockData = dataSource === "mock";
 
 const demoUser: UserProfile = {
@@ -74,84 +82,6 @@ async function mockResult<T>(value: T): Promise<T> {
 
 async function fromApiOrMock<T>(path: string, fallback: T, options?: RequestOptions) {
   return usingMockData ? mockResult(fallback) : request<T>(backendPath(path), options);
-}
-
-function getClubPage(
-  orgId: string,
-  params: { branchId?: string; offset?: number; limit?: number } = {},
-) {
-  const query = new URLSearchParams();
-  query.set("limit", String(params.limit ?? 20));
-  query.set("offset", String(params.offset ?? 0));
-  const path = params.branchId
-    ? `/organizations/${orgId}/branches/${params.branchId}/clubs?${query.toString()}`
-    : `/organizations/${orgId}/clubs?${query.toString()}`;
-  return fromApiOrMock<ClubListResponse>(
-    path,
-    { items: [], total: 0, offset: 0, limit: params.limit ?? 20 },
-  );
-}
-
-async function getAllClubPages(orgId: string, branchId?: string) {
-  const pageSize = 100;
-  const items: Club[] = [];
-  let offset = 0;
-  let total = 0;
-
-  do {
-    const page = await getClubPage(orgId, { branchId, offset, limit: pageSize });
-    items.push(...page.items);
-    total = page.total;
-    if (page.items.length === 0) break;
-    offset += page.items.length;
-  } while (offset < total);
-
-  return items;
-}
-
-async function clubContainsUser(orgId: string, clubId: string, userId: string) {
-  const pageSize = 200;
-  let offset = 0;
-  let total = 0;
-
-  do {
-    const query = new URLSearchParams({ limit: String(pageSize), offset: String(offset) });
-    const page = await fromApiOrMock<ClubMembersListResponse>(
-      `/organizations/${orgId}/clubs/${clubId}/members?${query.toString()}`,
-      { items: [], total: 0, offset, limit: pageSize },
-    );
-    if (page.items.some((member) => member.id === userId)) return true;
-    total = page.total;
-    if (page.items.length === 0) break;
-    offset += page.items.length;
-  } while (offset < total);
-
-  return false;
-}
-
-async function getAllClubsForUser(orgId: string, userId: string, branchId?: string) {
-  const items = await getAllClubPages(orgId, branchId);
-  const resolved: Club[] = [];
-
-  for (let index = 0; index < items.length; index += 8) {
-    const batch = items.slice(index, index + 8);
-    const details = await Promise.all(batch.map(async (club) => {
-      if (club.isMember) return club;
-      try {
-        const detail = await fromApiOrMock<Club>(
-          `/organizations/${orgId}/clubs/${club.id}`,
-          club,
-        );
-        const isMember = detail.isMember || await clubContainsUser(orgId, club.id, userId);
-        return { ...club, ...detail, isMember };
-      } catch {
-        return club;
-      }
-    }));
-    resolved.push(...details);
-  }
-
-  return resolved;
 }
 
 function parseEmployeeCountToInt(range: string): number {
@@ -247,32 +177,122 @@ export const api = {
   organization: {
     getStats: (orgId: string, params: StatsQueryParams = {}) => {
       const qs = buildStatsQuery(params);
-      return request<OrgStatsResponse>(backendPath(`/organizations/${orgId}/stats${qs ? `?${qs}` : ""}`));
+      return fromApiOrMock<OrgStatsResponse>(`/organizations/${orgId}/stats${qs ? `?${qs}` : ""}`, mockOrgStats());
     },
     getActiveUserStats: (orgId: string) =>
-      request<OrgStatsResponse>(backendPath(`/organizations/${orgId}/stats?user_status=active`)),
-    getActivitySummary: (orgId: string, params: StatsQueryParams = {}) => {
-      const qs = buildStatsQuery(params);
-      return request<ActivitySummaryResponse>(backendPath(`/organizations/${orgId}/activities/summary${qs ? `?${qs}` : ""}`));
-    },
+      fromApiOrMock<OrgStatsResponse>(`/organizations/${orgId}/stats?user_status=active`, mockOrgStats()),
+    getActivitySummary: (orgId: string) =>
+      fromApiOrMock<ActivitySummaryResponse>(`/organizations/${orgId}/activities/summary`, {
+        totalCount: 0,
+        byType: [],
+      }),
 
     getBranchStats: (orgId: string, branchId: string, params: StatsQueryParams = {}) => {
       const qs = buildStatsQuery(params);
-      return request<OrgStatsResponse>(backendPath(`/organizations/${orgId}/branches/${branchId}/stats${qs ? `?${qs}` : ""}`));
+      return fromApiOrMock<OrgStatsResponse>(
+        `/organizations/${orgId}/branches/${branchId}/stats${qs ? `?${qs}` : ""}`,
+        mockOrgStats(),
+      );
     },
     getBranchActiveUserStats: (orgId: string, branchId: string) =>
-      request<OrgStatsResponse>(backendPath(`/organizations/${orgId}/branches/${branchId}/stats?user_status=active`)),
-    getBranchActivitySummary: (orgId: string, branchId: string, params: StatsQueryParams = {}) => {
-      const qs = buildStatsQuery(params);
-      return request<ActivitySummaryResponse>(backendPath(`/organizations/${orgId}/branches/${branchId}/activities/summary${qs ? `?${qs}` : ""}`));
-    },
+      fromApiOrMock<OrgStatsResponse>(
+        `/organizations/${orgId}/branches/${branchId}/stats?user_status=active`,
+        mockOrgStats(),
+      ),
+    getBranchActivitySummary: (orgId: string, branchId: string) =>
+      fromApiOrMock<ActivitySummaryResponse>(
+        `/organizations/${orgId}/branches/${branchId}/activities/summary`,
+        { totalCount: 0, byType: [] },
+      ),
 
     getBranches: async (orgId: string) => {
-      const response = await request<{ items: Branch[]; total: number; offset: number; limit: number }>(
-        backendPath(`/organizations/${orgId}/branches?limit=100`),
+      const response = await fromApiOrMock<{ items: Branch[]; total: number; offset: number; limit: number }>(
+        `/organizations/${orgId}/branches?limit=100`,
+        { items: [], total: 0, offset: 0, limit: 100 },
       );
       return response.items;
     },
+    getDepartments: (orgId: string, branchId?: string) =>
+      fromApiOrMock<DepartmentListResponse>(
+        branchId
+          ? `/organizations/${orgId}/branches/${branchId}/departments?limit=200`
+          : `/organizations/${orgId}/departments?limit=200`,
+        { items: [], total: 0, offset: 0, limit: 200 },
+      ),
+    getDepartmentRanks: (orgId: string, branchId?: string) => {
+      const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : "";
+      return fromApiOrMock<DepartmentRankListResponse>(
+        `/organizations/${orgId}/department-rank${query}`,
+        { items: [] },
+      );
+    },
+    getDepartmentMembers: (orgId: string, departmentId: string) =>
+      fromApiOrMock<DepartmentMembersListResponse>(
+        `/organizations/${orgId}/departments/${departmentId}/members?limit=200`,
+        { items: [], total: 0, offset: 0, limit: 200 },
+      ),
+    createDepartment: (orgId: string, branchId: string, name: string) =>
+      fromApiOrMock<DepartmentItem>(`/organizations/${orgId}/departments`, {} as DepartmentItem, {
+        method: "POST", body: { name, branch_id: branchId, avatar_initial: name.slice(0, 2).toUpperCase() },
+      }),
+    updateDepartment: (orgId: string, departmentId: string, name: string) =>
+      fromApiOrMock<DepartmentItem>(`/organizations/${orgId}/departments/${departmentId}`, {} as DepartmentItem, {
+        method: "PATCH", body: { name },
+      }),
+    deleteDepartment: (orgId: string, departmentId: string) =>
+      fromApiOrMock<{ departmentId: string; membersTransferred: number; message: string }>(
+        `/organizations/${orgId}/departments/${departmentId}`,
+        { departmentId, membersTransferred: 0, message: "" },
+        { method: "DELETE", body: { transfer_to_department_id: null } },
+      ),
+    assignDepartmentMember: (orgId: string, departmentId: string, userId: string) =>
+      fromApiOrMock<{ message: string }>(
+        `/organizations/${orgId}/departments/${departmentId}/members/${userId}`,
+        { message: "" }, { method: "PUT" },
+      ),
+    getEvents: (orgId: string, params: { branchId?: string; offset?: number; limit?: number } = {}) => {
+      const query = new URLSearchParams({
+        offset: String(params.offset ?? 0), limit: String(params.limit ?? 20),
+      });
+      if (params.branchId) query.set("branch_id", params.branchId);
+      return fromApiOrMock<EventListResponse>(
+        `/organizations/${orgId}/events?${query.toString()}`,
+        { items: [], total: 0, offset: params.offset ?? 0, limit: params.limit ?? 20 },
+      );
+    },
+    getEvent: (orgId: string, eventId: string) =>
+      fromApiOrMock<EventItem>(`/organizations/${orgId}/events/${eventId}`, {} as EventItem),
+    createEvent: (orgId: string, payload: { branchId: string; title: string; description?: string; imageUrl?: string; startDate: string; endDate?: string; recurrenceRule?: string; time: string }) =>
+      fromApiOrMock<EventItem>(`/organizations/${orgId}/events`, {} as EventItem, {
+        method: "POST", body: {
+          branch_id: payload.branchId, title: payload.title, description: payload.description,
+          image_url: payload.imageUrl, start_date: payload.startDate, end_date: payload.endDate,
+          recurrence_rule: payload.recurrenceRule, time: payload.time,
+        },
+      }),
+    updateEvent: (orgId: string, eventId: string, payload: { title?: string; description?: string; imageUrl?: string; startDate?: string; endDate?: string; recurrenceRule?: string; time?: string; status?: string }) =>
+      fromApiOrMock<EventItem>(`/organizations/${orgId}/events/${eventId}`, {} as EventItem, {
+        method: "PATCH", body: {
+          title: payload.title, description: payload.description, image_url: payload.imageUrl,
+          start_date: payload.startDate, end_date: payload.endDate,
+          recurrence_rule: payload.recurrenceRule, time: payload.time, status: payload.status,
+        },
+      }),
+    deleteEvent: (orgId: string, eventId: string) =>
+      fromApiOrMock<{ eventId: string; message: string }>(
+        `/organizations/${orgId}/events/${eventId}`, { eventId, message: "" }, { method: "DELETE" },
+      ),
+    getEventParticipants: (orgId: string, eventId: string) =>
+      fromApiOrMock<EventParticipantsListResponse>(
+        `/organizations/${orgId}/events/${eventId}/participants?limit=200`,
+        { items: [], total: 0, offset: 0, limit: 200 },
+      ),
+    inviteEventParticipant: (orgId: string, eventId: string, userId: string) =>
+      fromApiOrMock<{ eventId: string; userId: string; message: string }>(
+        `/organizations/${orgId}/events/${eventId}/participants`,
+        { eventId, userId, message: "" },
+        { method: "POST", body: { user_id: userId, is_invite: true } },
+      ),
     getChallenges: (
       orgId: string,
       params: { branchId?: string; scope?: "organization" | "all"; status?: string; offset?: number; limit?: number } = {},
@@ -283,7 +303,10 @@ export const api = {
       if (params.branchId) query.set("branch_id", params.branchId);
       if (params.scope) query.set("scope", params.scope);
       if (params.status) query.set("status", params.status);
-      return request<ChallengeListResponse>(backendPath(`/organizations/${orgId}/challenges?${query.toString()}`));
+      return fromApiOrMock<ChallengeListResponse>(
+        `/organizations/${orgId}/challenges?${query.toString()}`,
+        { items: [], total: 0, offset: 0, limit: params.limit ?? 8 },
+      );
     },
     getChallenge: (orgId: string, challengeId: string) =>
       fromApiOrMock<ChallengeItem>(`/organizations/${orgId}/challenges/${challengeId}`, {} as ChallengeItem),
@@ -370,14 +393,36 @@ export const api = {
     getLivePulse: async (orgId: string, branchId?: string): Promise<LivePulseResponse | null> => {
       const qs = branchId ? `?branch_id=${branchId}` : "";
       try {
-        const result = await request<LivePulseResponse | []>(backendPath(`/organizations/${orgId}/wellbeing-survey/pulse/live${qs}`));
-        return Array.isArray(result) ? null : result;
+        return await fromApiOrMock<LivePulseResponse>(
+          `/organizations/${orgId}/wellbeing-survey/pulse/live${qs}`,
+          {
+            windowId: "", respondentCount: 0,
+            stressManageability: { percent: null, status: null },
+            energyRecovery: { percent: null, status: null },
+            connectionBelonging: { percent: null, status: null },
+            workloadSustainability: { percent: null, status: null },
+            workplaceComfort: { percent: null, status: null },
+            prioritySupportPct: null, needsAttentionPct: null, doingWellPct: null,
+          },
+        );
       } catch (err) {
         // 404 = no open survey window right now — a legitimate empty state,
         // not a failure. Anything else should still surface as an error.
         if (err instanceof ApiError && err.status === 404) return null;
         throw err;
       }
+    },
+    getEngagementWellbeingTrends: (
+      orgId: string,
+      period: EngagementWellbeingTrendPeriod,
+      branchId?: string,
+    ) => {
+      const query = new URLSearchParams({ period });
+      if (branchId) query.set("branch_id", branchId);
+      return fromApiOrMock<EngagementWellbeingTrendsResponse>(
+        `/organizations/${orgId}/dashboard/engagement-wellbeing-trends?${query.toString()}`,
+        { period, startDate: "", endDate: "", points: [] },
+      );
     },
     getMembers: (orgId: string, params: { offset?: number; limit?: number } = {}) => {
     const query = new URLSearchParams();
@@ -389,34 +434,95 @@ export const api = {
     );
   },
   },
+kpiSnapshots: {
+  getOverview: async (
+    orgId: string,
+    period: InsightsPeriod = "month",
+    branchId?: string,
+    fallback?: InsightsOverviewResponse,
+  ) => {
+    const empty = fallback ?? {
+      summary: {
+        averageDailySteps: "0", averageDailyStepsTrend: "0%",
+        healthScore: "0", healthScoreTrend: "0pts",
+        activeEmployees: "0%", activeEmployeesTrend: "0%",
+        challengesWon: "0", challengesWonTrend: "0",
+      },
+      topPerformers: [],
+      charts: {},
+    };
+    if (usingMockData) return mockResult(empty);
+
+    const query = new URLSearchParams({ period });
+    if (branchId) query.set("branch_id", branchId);
+    const raw = await request<KPIOverviewApiResponse>(
+      backendPath(`/organizations/${orgId}/kpi-snapshots/overview?${query.toString()}`),
+    );
+    const number = (value: number | null) => value === null ? "0" : value.toLocaleString();
+    const trend = (value: number | null, suffix = "%") => value === null ? `0${suffix}` : `${value > 0 ? "+" : ""}${value}${suffix}`;
+    return {
+      summary: {
+        averageDailySteps: number(raw.summary.averageDailySteps.value),
+        averageDailyStepsTrend: trend(raw.summary.averageDailySteps.change),
+        healthScore: number(raw.summary.healthScore.value),
+        healthScoreTrend: trend(raw.summary.healthScore.change, "pts"),
+        activeEmployees: `${number(raw.summary.activeEmployees.value)}%`,
+        activeEmployeesTrend: trend(raw.summary.activeEmployees.change),
+        challengesWon: number(raw.summary.challengesWon.value),
+        challengesWonTrend: trend(raw.summary.challengesWon.change, ""),
+      },
+      charts: {
+        monthlySteps: (raw.monthlySteps ?? []).map((point) => ({ ...point, actual: point.actual ?? 0, target: point.target ?? 0 })),
+        healthDistribution: raw.healthDistribution ?? [],
+        departmentPerformance: raw.departmentPerformance ?? [],
+        weeklyActivity: (raw.weeklyActivity ?? []).map((point) => ({ ...point, steps: point.steps ?? 0 })),
+      },
+      topPerformers: (raw.topPerformers ?? []).map((performer) => ({
+        id: performer.userId,
+        name: `${performer.firstName} ${performer.lastName}`.trim(),
+        steps: performer.steps.toLocaleString(),
+        score: performer.score,
+        avatar: performer.avatarUrl || `https://picsum.photos/seed/${performer.userId}/100/100`,
+      })),
+    } satisfies InsightsOverviewResponse;
+  },
+},
 leaderboard: {
   getBranch: (orgId: string, metricType: string, branchId?: string) => {
     const query = new URLSearchParams();
     query.set("metric_type", metricType);
-    query.set("period_type", "weekly");
-    query.set("limit", "7");
+    query.set("period_type", "daily");
+    query.set("limit", "3");
     if (branchId) query.set("branch_id", branchId);
-    return request<LeaderboardResponse>(backendPath(`/organizations/${orgId}/leaderboard/branch?${query.toString()}`));
+    return fromApiOrMock<LeaderboardResponse>(
+      `/organizations/${orgId}/leaderboard/branch?${query.toString()}`,
+      { metricType, periodType: "daily", periodStart: "", periodEnd: "", scope: "branch", items: [] } as unknown as LeaderboardResponse,
+    );
   },
   getOrg: (orgId: string, metricType: string) => {
     const query = new URLSearchParams();
     query.set("metric_type", metricType);
-    query.set("period_type", "weekly");
-    query.set("limit", "7");
-    return request<LeaderboardResponse>(backendPath(`/organizations/${orgId}/leaderboard/org?${query.toString()}`));
+    query.set("period_type", "daily");
+    query.set("limit", "3");
+    return fromApiOrMock<LeaderboardResponse>(
+      `/organizations/${orgId}/leaderboard/org?${query.toString()}`,
+      { metricType, periodType: "daily", periodStart: "", periodEnd: "", scope: "org", items: [] } as unknown as LeaderboardResponse,
+    );
   },
 },
 club: {
   // No branchId => org-wide discovery (GET /clubs). branchId set =>
   // GET /branches/{branchId}/clubs. These are two different backend
   // routes, not one route with a scope param.
-  getClubs: getClubPage,
-
-  getAllClubs: getAllClubPages,
-
-  // Resolve membership independently because the org-wide list currently
-  // returns false for clubs the authenticated user already belongs to.
-  getAllClubsForUser,
+  getClubs: (orgId: string, params: { branchId?: string; offset?: number; limit?: number } = {}) => {
+    const query = new URLSearchParams();
+    query.set("limit", String(params.limit ?? 20));
+    query.set("offset", String(params.offset ?? 0));
+    const path = params.branchId
+      ? `/organizations/${orgId}/branches/${params.branchId}/clubs?${query.toString()}`
+      : `/organizations/${orgId}/clubs?${query.toString()}`;
+    return fromApiOrMock<ClubListResponse>(path, { items: [], total: 0, offset: 0, limit: params.limit ?? 20 });
+  },
 
   getClub: (orgId: string, clubId: string) =>
     fromApiOrMock<Club>(`/organizations/${orgId}/clubs/${clubId}`, {} as Club),
@@ -705,109 +811,65 @@ story: {
   },
 
   dashboard: {
-    getTrends: (orgId: string, period: DashboardTrendPeriod, branchId?: string) => {
-      const query = new URLSearchParams({ period });
-      if (branchId) query.set("branch_id", branchId);
-      return request<DashboardTrendsResponse>(backendPath(`/organizations/${orgId}/dashboard/trends?${query.toString()}`));
-    },
-    getWellbeingDistribution: (orgId: string, branchId?: string) => {
-      const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : "";
-      return request<WellbeingDistributionResponse>(backendPath(`/organizations/${orgId}/dashboard/wellbeing-distribution${query}`));
-    },
     bootstrap: async (orgId: string): Promise<DashboardBootstrap> => {
-      const raw = await request<{
-        user: CurrentUserResponse;
-        branches: Branch[];
-        members: Array<{
-          id: string; firstName: string; lastName: string; email: string;
-          avatarUrl: string | null; status: string; branchId: string | null;
-        }>;
-        departments: Array<{
-          id: string; name: string; members: number; activities: number | null;
-          rank: number | null; branch: string | null; avatars: string[];
-        }>;
-        events: Array<Record<string, unknown>>;
-        challenges: Array<{
-          id: string; branchId: string | null; name: string; description: string | null;
-          imageUrl: string | null; startDate: string | null; endDate: string | null;
-          status: string; metricType: string | null; participantCount: number;
-        }>;
-        leaderboard: Array<{
-          userId: string; firstName: string; lastName: string; avatarUrl?: string | null;
-          value: number; rank: number; previousRank: number | null;
-        }>;
-      }>(backendPath(`/organizations/${orgId}/dashboard/bootstrap`));
-
-      const branchNames = new Map(raw.branches.map((branch) => [branch.id, branch.name]));
-      const activeBranch = branchNames.get(raw.user.branchId) ?? raw.branches[0]?.name ?? "";
-
+      if (usingMockData) {
+        const { mockDashboardBootstrap } = await import("@/services/mock-api");
+        return mockResult({ ...mockDashboardBootstrap, user: mockUser });
+      }
+      const payload = await request<DashboardBootstrap>(
+        backendPath(`/organizations/${orgId}/dashboard/bootstrap`),
+      );
+      const branchNames = new Map(payload.branches.map((branch) => [branch.id, branch.name]));
+      const normalizedChallenges = (payload.challenges as unknown as ChallengeItem[]).map((challenge) => {
+        const endTime = challenge.endDate ? new Date(`${challenge.endDate}T00:00:00`).getTime() : Date.now();
+        return {
+          id: challenge.id,
+          title: challenge.name,
+          category: "Wellness",
+          status: challenge.status ? `${challenge.status[0].toUpperCase()}${challenge.status.slice(1)}` : "Upcoming",
+          participants: challenge.participantCount ?? 0,
+          daysLeft: Math.max(0, Math.ceil((endTime - Date.now()) / 86_400_000)),
+          progress: challenge.completionRate ?? 0,
+          branch: challenge.branchId ? branchNames.get(challenge.branchId) ?? "Unknown branch" : "Organization",
+          image: challenge.imageUrl ?? "",
+          description: challenge.description ?? "",
+        };
+      }) as DashboardBootstrap["challenges"];
+      const normalizedLeaderboard = (payload.leaderboard as unknown as LeaderboardEntry[]).map((entry) => ({
+        id: entry.userId,
+        name: `${entry.firstName} ${entry.lastName}`.trim(),
+        role: "Employee",
+        steps: Number(entry.value),
+        rank: entry.rank,
+        trend: entry.previousRank === null || entry.rank === entry.previousRank
+          ? "flat"
+          : entry.rank < entry.previousRank ? "up" : "down",
+        branch: "",
+        avatar: `https://picsum.photos/seed/${entry.userId}/100/100`,
+      })) as DashboardBootstrap["leaderboard"];
       return {
-        user: {
-          id: raw.user.userId,
-          firstName: raw.user.firstName,
-          lastName: raw.user.lastName,
-          email: raw.user.email,
-          businessName: "",
-          profileImage: raw.user.avatarUrl ?? undefined,
-        },
-        branches: raw.branches,
-        activeBranch,
-        members: raw.members.map((member, index) => ({
-          id: index + 1,
-          name: `${member.firstName} ${member.lastName}`.trim(),
-          email: member.email,
-          department: "",
-          status: member.status,
-          avatar: member.avatarUrl ?? "",
-          branch: member.branchId ? (branchNames.get(member.branchId) ?? "") : "",
-          role: member.id === raw.user.userId ? raw.user.role : "Employee",
-        })),
-        departments: raw.departments.map((department, index) => ({
-          ...department,
-          id: index + 1,
-          activities: department.activities ?? 0,
-          rank: department.rank ?? 0,
-          branch: department.branch ? (branchNames.get(department.branch) ?? department.branch) : "",
-        })),
-        events: raw.events as DashboardBootstrap["events"],
-        challenges: raw.challenges.map((challenge, index) => {
-          const endTime = challenge.endDate ? new Date(challenge.endDate).getTime() : Date.now();
-          return {
-            id: index + 1,
-            title: challenge.name,
-            category: challenge.metricType ?? "Wellbeing",
-            status: challenge.status,
-            participants: challenge.participantCount,
-            daysLeft: Math.max(0, Math.ceil((endTime - Date.now()) / 86_400_000)),
-            progress: 0,
-            branch: challenge.branchId ? (branchNames.get(challenge.branchId) ?? "") : "Organization-wide",
-            image: challenge.imageUrl ?? "",
-            description: challenge.description ?? "",
-          };
-        }),
-        leaderboard: raw.leaderboard.map((entry, index) => ({
-          id: index + 1,
-          name: `${entry.firstName} ${entry.lastName}`.trim(),
-          role: "",
-          steps: Number(entry.value),
-          rank: entry.rank,
-          trend: (entry.previousRank == null || entry.rank <= entry.previousRank ? "up" : "down") as "up" | "down",
-          branch: "",
-          avatar: entry.avatarUrl ?? "",
-        })),
-        participantOptions: [],
+        ...payload,
+        user: { ...payload.user, businessName: payload.user.businessName ?? "" },
+        activeBranch: payload.activeBranch ?? payload.branches[0]?.name ?? "",
+        challenges: normalizedChallenges,
+        leaderboard: normalizedLeaderboard,
+        participantOptions: payload.participantOptions ?? [],
       };
     },
   },
 
   branches: {
-    update: (orgId: string, branchId: string, name: string) => fromApiOrMock<Branch>(`/organizations/${orgId}/branches/${branchId}`, {} as Branch, {
-      method: "PATCH",
+    nameCurrent: (name: string) => fromApiOrMock("/v1/branches/current", { name, invitees: [] }, {
+      method: "PUT",
       body: { name },
     }),
-    create: (orgId: string, name: string) => fromApiOrMock<Branch>(`/organizations/${orgId}/branches`, {} as Branch, {
+    create: (branch: Omit<Branch, "id">) => fromApiOrMock("/v1/branches", branch, {
       method: "POST",
-      body: { name },
+      body: branch,
+    }),
+    select: (branchName: string) => fromApiOrMock("/v1/branches/active", { activeBranch: branchName }, {
+      method: "PUT",
+      body: { branchName },
     }),
   },
 

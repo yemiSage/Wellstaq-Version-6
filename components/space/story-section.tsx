@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { Plus, Video, X, Loader2, ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import type { Story, OrganizationMemberInfo } from "@/types/api";
+import type { Story, OrganizationMemberInfo, CurrentUserResponse } from "@/types/api";
 
 const IMAGE_STORY_DURATION_MS = 5000;
 
@@ -77,7 +77,7 @@ export function StoriesSection({
 }: {
   stories: Story[];
   getMember: (userId: string) => OrganizationMemberInfo | undefined;
-  currentUser: { id: string; profileImage?: string; firstName?: string; lastName?: string };
+  currentUser: CurrentUserResponse | null;
   isUploading: boolean;
   onUploadStory: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
@@ -185,17 +185,37 @@ export function StoriesSection({
       <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
         <div className="flex-shrink-0 flex flex-col items-center gap-1">
           <input type="file" accept="image/*,video/*" className="hidden" ref={fileInputRef} onChange={onUploadStory} />
-          <button onClick={() => fileInputRef.current?.click()} disabled={isUploading} className="w-14 h-14 rounded-full p-0.5 border-2 border-grey-4 relative disabled:opacity-50">
-            <Avatar
-              url={currentUser.profileImage}
-              seed={currentUser.id}
-              firstName={currentUser.firstName}
-              lastName={currentUser.lastName}
-              size={52}
-            />
-            <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-primary-1 text-white border-2 border-white flex items-center justify-center">
-              {isUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-            </span>
+          {/*
+            FIX: the "+" badge used to live *inside* the `overflow-hidden`
+            circular avatar wrapper below, so its bounding-box corner
+            (bottom-0 right-0) got clipped by the circular mask and only
+            partially rendered. It now sits as a sibling of that wrapper,
+            inside this outer button (which has no overflow-hidden), so
+            it renders as a full circle overlapping the avatar's edge.
+          */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-14 h-14 rounded-full p-0.5 border-2 border-grey-4 relative disabled:opacity-50"
+          >
+            <div className="w-full h-full rounded-full overflow-hidden relative bg-grey-5 flex items-center justify-center">
+              {isUploading ? (
+                <Loader2 className="w-5 h-5 text-grey-3 animate-spin" />
+              ) : (
+                <Avatar
+                  url={currentUser?.avatarUrl}
+                  seed={currentUser?.userId}
+                  firstName={currentUser?.firstName}
+                  lastName={currentUser?.lastName}
+                  size={52}
+                />
+              )}
+            </div>
+            {!isUploading && (
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-primary-1 text-white">
+                <Plus className="h-3 w-3" />
+              </span>
+            )}
           </button>
           <span className="text-[10px] font-medium text-grey-2 truncate w-14 text-center">Your Story</span>
         </div>

@@ -138,7 +138,6 @@ export interface OrgStatsResponse {
 export interface ActivitySummaryResponse {
   totalCount: number;
   byType: Array<{ activityType: string; count: number }>;
-  trend: StatTrend | null;
 }
 export type ChallengeStatus = "upcoming" | "active" | "completed" | "cancelled" | "archived";
 
@@ -259,33 +258,6 @@ export interface LivePulseResponse {
   prioritySupportPct: number | null;
   needsAttentionPct: number | null;
   doingWellPct: number | null;
-}
-
-export type DashboardTrendPeriod = "week" | "month" | "three_months";
-export type DashboardTrendMetric = "stressLevel" | "energyLevel" | "socialInteraction" | "productivity";
-export interface DashboardTrendPoint { date: string; value: number; }
-export interface DashboardTrendsResponse {
-  period: DashboardTrendPeriod;
-  scope: "organization" | "branch";
-  branchId: string | null;
-  startDate: string;
-  endDate: string;
-  series: Record<DashboardTrendMetric, DashboardTrendPoint[]>;
-}
-export interface WellbeingDistributionItem {
-  dimensionId: string;
-  key: string;
-  label: string;
-  value: number | null;
-  participantCount: number;
-  suppressed: boolean;
-}
-export interface WellbeingDistributionResponse {
-  scope: "organization" | "branch";
-  branchId: string | null;
-  period: string | null;
-  computedAt: string | null;
-  dimensions: WellbeingDistributionItem[];
 }
 
 
@@ -447,6 +419,44 @@ export interface OrganizationMembersListResponse {
   items: OrganizationMemberInfo[]; total: number; offset: number; limit: number;
 }
 
+export interface DepartmentItem {
+  id: string;
+  name: string;
+  description: string | null;
+  avatarInitial: string | null;
+  organizationId: string;
+  branchId: string;
+  createdBy: string;
+  memberCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface DepartmentListResponse {
+  items: DepartmentItem[]; total: number; offset: number; limit: number;
+}
+export interface DepartmentRankItem {
+  departmentId: string; departmentName: string; branchId: string;
+  rank: number | null; totalActivities: number | null;
+  avgDailySteps: string | null; performanceScore: string | null;
+  periodStart: string | null; periodEnd: string | null;
+}
+export interface DepartmentRankListResponse { items: DepartmentRankItem[]; }
+
+export interface EventItem {
+  id: string; title: string; description: string | null; imageUrl: string | null;
+  startDate: string; endDate: string | null; recurrenceRule: string | null; time: string;
+  status: string; organizationId: string; branchId: string; createdBy: string | null;
+  participantCount: number;
+}
+export interface EventListResponse { items: EventItem[]; total: number; offset: number; limit: number; }
+export interface EventParticipantInfo {
+  userId: string; firstName: string; lastName: string; email: string;
+  status: string | null; attended: boolean; invitedAt: string | null;
+}
+export interface EventParticipantsListResponse {
+  items: EventParticipantInfo[]; total: number; offset: number; limit: number;
+}
+
 export interface ClubMemberInfo {
   id: string; firstName: string; lastName: string; email: string; avatarUrl: string | null; status: string;
 }
@@ -456,7 +466,6 @@ export interface ClubMembersListResponse {
 
 export interface LeaderboardEntry {
   userId: string; firstName: string; lastName: string; value: number;
-  avatarUrl?: string | null;
   rank: number; previousRank: number | null; orgRank: number; previousOrgRank: number | null;
 }
 export interface LeaderboardResponse {
@@ -498,6 +507,81 @@ export interface ActivityTrendResponse {
   granularity: string;
   points: ActivityTrendPoint[];
 }
+export type EngagementWellbeingTrendPeriod = "week" | "month" | "three_months";
+export interface EngagementWellbeingTrendPoint {
+  date: string;
+  stressLevel: number | null;
+  energyLevel: number | null;
+  socialInteraction: number | null;
+  productivity: number | null;
+}
+export interface EngagementWellbeingTrendsResponse {
+  period: EngagementWellbeingTrendPeriod;
+  startDate: string;
+  endDate: string;
+  points: EngagementWellbeingTrendPoint[];
+}
+export type InsightsPeriod = "month" | "three_months" | "six_months" | "nine_months" | "year";
+export interface KPIOverviewApiResponse {
+  period: InsightsPeriod;
+  scope: "branch" | "organization";
+  branchId: string | null;
+  summary: {
+    averageDailySteps: { value: number | null; change: number | null };
+    healthScore: { value: number | null; change: number | null };
+    activeEmployees: { value: number | null; change: number | null };
+    challengesWon: { value: number | null; change: number | null };
+  };
+  monthlySteps: Array<{ name: string; actual: number | null; target: number | null }>;
+  healthDistribution: Array<{ name: string; value: number; color: string }>;
+  departmentPerformance: Array<{ name: string; branchName: string | null; engagement: number }>;
+  weeklyActivity: Array<{ name: string; steps: number | null }>;
+  topPerformers: Array<{
+    userId: string; firstName: string; lastName: string; avatarUrl: string | null;
+    steps: number; score: number; rank: number;
+  }>;
+}
+export interface InsightsOverviewResponse {
+  summary: {
+    averageDailySteps: string;
+    averageDailyStepsTrend: string;
+    healthScore: string;
+    healthScoreTrend: string;
+    activeEmployees: string;
+    activeEmployeesTrend: string;
+    challengesWon: string;
+    challengesWonTrend: string;
+  };
+  topPerformers: Array<{
+    id: string | number;
+    name: string;
+    steps: string;
+    score: number;
+    avatar: string;
+  }>;
+  charts: {
+    monthlySteps?: Array<{ name: string; actual: number; target: number }>;
+    healthDistribution?: Array<{ name: string; value: number; color: string }>;
+    departmentPerformance?: Array<{ name: string; branchName?: string | null; engagement: number }>;
+    weeklyActivity?: Array<{ name: string; steps: number }>;
+  };
+}
 export interface LikesGivenCountResponse {
   count: number;
+}
+
+export interface DepartmentMemberInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatarUrl: string | null;
+  status: string;
+}
+
+export interface DepartmentMembersListResponse {
+  items: DepartmentMemberInfo[];
+  total: number;
+  offset: number;
+  limit: number;
 }

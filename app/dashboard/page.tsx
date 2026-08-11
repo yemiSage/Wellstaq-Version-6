@@ -13,13 +13,10 @@ import {
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { api, type StatsPeriod } from "@/services/api";
 import { TrendBadge } from "@/components/dashboard/trend-badge";
+import { StatCard } from "@/components/dashboard/stat-card";
 import { useDashboardScope } from "@/lib/scope";
 import { hasPermission } from "@/lib/permissions";
-import type { DashboardTrendPeriod, DashboardTrendsResponse, StatTrend, ChallengeItem, ChallengeListResponse, LeaderboardEntry, LivePulseResponse, WellbeingDistributionResponse } from "@/types/api";
-
-const EMPTY_TRENDS: DashboardTrendsResponse["series"] = {
-  stressLevel: [], energyLevel: [], socialInteraction: [], productivity: [],
-};
+import type { StatTrend, Challenge as ChallengeListItem, ChallengeListResponse, LivePulseResponse, EngagementWellbeingTrendPeriod, EngagementWellbeingTrendPoint } from "@/types/api";
 
 const PULSE_QUESTION_META: {
   key: keyof Omit<LivePulseResponse, "windowId" | "respondentCount" | "prioritySupportPct" | "needsAttentionPct" | "doingWellPct">;
@@ -41,6 +38,7 @@ function statusBarClass(status: string | null): string {
 
 export default function DashboardPage() {
   const {
+    leaderboard: dashboardLeaderboard,
     isLoading: isDashboardLoading,
     error: dashboardError,
     organizationId,
@@ -59,19 +57,17 @@ export default function DashboardPage() {
     events: number;
     departments: number;
     usersTrend: StatTrend;
-    activityTrend: StatTrend | null;
     eventsTrend: StatTrend;
     departmentsTrend: StatTrend;
   } | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState<string | null>(null);
 
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [leaderboardMetric, setLeaderboardMetric] = useState("steps");
-  const [trendPeriod, setTrendPeriod] = useState<DashboardTrendPeriod>("week");
-  const [trendSeries, setTrendSeries] = useState<DashboardTrendsResponse["series"]>(EMPTY_TRENDS);
-  const [distribution, setDistribution] = useState<WellbeingDistributionResponse | null>(null);
-  const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
+  const [trendPeriod, setTrendPeriod] = useState<EngagementWellbeingTrendPeriod>("week");
+  const [trendPoints, setTrendPoints] = useState<EngagementWellbeingTrendPoint[]>([]);
+  const [trendsLoading, setTrendsLoading] = useState(true);
+
+  const [challenges, setChallenges] = useState<ChallengeListItem[]>([]);
   const [challengesLoading, setChallengesLoading] = useState(true);
 
   // Wellbeing pulse — permission-gated before any request is made, not
@@ -82,18 +78,38 @@ export default function DashboardPage() {
     : false;
   const [pulse, setPulse] = useState<LivePulseResponse | null>(null);
   const [pulseLoading, setPulseLoading] = useState(true);
+  const pulseData: LivePulseResponse = pulse ?? {
+    windowId: "",
+    respondentCount: 0,
+    stressManageability: { percent: null, status: null },
+    energyRecovery: { percent: null, status: null },
+    connectionBelonging: { percent: null, status: null },
+    workloadSustainability: { percent: null, status: null },
+    workplaceComfort: { percent: null, status: null },
+    prioritySupportPct: null,
+    needsAttentionPct: null,
+    doingWellPct: null,
+  };
 
   useEffect(() => {
-    if (!organizationId) return;
+    if (!organizationId || !canViewPulse) {
+      setTrendPoints([]);
+      setTrendsLoading(false);
+      return;
+    }
     let cancelled = false;
-    const leaderboardRequest = scope.type === "overview"
-      ? api.leaderboard.getOrg(organizationId, leaderboardMetric)
-      : api.leaderboard.getBranch(organizationId, leaderboardMetric, scope.branchId);
-    void leaderboardRequest
-      .then((response) => { if (!cancelled) setLeaderboard(response.items); })
-      .catch(() => { if (!cancelled) setLeaderboard([]); });
+    setTrendsLoading(true);
+    api.organization
+      .getEngagementWellbeingTrends(
+        organizationId,
+        trendPeriod,
+        scope.type === "branch" ? scope.branchId : undefined,
+      )
+      .then((result) => { if (!cancelled) setTrendPoints(result.points ?? []); })
+      .catch(() => { if (!cancelled) setTrendPoints([]); })
+      .finally(() => { if (!cancelled) setTrendsLoading(false); });
     return () => { cancelled = true; };
-  }, [organizationId, scope, leaderboardMetric]);
+  }, [organizationId, scope, trendPeriod, canViewPulse]);
 
   useEffect(() => {
     if (!organizationId) return;
@@ -115,12 +131,12 @@ export default function DashboardPage() {
             ? await Promise.all([
               api.organization.getStats(orgId, statsParams),
               api.organization.getActiveUserStats(orgId),
-              api.organization.getActivitySummary(orgId, statsParams),
+              api.organization.getActivitySummary(orgId),
             ])
             : await Promise.all([
               api.organization.getBranchStats(orgId, scope.branchId, statsParams),
               api.organization.getBranchActiveUserStats(orgId, scope.branchId),
-              api.organization.getBranchActivitySummary(orgId, scope.branchId, statsParams),
+              api.organization.getBranchActivitySummary(orgId, scope.branchId),
             ]);
 
         if (cancelled) return;
@@ -132,7 +148,6 @@ export default function DashboardPage() {
           events: orgStats.totalEvents,
           departments: orgStats.totalDepartments,
           usersTrend: orgStats.usersTrend,
-          activityTrend: activitySummary.trend,
           eventsTrend: orgStats.eventsTrend,
           departmentsTrend: orgStats.departmentsTrend,
         });
@@ -215,31 +230,6 @@ export default function DashboardPage() {
     return () => { cancelled = true; };
   }, [organizationId, scope, canViewPulse]);
 
-  useEffect(() => {
-    if (!organizationId || !canViewPulse) {
-      setTrendSeries(EMPTY_TRENDS);
-      setDistribution(null);
-      return;
-    }
-    let cancelled = false;
-    const branchId = scope.type === "branch" ? scope.branchId : undefined;
-    void Promise.all([
-      api.dashboard.getTrends(organizationId, trendPeriod, branchId),
-      api.dashboard.getWellbeingDistribution(organizationId, branchId),
-    ]).then(([trends, wellbeing]) => {
-      if (!cancelled) {
-        setTrendSeries(trends.series);
-        setDistribution(wellbeing);
-      }
-    }).catch(() => {
-      if (!cancelled) {
-        setTrendSeries(EMPTY_TRENDS);
-        setDistribution(null);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [organizationId, scope, canViewPulse, trendPeriod]);
-
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
@@ -279,28 +269,24 @@ export default function DashboardPage() {
 
           {!statsLoading && !statsError && stats && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-[12px]">
-              <div className="dashboard-card border border-grey-4">
-                <div className="flex items-start justify-between mb-2 sm:mb-4">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-red-100 text-red-500 flex items-center justify-center">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                  </div>
-                  <TrendBadge trend={stats.usersTrend} />
-                </div>
-                <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Total Staff</p>
-                <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.staff}</h3>
-                <p className="text-[10px] text-grey-3 truncate">{stats.staffActive} active</p>
-              </div>
+              <StatCard
+                title="Total Staff"
+                value={stats.staff}
+                subtitle={`${stats.staffActive} active`}
+                icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}
+                iconClassName="bg-red-100 text-red-500"
+                trend={stats.usersTrend}
+              />
 
               <div className="dashboard-card border border-grey-4">
                 <div className="flex items-start justify-between mb-2 sm:mb-4">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-100 text-purple-500 flex items-center justify-center">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="sm:w-5 sm:h-5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
                   </div>
-                  <TrendBadge trend={stats.activityTrend} />
                 </div>
                 <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Total Activity</p>
                 <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.activity.toLocaleString()}</h3>
-                <p className="text-[10px] text-grey-3 truncate">All recorded activity</p>
+                <p className="text-[10px] text-grey-3 truncate">From last week</p>
               </div>
 
               <div className="dashboard-card border border-grey-4">
@@ -347,21 +333,17 @@ export default function DashboardPage() {
                   <div className="h-40 bg-grey-5 rounded-md animate-pulse" />
                 )}
 
-                {canViewPulse && !pulseLoading && !pulse && (
-                  <p className="text-sm text-grey-3 italic">No open survey window right now — check back once the next pulse survey opens.</p>
-                )}
-
-                {canViewPulse && !pulseLoading && pulse && (
+                {canViewPulse && !pulseLoading && (
                   <>
                     {/* Progress Bar */}
-                    <div className="flex h-4 mb-4 gap-0.5">
-                      {Array.from({ length: Math.round(pulse.prioritySupportPct ?? 0) }).map((_, i) => (
+                    <div className="flex h-4 mb-4 gap-0.5 rounded-sm bg-grey-5 overflow-hidden">
+                      {Array.from({ length: Math.round(pulseData.prioritySupportPct ?? 0) }).map((_, i) => (
                         <div key={`red-${i}`} className="bg-[#E64A19] w-1.5 h-full rounded-sm" />
                       ))}
-                      {Array.from({ length: Math.round(pulse.needsAttentionPct ?? 0) }).map((_, i) => (
+                      {Array.from({ length: Math.round(pulseData.needsAttentionPct ?? 0) }).map((_, i) => (
                         <div key={`orange-${i}`} className="bg-[#FFCC80] w-1.5 h-full rounded-sm" />
                       ))}
-                      {Array.from({ length: Math.round(pulse.doingWellPct ?? 0) }).map((_, i) => (
+                      {Array.from({ length: Math.round(pulseData.doingWellPct ?? 0) }).map((_, i) => (
                         <div key={`green-${i}`} className="bg-[#4CAF50] w-1.5 h-full rounded-sm" />
                       ))}
                     </div>
@@ -369,23 +351,23 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3 text-sm text-grey-2 mb-6">
                       <div className="flex items-center gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-[#E64A19]" />
-                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulse.prioritySupportPct ?? 0}% Priority support</span>
+                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulseData.prioritySupportPct ?? 0}% Priority support</span>
                       </div>
                       <div className="w-px h-4 bg-grey-4" />
                       <div className="flex items-center gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-[#FFCC80]" />
-                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulse.needsAttentionPct ?? 0}% Needs attention</span>
+                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulseData.needsAttentionPct ?? 0}% Needs attention</span>
                       </div>
                       <div className="w-px h-4 bg-grey-4" />
                       <div className="flex items-center gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-[#4CAF50]" />
-                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulse.doingWellPct ?? 0}% Doing well</span>
+                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulseData.doingWellPct ?? 0}% Doing well</span>
                       </div>
                     </div>
 
                     <div className="bg-[#FAFAFA] rounded-[12px] p-4 space-y-6">
                       {PULSE_QUESTION_META.map(({ key, name }) => {
-                        const q = pulse[key];
+                        const q = pulseData[key] ?? { status: null, percent: null };
                         return (
                           <div key={key}>
                             <div className="flex justify-between text-[16px] text-grey-1 font-medium mb-1">
@@ -407,18 +389,18 @@ export default function DashboardPage() {
               </div>
 
               {/* Department Performance */}
-              <DepartmentPerformanceRadar
-                period={distribution?.period ?? null}
-                data={(distribution?.dimensions ?? [])
-                  .filter((dimension) => dimension.value !== null)
-                  .map((dimension) => ({ subject: dimension.label, A: Number(dimension.value), fullMark: 100 }))}
-              />
+              <DepartmentPerformanceRadar />
             </div>
 
             {/* Right Column (spans 2) */}
             <div className="lg:col-span-2 space-y-[12px]">
               {/* Employee Engagement */}
-              <EngagementChart series={trendSeries} period={trendPeriod} onPeriodChange={setTrendPeriod} />
+              <EngagementChart
+                data={trendPoints}
+                period={trendPeriod}
+                onPeriodChange={setTrendPeriod}
+                loading={trendsLoading}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-[12px]">
                 {/* Upcoming Challenge */}
@@ -476,7 +458,13 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Leaderboard */}
-                <Leaderboard data={leaderboard} metric={leaderboardMetric} onMetricChange={setLeaderboardMetric} />
+                <Leaderboard data={dashboardLeaderboard.map((entry) => ({
+                  rank: entry.rank,
+                  name: entry.name,
+                  steps: `${entry.steps.toLocaleString()} Steps`,
+                  avatar: String(entry.id),
+                  trend: entry.trend,
+                }))} />
               </div>
             </div>
           </div>

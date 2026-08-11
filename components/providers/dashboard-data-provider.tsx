@@ -29,7 +29,7 @@ interface DashboardDataContextValue extends DashboardBootstrap {
   organizationId: string | null;
   refresh: () => Promise<void>;
   nameCurrentBranch: (name: string) => Promise<Branch>;
-  addBranch: (branch: Omit<Branch, "id">) => Promise<Branch>;
+  addBranch: (name: string) => Promise<Branch>;
   setActiveBranch: (name: string) => Promise<void>;
   updateUser: (user: Partial<UserProfile>) => void;
 }
@@ -46,19 +46,21 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     setIsLoading(true);
     setError(null);
 
-    // Bootstrap is organization-scoped, so /auth/me must resolve first.
-    // Calling both concurrently forced the old frontend-only /v1 route.
-    const meResult = await Promise.resolve(api.auth.me()).then(
+    let me: CurrentUserResponse;
+    try {
+      me = await api.auth.me();
+      setCurrentUser(me);
+    } catch (reason) {
+      setCurrentUser(null);
+      setError(reason instanceof Error ? reason.message : "Unable to load your account.");
+      setIsLoading(false);
+      return;
+    }
+
+    const bootstrapResult = await Promise.resolve(api.dashboard.bootstrap(me.organizationId)).then(
       (value) => ({ status: "fulfilled" as const, value }),
       (reason: unknown) => ({ status: "rejected" as const, reason }),
     );
-
-    const bootstrapResult = meResult.status === "fulfilled"
-      ? await Promise.resolve(api.dashboard.bootstrap(meResult.value.organizationId)).then(
-        (value) => ({ status: "fulfilled" as const, value }),
-        (reason: unknown) => ({ status: "rejected" as const, reason }),
-      )
-      : ({ status: "rejected" as const, reason: meResult.reason });
 
     if (bootstrapResult.status === "fulfilled") {
       setData(bootstrapResult.value);
@@ -70,13 +72,6 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       );
     }
 
-    if (meResult.status === "fulfilled") {
-      setCurrentUser(meResult.value);
-    }
-    // If /auth/me itself fails, currentUser stays null and organizationId-
-    // dependent effects (like the stats fetch) correctly stay idle — that's
-    // a real "not logged in" case, distinct from bootstrap being unfinished.
-
     setIsLoading(false);
   }, []);
 
@@ -85,10 +80,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   }, [refresh]);
 
   const nameCurrentBranch = useCallback(async (name: string) => {
-    const currentBranch = data.branches.find((branch) => branch.name === data.activeBranch);
-    const orgId = currentUser?.organizationId;
-    if (!currentBranch || !orgId) throw new Error("No active branch is available to rename.");
-    const renamed = await api.branches.update(orgId, currentBranch.id, name);
+    const renamed = await api.branches.nameCurrent(name);
     setData((current) => {
       const previousName = current.activeBranch;
       const rename = <T extends { branch: string }>(items: T[]) => items.map((item) => (
@@ -98,7 +90,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       return {
         ...current,
         activeBranch: renamed.name,
-        branches: current.branches.map((branch) => branch.id === renamed.id ? renamed : branch),
+        branches: [renamed],
         members: rename(current.members),
         departments: rename(current.departments),
         events: rename(current.events),
@@ -106,11 +98,11 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       };
     });
     return renamed;
-  }, [currentUser?.organizationId, data.activeBranch, data.branches]);
+  }, []);
 
-  const addBranch = useCallback(async (branch: Omit<Branch, "id">) => {
-    const orgId = currentUser?.organizationId ?? branch.organizationId;
-    const created = await api.branches.create(orgId, branch.name);
+  const addBranch = useCallback(async (name: string) => {
+    if (!currentUser?.organizationId) throw new Error("Organization is not loaded.");
+    const created = await api.organization.createBranch(currentUser.organizationId, name);
     setData((current) => ({
       ...current,
       branches: [...current.branches, created],
@@ -120,6 +112,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   }, [currentUser?.organizationId]);
 
   const setActiveBranch = useCallback(async (name: string) => {
+    await api.branches.select(name);
     setData((current) => ({ ...current, activeBranch: name }));
   }, []);
 

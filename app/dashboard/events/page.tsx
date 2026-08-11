@@ -11,6 +11,7 @@ import { useDashboardScope } from "@/lib/scope";
 import { hasPermission } from "@/lib/permissions";
 import { api } from "@/services/api";
 import { toast } from "sonner";
+import { StatCard } from "@/components/dashboard/stat-card";
 import type { EventItem } from "@/types/api";
 
 const TABS = ["All Events", "scheduled", "ongoing", "completed", "cancelled"] as const;
@@ -87,10 +88,10 @@ export default function EventsPage() {
   };
 
   const dashboardStats = [
-    { title: "Total Events", value: stats.totalEvents.toString(), icon: <Users className="w-5 h-5 text-pink-500" />, iconBg: "bg-pink-100" },
-    { title: "Upcoming Events", value: stats.upcomingEvents.toString(), icon: <TrendingUp className="w-5 h-5 text-purple-500" />, iconBg: "bg-purple-100" },
-    { title: "Completed Events", value: stats.completedEvents.toString(), icon: <Calendar className="w-5 h-5 text-blue-500" />, iconBg: "bg-blue-100" },
-    { title: "Total Participants", value: stats.totalParticipants.toString(), icon: <Users className="w-5 h-5 text-green-500" />, iconBg: "bg-green-100" },
+    { title: "Total Events", value: stats.totalEvents.toString(), subtitle: "Across the selected scope", icon: <Users className="w-5 h-5" />, iconClassName: "bg-pink-100 text-pink-500" },
+    { title: "Upcoming Events", value: stats.upcomingEvents.toString(), subtitle: "Scheduled events", icon: <TrendingUp className="w-5 h-5" />, iconClassName: "bg-purple-100 text-purple-500" },
+    { title: "Completed Events", value: stats.completedEvents.toString(), subtitle: "Completed events", icon: <Calendar className="w-5 h-5" />, iconClassName: "bg-blue-100 text-blue-500" },
+    { title: "Total Participants", value: stats.totalParticipants.toString(), subtitle: "Accepted participants", icon: <Users className="w-5 h-5" />, iconClassName: "bg-green-100 text-green-500" },
   ];
 
   const handleDeleteEvent = async (id: string) => {
@@ -127,16 +128,15 @@ export default function EventsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[12px] mb-0">
-        {dashboardStats.map((stat, idx) => (
-          <div key={idx} className="bg-white p-[14px] rounded-[12px] border border-grey-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.iconBg}`}>
-                {stat.icon}
-              </div>
-            </div>
-            <div className="text-sm font-medium text-grey-2 mb-1">{stat.title}</div>
-            <div className="text-2xl font-bold text-grey-1">{stat.value}</div>
-          </div>
+        {dashboardStats.map((stat) => (
+          <StatCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            subtitle={stat.subtitle}
+            icon={stat.icon}
+            iconClassName={stat.iconClassName}
+          />
         ))}
       </div>
 

@@ -57,7 +57,7 @@ function CreatePostBox({
   onSubmit,
   canSubmit,
 }: {
-  user: { profileImage?: string; firstName?: string; lastName?: string; id: string };
+  user: { avatarUrl?: string; firstName?: string; lastName?: string; id: string };
   placeholder: string;
   postContent: string;
   onContentChange: (v: string) => void;
@@ -74,7 +74,7 @@ function CreatePostBox({
   return (
     <div className="bg-white p-4 rounded-[12px] border border-grey-4">
       <div className="flex gap-3 mb-4">
-        <Avatar url={user.profileImage} seed={user.id} firstName={user.firstName} lastName={user.lastName} size={40} showPlaceholderBadge />
+        <Avatar url={user.avatarUrl} seed={user.id} firstName={user.firstName} lastName={user.lastName} size={40} showPlaceholderBadge />
         <div className="flex-1">
           <textarea
             placeholder={placeholder}
@@ -141,7 +141,7 @@ function PostCard({
   onHashtagClick,
 }: {
   post: Post;
-  user: { id: string; profileImage?: string; firstName?: string; lastName?: string };
+  user: { id: string; avatarUrl?: string; firstName?: string; lastName?: string };
   author: OrganizationMemberInfo | undefined;
   badge: Badge | undefined;
   isLiked: boolean;
@@ -251,7 +251,7 @@ function PostCard({
         )}
 
         <div className="flex items-center gap-3">
-          <Avatar url={user.profileImage} seed={user.id} firstName={user.firstName} lastName={user.lastName} size={32} showPlaceholderBadge />
+          <Avatar url={user.avatarUrl} seed={user.id} firstName={user.firstName} lastName={user.lastName} size={32} showPlaceholderBadge />
           <div className="flex-1 relative">
             <input
               type="text"
@@ -311,7 +311,7 @@ export function PostsSection({
   onRequestDeleteComment,
   onHashtagClick,
 }: {
-  user: { id: string; profileImage?: string; firstName?: string; lastName?: string };
+  user: { id: string; avatarUrl?: string; firstName?: string; lastName?: string };
   posts: Post[];
   postsLoading: boolean;
   getMember: (userId: string) => OrganizationMemberInfo | undefined;

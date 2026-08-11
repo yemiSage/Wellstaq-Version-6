@@ -11,6 +11,9 @@ import {
   WeeklyActivityChart
 } from "@/components/dashboard/insights/charts-dynamic";
 import { api } from "@/services/api";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { useDashboardScope } from "@/lib/scope";
+import type { InsightsOverviewResponse, InsightsPeriod } from "@/types/api";
 
 const topPerformers = [
   { id: 1, name: 'Frank Wilson', steps: '23,500', score: 98, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100&h=100&auto=format&fit=crop' },
@@ -19,7 +22,7 @@ const topPerformers = [
   { id: 4, name: 'Brian Kim', steps: '18,450', score: 88, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=100&h=100&auto=format&fit=crop' },
 ];
 
-const defaultInsights = {
+const defaultInsights: InsightsOverviewResponse = {
   summary: {
     averageDailySteps: "8,432",
     averageDailyStepsTrend: "+12%",
@@ -34,22 +37,37 @@ const defaultInsights = {
   charts: {} as {
     monthlySteps?: Array<{name: string; actual: number; target: number}>;
     healthDistribution?: Array<{name: string; value: number; color: string}>;
-    departmentPerformance?: Array<{name: string; engagement: number}>;
+    departmentPerformance?: Array<{name: string; branchName?: string | null; engagement: number}>;
     weeklyActivity?: Array<{name: string; steps: number}>;
   },
 };
 
 export default function InsightsPage() {
   const [insights, setInsights] = useState(defaultInsights);
+  const [period, setPeriod] = useState<InsightsPeriod>("nine_months");
+  const { organizationId } = useDashboardData();
+  const { scope } = useDashboardScope();
+  const selectedPeriodLabel: Record<InsightsPeriod, string> = {
+    month: "This month",
+    three_months: "Last 3 months",
+    six_months: "Last 6 months",
+    nine_months: "Last 9 months",
+    year: "This year",
+  };
 
   useEffect(() => {
-    void api.resources.get("insights", "overview", defaultInsights).then(setInsights);
-  }, []);
+    if (!organizationId) return;
+    const branchId = scope.type === "branch" ? scope.branchId : undefined;
+    void api.kpiSnapshots
+      .getOverview(organizationId, period, branchId, defaultInsights)
+      .then(setInsights)
+      .catch(() => setInsights(defaultInsights));
+  }, [organizationId, scope, period]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
-      <InsightsHeader />
+      <InsightsHeader period={period} onPeriodChange={setPeriod} />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[12px]">
@@ -64,7 +82,7 @@ export default function InsightsPage() {
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Avg Daily Steps</p>
           <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{insights.summary.averageDailySteps}</h3>
-          <p className="text-xs text-grey-3">vs Last 9 month</p>
+          <p className="text-xs text-grey-3">vs previous comparable period</p>
         </div>
 
         <div className="dashboard-card">
@@ -106,20 +124,20 @@ export default function InsightsPage() {
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Challenges Won</p>
           <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{insights.summary.challengesWon}</h3>
-          <p className="text-xs text-grey-3">Last 9 month</p>
+          <p className="text-xs text-grey-3">{selectedPeriodLabel[period]}</p>
         </div>
       </div>
 
       {/* Row 1 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-[12px]">
-        <MonthlyStepsChart data={insights.charts.monthlySteps} />
-        <HealthDistributionChart data={insights.charts.healthDistribution} />
+        <MonthlyStepsChart data={insights.charts?.monthlySteps ?? []} />
+        <HealthDistributionChart data={insights.charts?.healthDistribution ?? []} />
       </div>
 
       {/* Row 2 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[12px]">
-        <DepartmentPerformanceChart data={insights.charts.departmentPerformance} />
-        <WeeklyActivityChart data={insights.charts.weeklyActivity} />
+        <DepartmentPerformanceChart data={insights.charts?.departmentPerformance ?? []} />
+        <WeeklyActivityChart data={insights.charts?.weeklyActivity ?? []} />
       </div>
 
       {/* Top Performers */}

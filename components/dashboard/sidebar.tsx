@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/constants";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { useDashboardScope } from "@/lib/scope";
@@ -33,15 +33,18 @@ import {
 
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isScopeMenuOpen, setIsScopeMenuOpen] = useState(false);
   const scopeMenuRef = useRef<HTMLDivElement>(null);
-  const { challenges: bootstrapChallenges, currentUser, organizationId } = useDashboardData();
+  const { challenges: CHALLENGES, activeBranch, currentUser, organizationId } = useDashboardData();
   const { scope, setScope } = useDashboardScope();
   const [orgBranches, setOrgBranches] = useState<Branch[]>([]);
 
   useClickOutside(scopeMenuRef, () => setIsScopeMenuOpen(false));
 
+  const branchChallenges = CHALLENGES.filter(c => c.branch === activeBranch);
+  const lastChallenges = branchChallenges.slice(-4).reverse();
 
   const switchable = currentUser ? getSwitchableScopes(currentUser.permissions) : null;
   const isOrgWide = switchable?.isOrgWide ?? false;
@@ -63,13 +66,6 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     scope.type === "overview"
       ? "Overview"
       : visibleBranches.find((b) => b.id === scope.branchId)?.name ?? "Branch";
-
-  const visibleChallenges = scope.type === "overview"
-    ? bootstrapChallenges
-    : bootstrapChallenges.filter((challenge) => (
-      challenge.branch === currentScopeLabel || challenge.branch === "Organization-wide"
-    ));
-  const lastChallenges = visibleChallenges.slice(0, 4);
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -132,17 +128,29 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
               {!isCollapsed && <span className="whitespace-nowrap">Challenges</span>}
             </div>
             {!isCollapsed && (
-              <button className="text-grey-3 hover:text-grey-1 flex-shrink-0">
+              <button
+                type="button"
+                aria-label="Create challenge"
+                onClick={() => {
+                  if (pathname === "/dashboard/challenges") {
+                    window.dispatchEvent(new Event("wellstaq:open-create-challenge"));
+                  } else {
+                    router.push("/dashboard/challenges?create=1");
+                  }
+                  onClose?.();
+                }}
+                className="text-grey-3 hover:text-grey-1 flex-shrink-0"
+              >
                 <Plus size={14} strokeWidth={2} />
               </button>
             )}
           </div>
-          {!isCollapsed && visibleChallenges.length > 0 ? (
+          {!isCollapsed && branchChallenges.length > 0 ? (
             <div className="space-y-0.5">
               {lastChallenges.map(challenge => (
                 <Link href="/dashboard/challenges" key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
                   <div className="w-3 h-3 rounded-full border border-grey-3 flex-shrink-0" />
-                  <span className="truncate">{challenge.title}</span>
+                  <span className="truncate">{challenge.title || "Untitled challenge"}</span>
                 </Link>
               ))}
               <Link href="/dashboard/challenges" className="flex items-center justify-between px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">

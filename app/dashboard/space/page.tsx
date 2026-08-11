@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { PanelLeftOpen, X, Loader2 } from "lucide-react";
+import { PanelLeftOpen, X, Loader2, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { api } from "@/services/api";
+import { ApiError } from "@/services/http";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { useDashboardScope } from "@/lib/scope";
 import type {
@@ -28,17 +29,23 @@ const METRIC_BADGE: Record<string, { emoji: string; label: string }> = {
 };
 interface Badge { emoji: string; label: string; rank: number; }
 
-export default function SpacePage() {
-  const { user, currentUser, organizationId } = useDashboardData();
-  const { scope } = useDashboardScope();
-  const spaceUser = useMemo(
-    () => ({
-      ...user,
-      id: currentUser?.userId ?? "",
-      profileImage: currentUser?.avatarUrl ?? user.profileImage,
-    }),
-    [currentUser?.avatarUrl, currentUser?.userId, user],
+function RestrictedResource({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-32 flex-col items-center justify-center gap-2 rounded-xl border border-grey-4 bg-white p-6 text-center">
+      <Lock className="h-6 w-6 text-grey-3" />
+      <p className="text-sm text-grey-3">You don&apos;t have permission to view {label}.</p>
+    </div>
   );
+}
+
+export default function SpacePage() {
+  const { user, currentUser, organizationId, branches, isLoading: dashboardLoading } = useDashboardData();
+  const { scope } = useDashboardScope();
+  const spaceUser = useMemo(() => ({
+    ...user,
+    id: currentUser?.userId ?? "",
+    avatarUrl: currentUser?.avatarUrl,
+  }), [user, currentUser?.userId, currentUser?.avatarUrl]);
 
   const [activeTab, setActiveTab] = useState<"Other Clubs" | "My Clubs">("Other Clubs");
   const [selectedClub, setSelectedClub] = useState<string | null>(null);
@@ -51,12 +58,20 @@ export default function SpacePage() {
 
   const [feedView, setFeedView] = useState<"branch" | "org">("branch");
   const effectiveFeedScope: "org_only" | "branch_and_org" =
-    scope.type === "overview" ? "branch_and_org" : feedView === "org" ? "org_only" : "branch_and_org";
+    scope.type === "overview" ? "org_only" : feedView === "org" ? "org_only" : "branch_and_org";
 
   // ── Activity stat deltas (optimistic local bumps — see ActivitySection) ──
   const [postDelta, setPostDelta] = useState(0);
   const [likeDelta, setLikeDelta] = useState(0);
-  const [groupDelta, setGroupDelta] = useState(0);
+  const [restrictedResources, setRestrictedResources] = useState<Set<"clubs" | "posts" | "stories">>(new Set());
+  const setResourceForbidden = useCallback((resource: "clubs" | "posts" | "stories", error?: unknown) => {
+    setRestrictedResources((current) => {
+      const next = new Set(current);
+      if (error instanceof ApiError && error.status === 403) next.add(resource);
+      else next.delete(resource);
+      return next;
+    });
+  }, []);
 
   // ── Hashtag modal (fed by TrendingSection AND inline hashtags in posts) ──
   const [hashtagModalTag, setHashtagModalTag] = useState<string | null>(null);
@@ -94,7 +109,7 @@ export default function SpacePage() {
   // ── Leaderboard badges ────────────────────────────────────────────────
   const [badgeMap, setBadgeMap] = useState<Map<string, Badge>>(new Map());
   useEffect(() => {
-    if (!organizationId || !currentUser?.userId) return;
+    if (!organizationId) return;
     const isOrgWide = scope.type === "overview" || feedView === "org";
     let cancelled = false;
     async function loadBadges() {
@@ -121,31 +136,79 @@ export default function SpacePage() {
   const [clubsLoading, setClubsLoading] = useState(true);
   const [clubToJoin, setClubToJoin] = useState<string | null>(null);
 
+  // FIX: club membership ("am I a member of this club?") is personal user
+  // data — it must not be re-derived from whichever scoped list happens to
+  // come back from the branch vs org-wide endpoint. Previously `allClubs`
+  // (and therefore `isMember`) was fully replaced on every scope switch,
+  // so a club you'd already joined could come back with `isMember: false`
+  // from a differently-scoped call, causing the "+" join button to
+  // reappear and membership to not persist across Overview/branch toggles.
+  //
+  // `joinedClubIds` is the standalone, scope-independent source of truth.
+  // It's seeded from whatever the club list has told us so far and is
+  // updated optimistically on join — it is never reset by a scope change.
+  const joinedClubIdsRef = useRef<Set<string>>(new Set());
+
+  // Membership belongs to the signed-in user, so do not carry it into a
+  // different organization if the provider account changes in-place.
   useEffect(() => {
-    if (!organizationId || !currentUser?.userId) return;
-    const userId = currentUser.userId;
+    joinedClubIdsRef.current.clear();
+  }, [organizationId]);
+
+  useEffect(() => {
+    if (!organizationId) return;
+    // On Overview, wait until bootstrap has supplied the complete branch list.
+    // The org-wide discovery endpoint currently returns the right clubs but not
+    // reliable per-user `isMember` flags; branch-scoped responses do return them.
+    if (scope.type === "overview" && dashboardLoading) return;
     let cancelled = false;
     async function loadClubs(orgId: string) {
       setClubsLoading(true);
       try {
-        const items = await api.club.getAllClubsForUser(
-          orgId,
-          userId,
-          scope.type === "branch" ? scope.branchId : undefined,
-        );
-        const scopedItems = scope.type === "branch"
-          ? items.filter((club) => club.branchId === scope.branchId)
-          : items;
-        if (!cancelled) setAllClubs(scopedItems);
-      } catch {
-        if (!cancelled) setAllClubs([]);
+        const response = scope.type === "overview"
+          ? await api.club.getClubs(orgId, { limit: 200 })
+          : await api.club.getClubs(orgId, { branchId: scope.branchId, limit: 200 });
+
+        // Seed personal membership on a fresh Overview load from every
+        // branch-scoped club response. This removes the old dependency on the
+        // user visiting a branch first before "My Clubs" becomes accurate.
+        if (scope.type === "overview" && branches.length > 0) {
+          const branchResponses = await Promise.allSettled(
+            branches.map((branch) => api.club.getClubs(orgId, { branchId: branch.id, limit: 200 })),
+          );
+          if (cancelled) return;
+          branchResponses.forEach((result) => {
+            if (result.status !== "fulfilled") return;
+            result.value.items.forEach((club) => {
+              if (club.isMember) joinedClubIdsRef.current.add(club.id);
+            });
+          });
+        }
+        if (!cancelled) {
+          // Merge: a club is "mine" if either this response says so, or we
+          // already knew it was from a previous fetch in another scope.
+          const merged = response.items.map((c) => {
+            const isMember = c.isMember || joinedClubIdsRef.current.has(c.id);
+            return { ...c, isMember };
+          });
+          merged.forEach((c) => {
+            if (c.isMember) joinedClubIdsRef.current.add(c.id);
+          });
+          setAllClubs(merged);
+          setResourceForbidden("clubs");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setAllClubs([]);
+          setResourceForbidden("clubs", error);
+        }
       } finally {
         if (!cancelled) setClubsLoading(false);
       }
     }
     void loadClubs(organizationId);
     return () => { cancelled = true; };
-  }, [currentUser?.userId, organizationId, scope]);
+  }, [organizationId, scope, branches, dashboardLoading, setResourceForbidden]);
 
   useEffect(() => { setSelectedClub(null); }, [scope]);
 
@@ -153,13 +216,14 @@ export default function SpacePage() {
   const filteredMyClubs = allClubs.filter((c) => c.isMember);
 
   const handleJoinClub = async (id: string) => {
-    if (!organizationId || !currentUser?.userId) return;
+    if (!organizationId) return;
     const club = allClubs.find((c) => c.id === id);
     if (club) {
       try {
+        if (!currentUser?.userId) return;
         await api.club.joinClub(organizationId, id, currentUser.userId);
+        joinedClubIdsRef.current.add(id); // persist personal membership immediately
         setAllClubs((prev) => prev.map((c) => (c.id === id ? { ...c, isMember: true, memberCount: c.memberCount + 1 } : c)));
-        setGroupDelta((delta) => delta + 1);
         toast.success(`Successfully joined ${club.name}!`);
       } catch {
         toast.error("Failed to join club.");
@@ -221,8 +285,8 @@ export default function SpacePage() {
         privacy: "public",
         category: newClubData.category,
       });
+      joinedClubIdsRef.current.add(created.id); // creator is automatically a member
       setAllClubs((prev) => [...prev, { ...created, isMember: true }]);
-      setGroupDelta((delta) => delta + 1);
       setIsCreateClubModalOpen(false);
       setNewClubData({ name: "", description: "", imageUrl: "", category: "fitness" });
       setClubImagePreview(null);
@@ -251,21 +315,22 @@ export default function SpacePage() {
         const response = effectiveFeedScope === "org_only"
           ? await api.post.getPosts(orgId, { scope: "org_only" })
           : await api.post.getPosts(orgId, { branchId: scope.type === "branch" ? scope.branchId : undefined, scope: "branch_and_org" });
-        const items = scope.type === "overview"
-          ? response.items
-          : effectiveFeedScope === "org_only"
-            ? response.items.filter((p) => !p.branchId)
-            : response.items.filter((p) => p.branchId === scope.branchId);
-        if (!cancelled) setPosts(items);
-      } catch {
-        if (!cancelled) setPosts([]);
+        if (!cancelled) {
+          setPosts(response.items);
+          setResourceForbidden("posts");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPosts([]);
+          setResourceForbidden("posts", error);
+        }
       } finally {
         if (!cancelled) setPostsLoading(false);
       }
     }
     void loadPosts(organizationId);
     return () => { cancelled = true; };
-  }, [organizationId, scope, effectiveFeedScope]);
+  }, [organizationId, scope, effectiveFeedScope, setResourceForbidden]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -296,7 +361,7 @@ export default function SpacePage() {
       return;
     }
     const content = postContent + (postLocation ? `\n📍 ${postLocation}` : "");
-    const branchId = scope.type === "branch" && feedView === "branch" ? scope.branchId : undefined;
+    const branchId = scope.type === "branch" ? scope.branchId : undefined;
     try {
       const created = await api.post.createPost(organizationId, {
         branchId,
@@ -304,9 +369,7 @@ export default function SpacePage() {
         mediaUrl: postImage || undefined,
         mediaType: postImage ? "image" : undefined,
       });
-      const belongsInCurrentFeed = scope.type === "overview"
-        || (feedView === "org" ? !created.branchId : created.branchId === scope.branchId);
-      if (belongsInCurrentFeed) {
+      if (effectiveFeedScope === "org_only" ? !created.branchId : (scope.type === "branch" && created.branchId === scope.branchId)) {
         setPosts((prev) => [created, ...prev]);
       }
       setPostDelta((d) => d + 1);
@@ -414,19 +477,20 @@ export default function SpacePage() {
         const response = effectiveFeedScope === "org_only"
           ? await api.story.getStories(orgId, { scope: "org_only" })
           : await api.story.getStories(orgId, { branchId: scope.type === "branch" ? scope.branchId : undefined, scope: "branch_and_org" });
-        const items = scope.type === "overview"
-          ? response.items
-          : effectiveFeedScope === "org_only"
-            ? response.items.filter((s) => !s.branchId)
-            : response.items.filter((s) => s.branchId === scope.branchId);
-        if (!cancelled) setStories(items);
-      } catch {
-        if (!cancelled) setStories([]);
+        if (!cancelled) {
+          setStories(response.items);
+          setResourceForbidden("stories");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStories([]);
+          setResourceForbidden("stories", error);
+        }
       }
     }
     void loadStories(organizationId);
     return () => { cancelled = true; };
-  }, [organizationId, scope, effectiveFeedScope]);
+  }, [organizationId, scope, effectiveFeedScope, setResourceForbidden]);
 
   function getVideoDuration(file: File): Promise<number> {
     return new Promise((resolve, reject) => {
@@ -466,7 +530,7 @@ export default function SpacePage() {
       const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
       if (!putResponse.ok) throw new Error(`Upload failed with ${putResponse.status}`);
 
-      const branchId = scope.type === "branch" && feedView === "branch" ? scope.branchId : undefined;
+      const branchId = scope.type === "branch" ? scope.branchId : undefined;
       const created = await api.story.createStory(organizationId, {
         branchId,
         mediaUrl,
@@ -492,8 +556,8 @@ export default function SpacePage() {
   const activeClubData = allClubs.find((c) => c.id === selectedClub);
   const canModerateChat = useMemo(() => {
     if (!currentUser || !activeClubData) return false;
-    if (activeClubData.leaderId === currentUser.userId) return true;
-    return (currentUser.permissions ?? []).some(
+    if (activeClubData.leaderId === currentUser?.userId) return true;
+    return currentUser.permissions.some(
       (p: { name: string; branchId: string | null }) =>
         p.name === "chat.moderate" && (p.branchId === null || p.branchId === activeClubData.branchId),
     );
@@ -593,7 +657,7 @@ export default function SpacePage() {
         </div>
 
         <div className={`w-full md:w-[320px] shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${!isLeftColumnOpen ? "hidden" : activeMobileTab === "clubs" ? "block" : "hidden md:block"}`}>
-          <ClubSidebar
+          {restrictedResources.has("clubs") ? <RestrictedResource label="clubs" /> : <ClubSidebar
             isOpen={isLeftColumnOpen}
             onClose={() => setIsLeftColumnOpen(false)}
             activeTab={activeTab}
@@ -605,7 +669,7 @@ export default function SpacePage() {
             onRequestJoin={setClubToJoin}
             canCreate={scope.type === "branch"}
             onOpenCreate={() => setIsCreateClubModalOpen(true)}
-          />
+          />}
         </div>
 
         <div className={`flex-1 min-w-0 bg-[#FAFAFA] overflow-y-auto ${activeMobileTab === "feed" ? "block" : "hidden md:block"}`}>
@@ -645,15 +709,15 @@ export default function SpacePage() {
 
               <div className="flex-1 overflow-y-auto no-scrollbar p-3">
                 <div className="max-w-[600px] mx-auto mb-6">
-                  <StoriesSection
+                  {restrictedResources.has("stories") ? <RestrictedResource label="stories" /> : <StoriesSection
                     stories={stories}
                     getMember={getMember}
-                    currentUser={spaceUser}
+                    currentUser={currentUser}
                     isUploading={isUploadingStory}
                     onUploadStory={handleCreateStory}
-                  />
+                  />}
                 </div>
-                <PostsSection
+                {restrictedResources.has("posts") ? <RestrictedResource label="posts" /> : <PostsSection
                   user={spaceUser}
                   posts={posts}
                   postsLoading={postsLoading}
@@ -672,14 +736,14 @@ export default function SpacePage() {
                   onShareLocation={handleShareLocation}
                   onClearLocation={() => setPostLocation(null)}
                   onSubmitPost={handleCreatePost}
-                  placeholder={scope.type === "overview" || feedView === "org" ? "Share something org-wide..." : "Share a workout, milestone, or wellness tip..."}
+                  placeholder={effectiveFeedScope === "org_only" ? "Share something org-wide..." : "Share a workout, milestone, or wellness tip..."}
                   onToggleLike={handleToggleLike}
                   onToggleComments={handleToggleComments}
                   onAddComment={handleAddComment}
                   onRequestDeletePost={setDeleteConfirmPostId}
                   onRequestDeleteComment={(postId, commentId) => setDeleteConfirmComment({ postId, commentId })}
                   onHashtagClick={handleSelectHashtag}
-                />
+                />}
               </div>
             </div>
           )}
@@ -690,11 +754,12 @@ export default function SpacePage() {
     <ActivitySection
       organizationId={organizationId}
       userId={currentUser?.userId}
+      groupsJoined={filteredMyClubs.length}
+      groupsRestricted={restrictedResources.has("clubs")}
       postDelta={postDelta}
       likeDelta={likeDelta}
-      groupDelta={groupDelta}
     />
-    <TrendingSection organizationId={organizationId ?? undefined} onSelectHashtag={handleSelectHashtag} />
+    <TrendingSection organizationId={organizationId} onSelectHashtag={handleSelectHashtag} />
   </div>
 </div>
       </div>

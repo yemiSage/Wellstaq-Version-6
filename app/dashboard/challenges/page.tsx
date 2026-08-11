@@ -73,6 +73,18 @@ export default function ChallengesPage() {
 
   const canCreate = currentUser ? hasPermission(currentUser.permissions, "challenge.create") : false;
 
+  useEffect(() => {
+    if (canCreate && new URLSearchParams(window.location.search).get("create") === "1") {
+      setIsCreateModalOpen(true);
+      window.history.replaceState(null, "", "/dashboard/challenges");
+    }
+    const openCreateModal = () => {
+      if (canCreate) setIsCreateModalOpen(true);
+    };
+    window.addEventListener("wellstaq:open-create-challenge", openCreateModal);
+    return () => window.removeEventListener("wellstaq:open-create-challenge", openCreateModal);
+  }, [canCreate]);
+
   // Overview has no single branch, so "branch only" isn't a valid choice there.
   useEffect(() => {
     if (scope.type === "overview" && challengeFilter === "branch") {
