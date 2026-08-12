@@ -1,524 +1,237 @@
-"use client";
+﻿"use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Search, Plus, Users, Activity, TrendingUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Edit2, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Search, Users, Activity, UserCheck, Plus, X } from "lucide-react";
 import { toast } from "sonner";
-import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { Modal } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { api } from "@/services/api";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { useDashboardScope } from "@/lib/scope";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import type { DepartmentItem, OrganizationMemberInfo, RoleItem } from "@/types/api";
+import { hasPermission } from "@/lib/permissions";
+import { humanizeIdentifier } from "@/lib/format";
 
 export default function TeamsPage() {
-  const { members: sourceMembers, departments: MOCK_DEPARTMENTS, activeBranch } = useDashboardData();
-  const [members, setMembers] = useState(sourceMembers);
+  const { organizationId, branches, currentUser } = useDashboardData();
+  const { scope } = useDashboardScope();
+  const scopeBranchId = scope.type === "branch" ? scope.branchId : undefined;
+  const scopeKey = scopeBranchId ?? "overview";
+  const [members, setMembers] = useState<OrganizationMemberInfo[]>([]);
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [stats, setStats] = useState({
-    totalMembers: 0,
-    activeTeams: 0,
-    engagementRate: "0%"
-  });
-
-  const updateStats = useCallback((branch: string, memberData: typeof sourceMembers) => {
-    const branchMembers = memberData.filter(m => m.branch === branch);
-    const branchDepts = MOCK_DEPARTMENTS.filter(d => d.branch === branch);
-
-    // Calculate engagement based on activities in departments
-    const totalActivities = branchDepts.reduce((acc, dept) => acc + dept.activities, 0);
-    const engagement = branchMembers.length > 0 ? Math.min(100, Math.round((totalActivities / (branchMembers.length * 100)) * 100)) : 0;
-
-    setStats({
-      totalMembers: branchMembers.length,
-      activeTeams: branchDepts.length,
-      engagementRate: `${engagement}%`
-    });
-  }, [MOCK_DEPARTMENTS]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [roles, setRoles] = useState<RoleItem[]>([]);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteRolesLoading, setInviteRolesLoading] = useState(false);
+  const [invite, setInvite] = useState({ email: "", branchId: "", departmentId: "", roleId: "" });
+  const [selectedMember, setSelectedMember] = useState<OrganizationMemberInfo | null>(null);
+  const [manageRoles, setManageRoles] = useState<RoleItem[]>([]);
+  const [manageDepartments, setManageDepartments] = useState<DepartmentItem[]>([]);
+  const [memberChanges, setMemberChanges] = useState({ roleId: "", departmentId: "", branchId: "", branchDepartmentId: "" });
+  const [pendingChange, setPendingChange] = useState<"role" | "revoke_role" | "department" | "branch" | null>(null);
+  const [isUpdatingMember, setIsUpdatingMember] = useState(false);
+  const canInvite = currentUser ? hasPermission(currentUser.permissions, "member.invite", scope.type === "branch" ? scope.branchId : undefined) : false;
+  const permissionBranchId = scope.type === "branch" ? scope.branchId : undefined;
+  const canAssignRole = currentUser ? hasPermission(currentUser.permissions, "member.role.assign", permissionBranchId) : false;
+  const canRevokeRole = currentUser ? hasPermission(currentUser.permissions, "member.role.revoke", permissionBranchId) : false;
+  const canAssignDepartment = currentUser ? hasPermission(currentUser.permissions, "member.department.assign", permissionBranchId) : false;
+  const canAssignBranch = currentUser ? hasPermission(currentUser.permissions, "member.branch.assign", permissionBranchId) : false;
 
   useEffect(() => {
-    setMembers(sourceMembers);
-    setCurrentPage(1);
-    updateStats(activeBranch, sourceMembers);
-  }, [activeBranch, sourceMembers, updateStats]);
+    setSelectedMember(null);
+    setPendingChange(null);
+    setManageRoles([]);
+    setManageDepartments([]);
+    setMemberChanges({ roleId: "", departmentId: "", branchId: "", branchDepartmentId: "" });
+  }, [scopeKey]);
 
-  const dashboardStats = [
-    {
-      title: "Total Members",
-      value: stats.totalMembers.toString(),
-      trend: "+12% this month",
-      trendColor: "text-green-500",
-      icon: <Users className="w-5 h-5 text-blue-500" />,
-      iconBg: "bg-blue-50"
-    },
-    {
-      title: "Active Teams",
-      value: stats.activeTeams.toString(),
-      trend: "Stable",
-      trendColor: "text-grey-2",
-      icon: <Activity className="w-5 h-5 text-purple-500" />,
-      iconBg: "bg-purple-50"
-    },
-    {
-      title: "Engagement Rate",
-      value: stats.engagementRate,
-      trend: "+5% this month",
-      trendColor: "text-green-500",
-      icon: <TrendingUp className="w-5 h-5 text-green-500" />,
-      iconBg: "bg-green-50"
+  useEffect(() => {
+    if (!organizationId) return;
+    let cancelled = false;
+    setIsLoading(true);
+    Promise.all([
+      api.organization.getMembers(organizationId, { limit: 200, branchId: scopeBranchId }),
+      api.organization.getDepartments(organizationId, scopeBranchId),
+    ]).then(([memberResponse, departmentResponse]) => {
+      if (cancelled) return;
+      setMembers(memberResponse.items);
+      setDepartments(departmentResponse.items);
+    }).finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [organizationId, scopeBranchId]);
+
+  useEffect(() => {
+    if (!isInviteOpen || !organizationId || !invite.branchId) {
+      if (isInviteOpen) setRoles([]);
+      return;
     }
-  ];
+    let cancelled = false;
+    setInviteRolesLoading(true);
+    setInvite((current) => ({ ...current, roleId: "" }));
+    api.roles.listOrganization(organizationId, invite.branchId)
+      .then((response) => {
+        if (!cancelled) setRoles(response.items.filter((role) => role.name.trim().toLowerCase().replaceAll(" ", "_") !== "super_admin"));
+      })
+      .finally(() => { if (!cancelled) setInviteRolesLoading(false); });
+    return () => { cancelled = true; };
+  }, [invite.branchId, isInviteOpen, organizationId]);
 
-  const [memberToDelete, setMemberToDelete] = useState<number | null>(null);
-  const [memberToEdit, setMemberToEdit] = useState<(typeof sourceMembers)[number] | null>(null);
-  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
-  const [newMember, setNewMember] = useState({ name: "", email: "", department: "Engineering", role: "Employee" });
+  const branchNames = useMemo(() => new Map(branches.map((branch) => [branch.id, branch.name])), [branches]);
+  const departmentNames = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments]);
+  const scopedMembers = useMemo(() => (
+    scope.type === "branch" ? members.filter((member) => member.branchId === scope.branchId) : members
+  ), [members, scope]);
+  const query = searchQuery.trim().toLowerCase();
+  const filteredMembers = scopedMembers.filter((member) => {
+    const name = `${member.firstName ?? ""} ${member.lastName ?? ""}`.trim();
+    const department = member.departmentId ? departmentNames.get(member.departmentId) ?? "" : "";
+    return name.toLowerCase().includes(query) || (member.email ?? "").toLowerCase().includes(query) || department.toLowerCase().includes(query);
+  });
+  const activeMembers = scopedMembers.filter((member) => member.status?.toLowerCase() === "active").length;
+  const inviteDepartments = departments.filter((department) => department.branchId === invite.branchId);
+  const inviteRoles = roles.filter((role) => !role.branchId || role.branchId === invite.branchId);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-
-  const filteredMembers = members.filter(m =>
-    (m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.department.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    m.branch === activeBranch
-  );
-
-  const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
-  const paginatedMembers = filteredMembers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const handleRemoveMember = async () => {
-    if (memberToDelete !== null) {
-      await api.resources.mutate({ resource: "members", action: "delete", id: memberToDelete });
-      setMembers(members.filter(m => m.id !== memberToDelete));
-      toast.success("Team member removed successfully");
-      setMemberToDelete(null);
-    }
+  const openInvite = () => {
+    const branchId = scope.type === "branch" ? scope.branchId : branches[0]?.id ?? "";
+    setInvite({ email: "", branchId, departmentId: "", roleId: "" });
+    setIsInviteOpen(true);
   };
 
-  const handleSaveMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (memberToEdit) {
-      await api.resources.mutate({ resource: "members", action: "update", id: memberToEdit.id, payload: memberToEdit });
-      setMembers(members.map(m => m.id === memberToEdit.id ? memberToEdit : m));
-      toast.success("Team member updated successfully");
-      setMemberToEdit(null);
+  const openMemberManagement = async (member: OrganizationMemberInfo) => {
+    if (!organizationId || (!canAssignRole && !canRevokeRole && !canAssignDepartment && !canAssignBranch)) return;
+    if (member.roleName === "super_admin") {
+      toast.error("The Super Admin account cannot be reassigned or moved.");
+      return;
     }
+    setSelectedMember(member);
+    setMemberChanges({ roleId: member.roleId ?? "", departmentId: member.departmentId ?? "", branchId: member.branchId ?? "", branchDepartmentId: member.departmentId ?? "" });
+    const [roleResponse, departmentResponse] = await Promise.all([
+      api.roles.listOrganization(organizationId, permissionBranchId),
+      api.organization.getDepartments(organizationId),
+    ]);
+    setManageRoles(roleResponse.items.filter((role) => role.name !== "super_admin"));
+    setManageDepartments(departmentResponse.items);
   };
 
-  const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const member = {
-      id: members.length + 1,
-      ...newMember,
-      status: "Good", // Default status from wellness report
-      branch: activeBranch,
-      avatar: `https://picsum.photos/seed/${newMember.name}/100/100`
-    };
-    await api.resources.mutate({ resource: "members", action: "create", payload: member });
-    setMembers([member, ...members]);
-    toast.success("Team member added successfully");
-    setIsAddMemberModalOpen(false);
-    setNewMember({ name: "", email: "", department: "Engineering", role: "Employee" });
+  const confirmMemberChange = async () => {
+    if (!organizationId || !selectedMember || !pendingChange) return;
+    setIsUpdatingMember(true);
+    try {
+      if (pendingChange === "role") {
+        const role = manageRoles.find((item) => item.id === memberChanges.roleId);
+        if (!role) return;
+        await api.roles.assignToMember(organizationId, selectedMember.id, role);
+        toast.success(`${selectedMember.firstName}'s role is now ${humanizeIdentifier(role.name)}.`);
+      } else if (pendingChange === "revoke_role") {
+        await api.roles.revokeFromMember(organizationId, selectedMember.id, permissionBranchId);
+        toast.success(`${selectedMember.firstName}'s role was revoked. The user is now a Member.`);
+      } else if (pendingChange === "department") {
+        const department = manageDepartments.find((item) => item.id === memberChanges.departmentId);
+        if (!department) return;
+        await api.teamMembers.assignDepartment(organizationId, department.id, selectedMember.id);
+        setMembers((items) => items.map((item) => item.id === selectedMember.id ? { ...item, departmentId: department.id } : item));
+        setSelectedMember({ ...selectedMember, departmentId: department.id });
+        toast.success(`${selectedMember.firstName} was moved to ${department.name}.`);
+      } else {
+        const branch = branches.find((item) => item.id === memberChanges.branchId);
+        const department = manageDepartments.find((item) => item.id === memberChanges.branchDepartmentId);
+        if (!branch || !department) return;
+        await api.teamMembers.transferBranch(organizationId, branch.id, selectedMember.id, department.id);
+        setMembers((items) => items.map((item) => item.id === selectedMember.id ? { ...item, branchId: branch.id, departmentId: department.id } : item));
+        setSelectedMember({ ...selectedMember, branchId: branch.id, departmentId: department.id });
+        toast.success(`${selectedMember.firstName} was moved to ${branch.name}, ${department.name}.`);
+      }
+      if (pendingChange === "role" || pendingChange === "revoke_role") {
+        const refreshed = await api.organization.getMembers(organizationId, { limit: 200, branchId: scopeBranchId });
+        setMembers(refreshed.items);
+        setSelectedMember(null);
+      }
+      setPendingChange(null);
+    } finally { setIsUpdatingMember(false); }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Excellent": return "bg-green-50 text-green-600 border-green-200";
-      case "Good": return "bg-blue-50 text-blue-600 border-blue-200";
-      case "Needs Attention": return "bg-orange-50 text-orange-600 border-orange-200";
-      default: return "bg-grey-5 text-grey-2 border-grey-4";
+  const sendInvite = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!organizationId || !invite.email || !invite.branchId || !invite.departmentId || !invite.roleId) return;
+    setIsInviting(true);
+    try {
+      await api.organization.sendInvite(organizationId, invite);
+      toast.success("Team invitation sent successfully.");
+      setIsInviteOpen(false);
+    } finally {
+      setIsInviting(false);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-[20px] pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-0">
-        <div>
-          <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">My Teams</h1>
-          <p className="text-sm text-grey-2">Manage your team members, view their wellness status, and organize departments.</p>
-        </div>
-        <button
-          onClick={() => setIsAddMemberModalOpen(true)}
-          className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg hover:bg-[#C45700]/90 transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Member
-        </button>
+    <div className="mx-auto flex max-w-7xl flex-col gap-5 pb-12">
+      <div className="flex items-start justify-between gap-4">
+        <div><h1 className="text-[20px] font-bold text-grey-1">My Teams</h1>
+        <p className="text-sm text-grey-2">{scope.type === "branch" ? "Everyone assigned to this branch, including its manager." : "Everyone in the organization, including the super admin."}</p></div>
+        {canInvite && <button type="button" onClick={openInvite} className="flex items-center gap-2 rounded-lg bg-[#C45700] px-4 py-2 text-sm font-medium text-white"><Plus className="h-4 w-4" /> Add Team Member</button>}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-[12px] mb-0">
-        {dashboardStats.map((stat, idx) => (
-          <div key={idx} className="bg-white p-[14px] rounded-[12px] border border-grey-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.iconBg}`}>
-                {stat.icon}
-              </div>
-              <div className={`text-xs font-medium flex items-center gap-1 ${stat.trendColor}`}>
-                <TrendingUp className="w-3 h-3" />
-                {stat.trend}
-              </div>
-            </div>
-            <div className="text-sm font-medium text-grey-2 mb-1">{stat.title}</div>
-            <div className="text-2xl font-bold text-grey-1">{stat.value}</div>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <StatCard title="Total Members" value={scopedMembers.length} subtitle="In the selected scope" icon={<Users className="h-5 w-5" />} iconClassName="bg-blue-50 text-blue-500" />
+        <StatCard title="Departments" value={departments.length} subtitle="In the selected scope" icon={<Activity className="h-5 w-5" />} iconClassName="bg-purple-50 text-purple-500" />
+        <StatCard title="Active Members" value={activeMembers} subtitle="Currently active accounts" icon={<UserCheck className="h-5 w-5" />} iconClassName="bg-green-50 text-green-500" />
       </div>
 
-      {/* Main Content */}
-      <div className="bg-white rounded-[12px] p-6 flex flex-col gap-[20px] border border-grey-4">
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="relative w-full sm:w-[320px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
-            <input
-              type="text"
-              placeholder="Search members..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-10 pl-9 pr-4 w-full rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
-            />
-          </div>
+      <section className="rounded-xl border border-grey-4 bg-white p-6">
+        <div className="relative mb-5 w-full sm:w-[320px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grey-3" />
+          <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search members..." className="h-10 w-full rounded-lg border border-grey-4 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary-1" />
         </div>
-
-        {/* Table/Cards View */}
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-grey-4">
-                <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Name</th>
-                <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Email</th>
-                <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Department</th>
-                <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Role</th>
-                <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider">Wellness Status</th>
-                <th className="py-3 px-4 text-xs font-semibold text-grey-2 uppercase tracking-wider text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedMembers.map((member) => (
-                <tr key={member.id} className="border-b border-grey-4 hover:bg-grey-5 transition-colors">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full overflow-hidden relative shrink-0">
-                        <Image src={member.avatar} alt={member.name} fill className="object-cover" referrerPolicy="no-referrer" />
-                      </div>
-                      <span className="text-sm font-medium text-grey-1">{member.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-grey-2">{member.email}</td>
-                  <td className="py-3 px-4 text-sm text-grey-2">{member.department}</td>
-                  <td className="py-3 px-4 text-sm text-grey-2">
-                    <span className="px-2 py-1 bg-grey-5 rounded-md text-[10px] font-bold text-grey-2 border border-grey-4">
-                      {member.role || "Employee"}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(member.status)}`}>
-                      {member.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => setMemberToEdit(member)}
-                        className="p-1.5 text-grey-3 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors"
-                        title="Edit Member"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setMemberToDelete(member.id)}
-                        className="p-1.5 text-grey-3 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
-                        title="Remove Member"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {paginatedMembers.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-sm text-grey-2">
-                    No team members found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile Card View */}
-        <div className="md:hidden flex flex-col gap-4">
-          {paginatedMembers.map((member) => (
-            <div key={member.id} className="bg-white p-4 rounded-xl border border-grey-4 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full overflow-hidden relative shrink-0">
-                    <Image src={member.avatar} alt={member.name} fill className="object-cover" referrerPolicy="no-referrer" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-grey-1">{member.name}</p>
-                    <p className="text-xs text-grey-3">{member.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setMemberToEdit(member)}
-                    className="p-2 text-grey-3 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setMemberToDelete(member.id)}
-                    className="p-2 text-grey-3 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-grey-4">
-                <div>
-                  <p className="text-[10px] text-grey-3 uppercase font-bold tracking-wider mb-1">Department</p>
-                  <p className="text-xs text-grey-2 font-medium">{member.department}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-grey-3 uppercase font-bold tracking-wider mb-1">Role</p>
-                  <span className="px-2 py-0.5 bg-grey-5 rounded text-[10px] font-bold text-grey-2 border border-grey-4 inline-block">
-                    {member.role || "Employee"}
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-[10px] text-grey-3 uppercase font-bold tracking-wider mb-1">Wellness Status</p>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-block ${getStatusColor(member.status)}`}>
-                    {member.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-          {paginatedMembers.length === 0 && (
-            <div className="py-8 text-center text-sm text-grey-2 bg-grey-5 rounded-xl border border-dashed border-grey-4">
-              No team members found.
-            </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-grey-4 mt-4">
-            <div className="text-[14px] leading-[20px] text-[#1A1A1A]">
-              Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredMembers.length)} of {filteredMembers.length} members
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
-              >
-                <ChevronsLeft className="w-4 h-4 text-[#626262]" /> First
-              </button>
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
-              >
-                <ChevronLeft className="w-4 h-4 text-[#626262]" /> Prev
-              </button>
-              <div className="flex items-center gap-1 px-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`w-8 h-8 rounded text-sm font-medium flex items-center justify-center transition-colors ${
-                      currentPage === page
-                        ? "bg-[#C45700] text-white"
-                        : "hover:bg-grey-5 text-grey-2"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
-              >
-                Next <ChevronRight className="w-4 h-4 text-[#626262]" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
-              >
-                Last <ChevronsRight className="w-4 h-4 text-[#626262]" />
-              </button>
-            </div>
+        {isLoading ? <p className="py-10 text-center text-sm text-grey-3">Loading team members...</p> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead><tr className="border-b border-grey-4 text-xs uppercase text-grey-2"><th className="px-4 py-3">Name</th><th className="px-4 py-3">Email</th><th className="px-4 py-3">Branch</th><th className="px-4 py-3">Department</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Status</th></tr></thead>
+              <tbody>
+                {filteredMembers.map((member) => {
+                  const name = `${member.firstName ?? ""} ${member.lastName ?? ""}`.trim() || member.email;
+                  return <tr key={member.id} onClick={() => void openMemberManagement(member)} className={`border-b border-grey-4 ${(canAssignRole || canRevokeRole || canAssignDepartment || canAssignBranch) ? "cursor-pointer hover:bg-grey-5" : ""}`}>
+                    <td className="px-4 py-3"><div className="flex items-center gap-3"><div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-grey-4 text-xs font-bold">{member.avatarUrl ? <Image src={member.avatarUrl} alt={name} fill className="object-cover" /> : name.slice(0, 1).toUpperCase()}</div>{member.publicProfile || member.id === currentUser?.userId ? <Link onClick={(event) => event.stopPropagation()} href={`/dashboard/profile/${member.id}`} className="text-sm font-medium text-grey-1 hover:text-primary-1 hover:underline">{name}</Link> : <span className="text-sm font-medium text-grey-1" title="This profile is private">{name}</span>}</div></td>
+                    <td className="px-4 py-3 text-sm text-grey-2">{member.email}</td>
+                    <td className="px-4 py-3 text-sm text-grey-2">{member.branchId ? branchNames.get(member.branchId) ?? "Assigned branch" : "Organization-wide"}</td>
+                    <td className="px-4 py-3 text-sm text-grey-2">{member.departmentId ? departmentNames.get(member.departmentId) ?? "Assigned department" : "Unassigned"}</td>
+                    <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.roleName ?? (member.id === currentUser?.userId ? currentUser.role : null) ?? "member")}</td>
+                    <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.status)}</td>
+                  </tr>;
+                })}
+                {filteredMembers.length === 0 && <tr><td colSpan={6} className="py-10 text-center text-sm text-grey-3">No team members found.</td></tr>}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
+      </section>
 
-      <ConfirmModal
-        isOpen={memberToDelete !== null}
-        onClose={() => setMemberToDelete(null)}
-        onConfirm={handleRemoveMember}
-        title="Remove Team Member"
-        description="Are you sure you want to remove this team member? This action cannot be undone."
-        confirmText="Remove"
-        isDestructive={true}
-      />
+      {selectedMember && <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onMouseDown={() => setSelectedMember(null)}>
+        <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
+          <div className="mb-5 flex items-start justify-between"><div><h2 className="text-lg font-bold text-grey-1">Manage {selectedMember.firstName} {selectedMember.lastName}</h2><p className="mt-1 text-sm text-grey-2">Changes replace the user&apos;s current assignment and require confirmation.</p></div><button type="button" onClick={() => setSelectedMember(null)}><X className="h-5 w-5" /></button></div>
+          <div className="space-y-5">
+            {(canAssignRole || canRevokeRole) && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Change role</h3><p className="mb-3 text-xs text-grey-3">Changing replaces the current role. Revoking returns the user to Member.</p><div className="flex flex-wrap gap-2"><select disabled={!canAssignRole} value={memberChanges.roleId} onChange={(event) => setMemberChanges({ ...memberChanges, roleId: event.target.value })} className="h-10 min-w-0 flex-1 rounded-lg border border-grey-4 px-3 text-sm disabled:bg-grey-5"><option value="">Select role</option>{manageRoles.map((role) => <option key={role.id} value={role.id}>{humanizeIdentifier(role.name)}</option>)}</select>{canAssignRole && <button disabled={!memberChanges.roleId || memberChanges.roleId === selectedMember.roleId} onClick={() => setPendingChange("role")} className="rounded-lg bg-primary-1 px-4 text-sm font-medium text-white disabled:opacity-40">Change</button>}{canRevokeRole && selectedMember.roleName !== "member" && <button onClick={() => setPendingChange("revoke_role")} className="rounded-lg border border-red-200 px-4 text-sm font-medium text-red-600 hover:bg-red-50">Revoke</button>}</div></section>}
+            {canAssignDepartment && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Move department</h3><p className="mb-3 text-xs text-grey-3">Choose another department in the user&apos;s current branch.</p><div className="flex gap-2"><select value={memberChanges.departmentId} onChange={(event) => setMemberChanges({ ...memberChanges, departmentId: event.target.value })} className="h-10 flex-1 rounded-lg border border-grey-4 px-3 text-sm"><option value="">Select department</option>{manageDepartments.filter((department) => department.branchId === selectedMember.branchId).map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select><button disabled={!memberChanges.departmentId || memberChanges.departmentId === selectedMember.departmentId} onClick={() => setPendingChange("department")} className="rounded-lg bg-primary-1 px-4 text-sm font-medium text-white disabled:opacity-40">Move</button></div></section>}
+            {canAssignBranch && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Move branch</h3><p className="mb-3 text-xs text-grey-3">A destination department is required because branch and department change together.</p><div className="grid gap-2 sm:grid-cols-2"><select value={memberChanges.branchId} onChange={(event) => setMemberChanges({ ...memberChanges, branchId: event.target.value, branchDepartmentId: "" })} className="h-10 rounded-lg border border-grey-4 px-3 text-sm"><option value="">Select branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><select value={memberChanges.branchDepartmentId} onChange={(event) => setMemberChanges({ ...memberChanges, branchDepartmentId: event.target.value })} className="h-10 rounded-lg border border-grey-4 px-3 text-sm"><option value="">Select destination department</option>{manageDepartments.filter((department) => department.branchId === memberChanges.branchId).map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></div><button disabled={!memberChanges.branchId || !memberChanges.branchDepartmentId || memberChanges.branchId === selectedMember.branchId} onClick={() => setPendingChange("branch")} className="mt-3 h-10 w-full rounded-lg bg-primary-1 text-sm font-medium text-white disabled:opacity-40">Move to branch</button></section>}
+          </div>
+        </div>
+      </div>}
 
-      <Modal
-        isOpen={isAddMemberModalOpen}
-        onClose={() => setIsAddMemberModalOpen(false)}
-        title="Add Team Member"
-      >
-        <form onSubmit={handleAddMember} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-grey-1 mb-1">Full Name</label>
-            <Input
-              value={newMember.name}
-              onChange={(e) => setNewMember({...newMember, name: e.target.value})}
-              placeholder="e.g. John Doe"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-grey-1 mb-1">Email Address</label>
-            <Input
-              type="email"
-              value={newMember.email}
-              onChange={(e) => setNewMember({...newMember, email: e.target.value})}
-              placeholder="e.g. john@example.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-grey-1 mb-1">Department</label>
-            <select
-              value={newMember.department}
-              onChange={(e) => setNewMember({...newMember, department: e.target.value})}
-              className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
-            >
-              <option value="Engineering">Engineering</option>
-              <option value="Design">Design</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Sales">Sales</option>
-              <option value="HR">HR</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-grey-1 mb-1">Role</label>
-            <select
-              value={newMember.role}
-              onChange={(e) => setNewMember({...newMember, role: e.target.value})}
-              className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
-            >
-              <option value="Super Admin">Super Admin</option>
-              <option value="Branch Manager">Branch Manager</option>
-              <option value="Team Lead">Team Lead</option>
-              <option value="Employee">Employee</option>
-            </select>
-          </div>
-          <div className="pt-4 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setIsAddMemberModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-primary-1 text-white text-sm font-medium rounded-lg hover:bg-primary-1/90 transition-colors"
-            >
-              Add Member
-            </button>
-          </div>
+      <ConfirmModal isOpen={pendingChange !== null} onClose={() => setPendingChange(null)} onConfirm={() => void confirmMemberChange()} title={pendingChange === "role" ? "Change user role?" : pendingChange === "revoke_role" ? "Revoke user role?" : pendingChange === "department" ? "Move user to another department?" : "Move user to another branch?"} description={pendingChange === "role" ? "This will replace the user's current role and its role-based access." : pendingChange === "revoke_role" ? "The current role will be removed and the user will return to the zero-permission Member role." : pendingChange === "department" ? "This will replace the user's current department assignment." : "This will change both the user's home branch and department."} confirmText={isUpdatingMember ? "Updating..." : "Confirm change"} isDestructive={pendingChange === "revoke_role"} />
+
+      {isInviteOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+        <form onSubmit={sendInvite} className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl">
+          <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-grey-1">Invite Team Member</h2><button type="button" onClick={() => setIsInviteOpen(false)}><X className="h-5 w-5" /></button></div>
+          <label className="block text-sm font-medium">Email<input required type="email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-grey-4 px-3" /></label>
+          <label className="block text-sm font-medium">Branch<select required disabled={scope.type === "branch"} value={invite.branchId} onChange={(event) => setInvite({ ...invite, branchId: event.target.value, departmentId: "" })} className="mt-1 h-10 w-full rounded-lg border border-grey-4 px-3"><option value="">Select branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>
+          <label className="block text-sm font-medium">Department<select required value={invite.departmentId} onChange={(event) => setInvite({ ...invite, departmentId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-grey-4 px-3"><option value="">Select department</option>{inviteDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
+          <label className="block text-sm font-medium">Role<select required disabled={!invite.branchId || inviteRolesLoading} value={invite.roleId} onChange={(event) => setInvite({ ...invite, roleId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-grey-4 px-3 disabled:bg-grey-5"><option value="">{inviteRolesLoading ? "Loading roles..." : invite.branchId ? "Select role" : "Select a branch first"}</option>{inviteRoles.map((role) => <option key={role.id} value={role.id}>{humanizeIdentifier(role.name)}</option>)}</select></label>
+          <button disabled={isInviting} className="h-10 w-full rounded-lg bg-[#C45700] text-sm font-medium text-white disabled:opacity-50">{isInviting ? "Sending..." : "Send Invitation"}</button>
         </form>
-      </Modal>
-
-      <Modal
-        isOpen={memberToEdit !== null}
-        onClose={() => setMemberToEdit(null)}
-        title="Edit Team Member"
-      >
-        {memberToEdit && (
-          <form onSubmit={handleSaveMember} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-grey-1 mb-1">Name</label>
-              <input
-                type="text"
-                value={memberToEdit.name}
-                onChange={(e) => setMemberToEdit({...memberToEdit, name: e.target.value})}
-                className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-grey-1 mb-1">Email</label>
-              <input
-                type="email"
-                value={memberToEdit.email}
-                onChange={(e) => setMemberToEdit({...memberToEdit, email: e.target.value})}
-                className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-grey-1 mb-1">Department</label>
-              <select
-                value={memberToEdit.department}
-                onChange={(e) => setMemberToEdit({...memberToEdit, department: e.target.value})}
-                className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
-              >
-                <option value="Engineering">Engineering</option>
-                <option value="Design">Design</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Sales">Sales</option>
-                <option value="HR">HR</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-grey-1 mb-1">Role</label>
-              <select
-                value={memberToEdit.role || "Employee"}
-                onChange={(e) => setMemberToEdit({...memberToEdit, role: e.target.value})}
-                className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 text-sm bg-white"
-              >
-                <option value="Super Admin">Super Admin</option>
-                <option value="Branch Manager">Branch Manager</option>
-                <option value="Team Lead">Team Lead</option>
-                <option value="Employee">Employee</option>
-              </select>
-            </div>
-            <div className="pt-4 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setMemberToEdit(null)}
-                className="px-4 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-primary-1 text-white text-sm font-medium rounded-lg hover:bg-primary-1/90 transition-colors"
-              >
-                Save Changes
-              </button>
-            </div>
-          </form>
-        )}
-      </Modal>
+      </div>}
     </div>
   );
 }

@@ -13,6 +13,7 @@ import type {
 } from "@/types/api";
 import { CLUB_CATEGORIES } from "@/types/api";
 import { Avatar } from "@/components/space/story-section";
+import { formatRelativeTime } from "@/lib/time";
 
 // ── Sidebar (tabs + club list) ──────────────────────────────────────────
 function ClubSidebar({
@@ -40,6 +41,10 @@ function ClubSidebar({
   canCreate: boolean;
   onOpenCreate: () => void;
 }) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const visibleOtherClubs = filteredClubs.filter((club) => !normalizedSearch || club.name.toLowerCase().includes(normalizedSearch));
+  const visibleMyClubs = filteredMyClubs.filter((club) => !normalizedSearch || club.name.toLowerCase().includes(normalizedSearch));
   if (!isOpen) return null;
 
   return (
@@ -51,7 +56,7 @@ function ClubSidebar({
           </button>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
-            <input type="text" placeholder="Search" className="w-full pl-9 pr-12 py-2 bg-white border border-grey-4 rounded-lg text-sm focus:outline-none focus:border-primary-1 focus:ring-1 focus:ring-primary-1" />
+            <input type="text" placeholder="Search clubs" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="w-full pl-9 pr-12 py-2 bg-white border border-grey-4 rounded-lg text-sm focus:outline-none focus:border-primary-1 focus:ring-1 focus:ring-primary-1" />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">⌘</kbd>
               <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">K</kbd>
@@ -81,7 +86,7 @@ function ClubSidebar({
           </div>
         ) : activeTab === "Other Clubs" ? (
           <div className="space-y-4">
-            {filteredClubs.map((club) => (
+            {visibleOtherClubs.map((club) => (
               <div key={club.id} className="p-4 border border-grey-4 rounded-[12px] hover:border-primary-1 cursor-pointer transition-colors" onClick={() => onSelectClub(club.id)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -107,7 +112,7 @@ function ClubSidebar({
           </div>
         ) : filteredMyClubs.length > 0 ? (
           <div className="space-y-4">
-            {filteredMyClubs.map((club) => (
+            {visibleMyClubs.map((club) => (
               <div key={club.id} className="p-4 border border-grey-4 rounded-[12px] hover:border-primary-1 cursor-pointer transition-colors" onClick={() => onSelectClub(club.id)}>
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -223,9 +228,9 @@ function ClubChatView({
                 const isMe = msg.userId === user.id;
                 const canDeleteThis = isMe || canModerateChat;
                 return (
-                  <div key={msg.id} className="flex items-start gap-3">
+                  <div key={msg.id} className={`flex items-start gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
                     <Avatar url={sender?.avatarUrl} seed={msg.userId} firstName={sender?.firstName} lastName={sender?.lastName} size={40} showPlaceholderBadge />
-                    <div className="flex-1">
+                    <div className={`w-fit max-w-[78%] ${isMe ? "ml-auto" : "mr-auto"}`}>
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-grey-1">{isMe ? "You" : sender ? `${sender.firstName} ${sender.lastName}` : "Member"}</span>
@@ -244,7 +249,7 @@ function ClubChatView({
                           )}
                         </div>
                       </div>
-                      <div className="text-xs text-grey-3 mb-2">{new Date(msg.createdAt).toLocaleString()}</div>
+                      <div className="text-xs text-grey-3 mb-2">{formatRelativeTime(msg.createdAt)}</div>
                       <div className={`text-sm text-grey-1 pl-3 border-l-2 ${isMe ? "border-green-500" : "border-primary-1"}`}>
                         {msg.content}
                         {msg.mediaType === "image" && msg.mediaUrl && (

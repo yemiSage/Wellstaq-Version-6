@@ -1,22 +1,25 @@
-// path: app/dashboard/layout.tsx
+﻿// path: app/dashboard/layout.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { TopNav } from "@/components/dashboard/top-nav";
 import { DashboardDataProvider, useDashboardData } from "@/components/providers/dashboard-data-provider";
-import { hasPermission, getSwitchableScopes } from "@/lib/permissions";
+import { getSwitchableScopes } from "@/lib/permissions";
+import { clearAuthTokens } from "@/services/auth-token";
 
 function AccessGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { currentUser, isLoading } = useDashboardData();
 
   useEffect(() => {
     if (isLoading || !currentUser) return;
 
-    if (!hasPermission(currentUser.permissions, "overview")) {
+    if (!getSwitchableScopes(currentUser.permissions).canViewOverview) {
+      clearAuthTokens();
       router.replace("/login?error=insufficient_permission");
       return;
     }
@@ -33,16 +36,18 @@ function AccessGate({ children }: { children: React.ReactNode }) {
       const defaultBranchId = switchable.scopedBranchIds.includes(currentUser.branchId)
         ? currentUser.branchId
         : switchable.scopedBranchIds[0];
-      router.replace(`/dashboard?branchId=${defaultBranchId}`);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("branchId", defaultBranchId);
+      router.replace(`${pathname}?${params.toString()}`);
     }
-  }, [currentUser, isLoading, router, searchParams]);
+  }, [currentUser, isLoading, pathname, router, searchParams]);
 
   if (isLoading) {
     return <div className="flex h-screen items-center justify-center text-grey-3">Loading...</div>;
   }
 
-  if (currentUser && !hasPermission(currentUser.permissions, "overview")) {
-    return null;
+  if (currentUser && !getSwitchableScopes(currentUser.permissions).canViewOverview) {
+    return <div className="flex h-screen items-center justify-center px-6 text-center text-sm text-red-600">You don&apos;t have permission to view this resource. Redirecting to login...</div>;
   }
 
   return <>{children}</>;

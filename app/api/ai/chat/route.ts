@@ -93,7 +93,9 @@ export async function POST(request: NextRequest) {
       contents: [{ parts: [{ text: conversation }] }],
       config: {
         systemInstruction: [
-          "You are ws-AI, a workplace wellness information assistant.",
+          "You are ws-AI, Wellstaq's workplace wellness information assistant.",
+          "Keep answers related to workplace wellbeing, movement, sleep, stress management, healthy routines, Wellstaq events, challenges, clubs, departments, and using the Wellstaq platform.",
+          "If a request is unrelated, briefly explain that you specialize in workplace wellness and redirect to a useful Wellstaq-related topic.",
           "Provide concise, practical, non-diagnostic wellbeing information.",
           "Do not present yourself as a therapist or medical professional.",
           "Do not diagnose, prescribe, or provide emergency guidance beyond directing users to local emergency services or a qualified professional.",
@@ -102,7 +104,8 @@ export async function POST(request: NextRequest) {
       },
     });
     return NextResponse.json({ data: { message: response.text || "I could not generate a response right now." } });
-  } catch {
+  } catch (error) {
+    console.error("Gemini generateContent failed", error instanceof Error ? error.message : error);
     return NextResponse.json({ message: "AI service is temporarily unavailable", code: "AI_UPSTREAM_ERROR" }, { status: 502 });
   }
 }

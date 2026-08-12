@@ -15,7 +15,7 @@ import { api, type StatsPeriod } from "@/services/api";
 import { TrendBadge } from "@/components/dashboard/trend-badge";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { useDashboardScope } from "@/lib/scope";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, readablePermission } from "@/lib/permissions";
 import type { StatTrend, Challenge as ChallengeListItem, ChallengeListResponse, LivePulseResponse, EngagementWellbeingTrendPeriod, EngagementWellbeingTrendPoint } from "@/types/api";
 
 const PULSE_QUESTION_META: {
@@ -325,7 +325,7 @@ export default function DashboardPage() {
                 {!canViewPulse && (
                   <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
                     <Lock className="w-6 h-6 text-grey-3" />
-                    <p className="text-sm text-grey-3">You don&apos;t have permission to view this resource.</p>
+                    <p className="text-sm text-grey-3">You don&apos;t have permission to {readablePermission("wellbeing.view_team").toLowerCase()}.</p>
                   </div>
                 )}
 

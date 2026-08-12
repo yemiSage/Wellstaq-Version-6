@@ -15,15 +15,21 @@ import { api } from "@/services/api";
 import { useDashboardScope } from "@/lib/scope";
 import { StatCard } from "@/components/dashboard/stat-card";
 import type { DepartmentItem, DepartmentMemberInfo, OrganizationMemberInfo, StatTrend } from "@/types/api";
+import { hasPermission } from "@/lib/permissions";
 
 export default function DepartmentsPage() {
-  const { organizationId, branches } = useDashboardData();
+  const { organizationId, branches, currentUser } = useDashboardData();
   const { scope } = useDashboardScope();
+  const permissionBranchId = scope.type === "branch" ? scope.branchId : undefined;
+  const canCreateDepartment = currentUser ? hasPermission(currentUser.permissions, "department.create", permissionBranchId) : false;
+  const canUpdateDepartment = currentUser ? hasPermission(currentUser.permissions, "department.update", permissionBranchId) : false;
+  const canDeleteDepartment = currentUser ? hasPermission(currentUser.permissions, "department.delete", permissionBranchId) : false;
   type Department = {
     id: string; name: string; members: number; activities: number; rank: number | null;
-    branch: string; branchId: string; avatars: string[]; healthScore?: number; engagement?: number;
+    branch: string; branchId: string; avatars: string[]; healthScore?: number; avgDailySteps: number | null;
   };
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [organizationMembers, setOrganizationMembers] = useState<OrganizationMemberInfo[]>([]);
   const [departmentMembers, setDepartmentMembers] = useState<DepartmentMemberInfo[]>([]);
   const [stats, setStats] = useState({
@@ -66,6 +72,7 @@ export default function DepartmentsPage() {
             activities: rank?.totalActivities ?? 0, rank: rank?.rank ?? null,
             branchId: item.branchId, branch: branchNames.get(item.branchId) ?? "Unknown branch",
             avatars: [], healthScore: rank?.performanceScore ? Number(rank.performanceScore) : undefined,
+            avgDailySteps: rank?.avgDailySteps ? Number(rank.avgDailySteps) : null,
           };
         }));
         setSelectedDepartment(null);
@@ -137,7 +144,11 @@ export default function DepartmentsPage() {
     }
   ];
 
-  const filteredDepartments = departments;
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredDepartments = departments.filter((department) =>
+    !normalizedSearch || department.name.toLowerCase().includes(normalizedSearch)
+      || department.branch.toLowerCase().includes(normalizedSearch),
+  );
   const selectedBranchName = scope.type === "branch"
     ? branches.find((branch) => branch.id === scope.branchId)?.name ?? "Branch"
     : "Organization overview";
@@ -185,6 +196,7 @@ export default function DepartmentsPage() {
       id: created.id, name: created.name, members: selectedMembers.length,
       activities: 0, rank: null, branch: selectedBranchName, branchId: created.branchId,
       avatars: selectedMembers.map(id => organizationMembers.find(m => m.id === id)?.avatarUrl).filter((avatar): avatar is string => Boolean(avatar)),
+      avgDailySteps: null,
     };
     setDepartments([newDepartment, ...departments]);
     setIsCreateModalOpen(false);
@@ -245,7 +257,7 @@ export default function DepartmentsPage() {
           <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Departments</h1>
           <p className="text-grey-2">Manage and track your organization&apos;s departments.</p>
         </div>
-        <button
+        {canCreateDepartment && <button
           onClick={() => scope.type === "branch" && setIsCreateModalOpen(true)}
           disabled={scope.type !== "branch"}
           title={scope.type === "overview" ? "Select a branch before creating a department" : undefined}
@@ -253,7 +265,7 @@ export default function DepartmentsPage() {
         >
           <Plus className="w-4 h-4" />
           Create Department
-        </button>
+        </button>}
       </div>
 
       {/* Stats Cards */}
@@ -279,6 +291,8 @@ export default function DepartmentsPage() {
             <input
               type="text"
               placeholder="Search departments..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full h-10 pl-9 pr-4 rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
             />
           </div>
@@ -288,13 +302,13 @@ export default function DepartmentsPage() {
               <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white rounded-[12px]">
                 <h3 className="text-lg font-bold text-grey-1 mb-2">No Departments Available</h3>
                 <p className="text-sm text-grey-2 mb-6">You haven&apos;t created any departments yet. Start by creating departments and adding team members!</p>
-                <button
+                {canCreateDepartment && <button
                   onClick={() => setIsCreateModalOpen(true)}
                   className="flex items-center gap-2 px-6 py-2 bg-white border border-[#EA6A05] text-[#EA6A05] rounded-lg text-sm font-medium hover:bg-orange-50"
                 >
                   <Plus className="w-4 h-4" />
                   Create Department
-                </button>
+                </button>}
               </div>
             ) : (
               filteredDepartments.map((department) => (
@@ -378,10 +392,10 @@ export default function DepartmentsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setIsAddMemberModalOpen(true)} className="w-8 h-8 rounded-lg bg-[#EA6A05] text-white flex items-center justify-center hover:bg-[#C45700]">
+                    {canUpdateDepartment && <button onClick={() => setIsAddMemberModalOpen(true)} className="w-8 h-8 rounded-lg bg-[#EA6A05] text-white flex items-center justify-center hover:bg-[#C45700]">
                       <UserPlus className="w-4 h-4" />
-                    </button>
-                    <button
+                    </button>}
+                    {canUpdateDepartment && <button
                       onClick={() => {
                         setEditDepartmentName(selectedDepartment.name);
                         setIsEditModalOpen(true);
@@ -389,13 +403,13 @@ export default function DepartmentsPage() {
                       className="w-8 h-8 rounded-lg border border-grey-4 text-grey-2 flex items-center justify-center hover:bg-grey-5"
                     >
                       <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
+                    </button>}
+                    {canDeleteDepartment && <button
                       onClick={() => setIsDeleteModalOpen(true)}
                       className="w-8 h-8 rounded-lg border border-red-100 text-red-500 bg-red-50 flex items-center justify-center hover:bg-red-100"
                     >
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </button>}
                   </div>
                 </div>
 
@@ -405,7 +419,7 @@ export default function DepartmentsPage() {
                     <p className="text-xs text-grey-3">Members</p>
                   </div>
                   <div className="p-4 rounded-[12px] border border-[#E6E6E6] bg-white">
-                    <h3 className="text-2xl font-bold text-grey-1 mb-1">18,500</h3>
+                    <h3 className="text-2xl font-bold text-grey-1 mb-1">{selectedDepartment.avgDailySteps === null ? "Not available" : selectedDepartment.avgDailySteps.toLocaleString()}</h3>
                     <p className="text-xs text-grey-3">Avg Daily Steps</p>
                   </div>
                   <div className="p-4 rounded-[12px] border border-[#E6E6E6] bg-white">

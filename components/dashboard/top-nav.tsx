@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Menu, Plus, Settings2, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus, LoaderCircle, UserPlus } from "lucide-react";
+import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Menu, Plus, Settings2, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus, UserPlus } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -10,16 +10,13 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
-import { notificationGroups } from "@/lib/workspace-activity";
-import type { BranchInvitee, UserSearchResult } from "@/types/api";
+import type { Branch, NotificationItem, OrganizationMemberInfo, UserSearchResult } from "@/types/api";
 
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function truncateProfileText(value: string) {
   return value.length > 14 ? `${value.slice(0, 14)}...` : value;
@@ -29,15 +26,15 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [activeNotificationGroup, setActiveNotificationGroup] = useState(notificationGroups[0].group);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isAddBranchModalOpen, setIsAddBranchModalOpen] = useState(false);
-  const [branchModalStep, setBranchModalStep] = useState<"current" | "new">("current");
-  const [currentBranchName, setCurrentBranchName] = useState("");
   const [newBranchName, setNewBranchName] = useState("");
-  const [employeeQuery, setEmployeeQuery] = useState("");
-  const [invitees, setInvitees] = useState<BranchInvitee[]>([]);
-  const [userMatches, setUserMatches] = useState<UserSearchResult[]>([]);
-  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [createdBranch, setCreatedBranch] = useState<Branch | null>(null);
+  const [managerCandidates, setManagerCandidates] = useState<OrganizationMemberInfo[]>([]);
+  const [selectedManagerId, setSelectedManagerId] = useState("");
+  const [isAssigningManager, setIsAssigningManager] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [globalUserMatches, setGlobalUserMatches] = useState<UserSearchResult[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const [chatInput, setChatInput] = useState("");
@@ -51,14 +48,39 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
-  const branchSearchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { user: userData, activeBranch, addBranch, nameCurrentBranch, members } = useDashboardData();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const routeKey = `${pathname}?${searchParams.toString()}`;
+  const { user: userData, activeBranch, addBranch, members, organizationId } = useDashboardData();
 
-  const currentUserRole = members.find((member) => member.email.toLowerCase() === userData.email.toLowerCase() && member.branch === activeBranch)?.role;
+  const currentUserRole = members.find((member) => (member.email ?? "").toLowerCase() === (userData.email ?? "").toLowerCase() && member.branch === activeBranch)?.role;
   const isAdmin = !currentUserRole || ["Super Admin", "Branch Manager"].includes(currentUserRole) || userData.email.toLowerCase().includes("admin");
-  const selectedNotificationGroup = notificationGroups.find((group) => group.group === activeNotificationGroup) ?? notificationGroups[0];
   const signedInUserName = `${userData.firstName} ${userData.lastName}`.trim();
+
+  useEffect(() => {
+    setIsChatOpen(false);
+    setIsProfileOpen(false);
+    setIsNotificationsOpen(false);
+    setIsAddBranchModalOpen(false);
+    setIsLogoutModalOpen(false);
+  }, [routeKey]);
+  const navigationItems = [
+    ["Overview", "/dashboard"], ["Teams", "/dashboard/teams"], ["Departments", "/dashboard/departments"],
+    ["Events", "/dashboard/events"], ["Challenges", "/dashboard/challenges"], ["Clubs", "/dashboard/clubs"],
+    ["Integrations", "/dashboard/integrations"], ["Settings", "/dashboard/settings"], ["Contact Support", "/dashboard/contact"],
+  ] as const;
+  const globalNavigationMatches = globalSearch.trim().length < 2 ? [] : navigationItems.filter(([label]) => label.toLowerCase().includes(globalSearch.trim().toLowerCase()));
+
+  useEffect(() => {
+    const query = globalSearch.trim();
+    if (query.length < 2) return setGlobalUserMatches([]);
+    let cancelled = false;
+    const timer = setTimeout(() => void api.users.search(query).then((matches) => {
+      if (!cancelled) setGlobalUserMatches(matches.slice(0, 5));
+    }).catch(() => { if (!cancelled) setGlobalUserMatches([]); }), 200);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [globalSearch]);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -71,32 +93,23 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   }, [messages, isChatOpen, isTyping]);
 
   useEffect(() => {
-    const query = employeeQuery.trim();
-    if (!isAddBranchModalOpen || branchModalStep !== "new" || query.length < 2) {
-      setUserMatches([]);
-      setIsSearchingUsers(false);
-      return;
-    }
-
     let cancelled = false;
-    const timer = setTimeout(async () => {
-      setIsSearchingUsers(true);
-      try {
-        const matches = await api.users.search(query);
-        if (!cancelled) {
-          const selectedEmails = new Set(invitees.map((invitee) => invitee.email.toLowerCase()));
-          setUserMatches(matches.filter((match) => !selectedEmails.has(match.email.toLowerCase())));
-        }
-      } finally {
-        if (!cancelled) setIsSearchingUsers(false);
-      }
-    }, 200);
+    api.notifications.list({ limit: 10 }).then((response) => {
+      if (!cancelled) setNotifications(response.items);
+    }).catch(() => { if (!cancelled) setNotifications([]); });
+    return () => { cancelled = true; };
+  }, []);
 
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [branchModalStep, employeeQuery, invitees, isAddBranchModalOpen]);
+  const openNotification = async (notification: NotificationItem) => {
+    if (!notification.isRead) {
+      await api.notifications.markRead(notification.id);
+      setNotifications((items) => items.map((item) => item.id === notification.id ? { ...item, isRead: true } : item));
+    }
+    setIsNotificationsOpen(false);
+    if (notification.referenceType === "event" && notification.referenceId) router.push(`/dashboard/events/${notification.referenceId}`);
+    else if (notification.referenceType === "challenge" && notification.referenceId) router.push(`/dashboard/challenges/${notification.referenceId}`);
+  };
+
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -133,54 +146,19 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
     }
   };
   const openBranchModal = () => {
-    setBranchModalStep("new");
-    setCurrentBranchName("");
     setNewBranchName("");
-    setEmployeeQuery("");
-    setInvitees([]);
-    setUserMatches([]);
+    setCreatedBranch(null);
+    setManagerCandidates([]);
+    setSelectedManagerId("");
     setIsAddBranchModalOpen(true);
   };
 
   const closeBranchModal = () => {
     setIsAddBranchModalOpen(false);
-    setBranchModalStep("current");
-    setCurrentBranchName("");
     setNewBranchName("");
-    setEmployeeQuery("");
-    setInvitees([]);
-    setUserMatches([]);
-  };
-
-  const handleNameCurrentBranch = async () => {
-    const name = currentBranchName.trim();
-    if (!name) {
-      toast.error("Please enter the current branch name");
-      return;
-    }
-
-    await nameCurrentBranch(name);
-    setBranchModalStep("new");
-  };
-
-  const addInvitee = (invitee: BranchInvitee) => {
-    if (invitees.some((item) => item.email.toLowerCase() === invitee.email.toLowerCase())) {
-      toast.error("This employee has already been added");
-      return;
-    }
-
-    setInvitees((current) => [...current, invitee]);
-    setEmployeeQuery("");
-    setUserMatches([]);
-  };
-
-  const addEmployeeQuery = () => {
-    const email = employeeQuery.trim().toLowerCase();
-    if (!EMAIL_PATTERN.test(email)) {
-      toast.error("Enter a valid email or select an existing user");
-      return;
-    }
-    addInvitee({ email });
+    setCreatedBranch(null);
+    setManagerCandidates([]);
+    setSelectedManagerId("");
   };
 
   const handleAddBranch = async () => {
@@ -190,22 +168,27 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
       return;
     }
 
-    let branchInvitees = invitees;
-    const pendingEmail = employeeQuery.trim().toLowerCase();
-    if (pendingEmail) {
-      if (!EMAIL_PATTERN.test(pendingEmail)) {
-        toast.error("Enter a valid email or select an existing user");
-        return;
-      }
-      if (!branchInvitees.some((item) => item.email.toLowerCase() === pendingEmail)) {
-        branchInvitees = [...branchInvitees, { email: pendingEmail }];
-      }
-    }
-
-    await addBranch({ name, invitees: branchInvitees });
-
+    const branch = await addBranch(name);
     toast.success("Branch added successfully!");
-    closeBranchModal();
+    setCreatedBranch(branch);
+    if (organizationId) {
+      const response = await api.organization.getMembers(organizationId, { limit: 200 });
+      setManagerCandidates(response.items.filter((member) =>
+        member.status === "active" && member.roleName?.toLowerCase() !== "super_admin"
+      ));
+    }
+  };
+
+  const handleAssignManager = async () => {
+    if (!organizationId || !createdBranch || !selectedManagerId) return;
+    setIsAssigningManager(true);
+    try {
+      await api.organization.assignBranchManager(organizationId, createdBranch.id, selectedManagerId);
+      toast.success("Branch manager assigned successfully!");
+      closeBranchModal();
+    } finally {
+      setIsAssigningManager(false);
+    }
   };
 
   const startNewChat = () => {
@@ -215,7 +198,6 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
 
   useClickOutside(profileRef, () => setIsProfileOpen(false));
   useClickOutside(notificationsRef, () => setIsNotificationsOpen(false));
-  useClickOutside(branchSearchRef, () => setUserMatches([]));
 
   useEffect(() => {
     window.addEventListener("wellstaq:open-add-branch", openBranchModal);
@@ -239,8 +221,20 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
             <input
               type="text"
               placeholder="Search..."
+              value={globalSearch}
+              onChange={(event) => setGlobalSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && globalNavigationMatches[0]) {
+                  router.push(globalNavigationMatches[0][1]);
+                  setGlobalSearch("");
+                }
+              }}
               className="h-11 w-full rounded-[8px] border border-grey-4 bg-white pl-10 pr-16 text-sm focus:border-primary-1 focus:outline-none focus:ring-2 focus:ring-primary-1/20"
             />
+            {globalSearch.trim().length >= 2 && (globalNavigationMatches.length > 0 || globalUserMatches.length > 0) && <div className="absolute left-0 right-0 top-12 z-50 max-h-80 overflow-y-auto rounded-xl border border-grey-4 bg-white p-2 shadow-xl">
+              {globalNavigationMatches.map(([label, href]) => <button key={href} onClick={() => { router.push(href); setGlobalSearch(""); }} className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-grey-5">{label}</button>)}
+              {globalUserMatches.map((match) => <button key={match.id} onClick={() => { router.push(`/dashboard/profile/${match.id}`); setGlobalSearch(""); }} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-grey-5"><div className="text-sm font-medium text-grey-1">{match.name}</div><div className="text-xs text-grey-3">{match.email}</div></button>)}
+            </div>}
             <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1">
               <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">⌘</kbd>
               <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">K</kbd>
@@ -270,7 +264,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               title="Notifications"
             >
               <Bell className="w-4 h-4 lg:w-5 lg:h-5" />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary-1" />
+              {notifications.some((item) => !item.isRead) && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary-1" />}
             </button>
             <AnimatePresence>
               {isNotificationsOpen && (
@@ -291,43 +285,19 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                       View all
                     </Link>
                   </div>
-                  <div className="border-b border-grey-4 px-4">
-                    <div className="flex gap-2" role="tablist" aria-label="Notification categories">
-                      {notificationGroups.map((group) => (
-                        (() => {
-                          const Icon = group.icon;
-                          return (
-                            <button
-                              key={group.group}
-                              type="button"
-                              role="tab"
-                              aria-selected={activeNotificationGroup === group.group}
-                              onClick={() => setActiveNotificationGroup(group.group)}
-                              className={`flex items-center gap-1.5 border-b-2 py-3 text-xs font-medium transition-colors ${activeNotificationGroup === group.group
-                                ? "border-primary-1 text-primary-1"
-                                : "border-transparent text-grey-2 hover:text-grey-1"
-                                }`}
-                            >
-                              <Icon className="h-3.5 w-3.5" />
-                              {group.group}
-                            </button>
-                          );
-                        })()
-                      ))}
-                    </div>
-                  </div>
                   <div className="max-h-[360px] overflow-y-auto p-2">
-                    {selectedNotificationGroup.items.map((item) => (
-                      <div key={`${selectedNotificationGroup.group}-${item.title}`} className="flex items-start gap-3 rounded-lg px-2 py-3 hover:bg-grey-5">
-                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.unread ? "bg-primary-1" : "bg-grey-4"}`} />
+                    {notifications.length === 0 && <p className="px-3 py-8 text-center text-sm text-grey-3">No notifications yet.</p>}
+                    {notifications.map((item) => (
+                      <button type="button" onClick={() => void openNotification(item)} key={item.id} className="flex w-full items-start gap-3 rounded-lg px-2 py-3 text-left hover:bg-grey-5">
+                        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${!item.isRead ? "bg-primary-1" : "bg-grey-4"}`} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
-                            <p className="text-sm font-medium text-grey-1">{item.title}</p>
-                            <p className="shrink-0 text-xs text-grey-3">{item.time}</p>
+                            <p className="text-sm font-medium capitalize text-grey-1">{item.notificationType.replaceAll("_", " ")}</p>
+                            <p className="shrink-0 text-xs text-grey-3">{new Date(item.createdAt).toLocaleDateString()}</p>
                           </div>
                           <p className="mt-1 text-xs text-grey-2">{item.body}</p>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </motion.div>
@@ -376,6 +346,14 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                   transition={{ duration: 0.2, ease: "easeOut" }}
                   className="absolute right-0 mt-2 w-48 bg-white border border-grey-4 rounded-lg shadow-lg z-50 py-1 origin-top-right"
                 >
+                  <Link
+                    href={userData.id ? `/dashboard/profile/${userData.id}` : "/dashboard/settings"}
+                    onClick={() => setIsProfileOpen(false)}
+                    className="w-full text-left px-4 py-2 text-sm text-grey-1 hover:bg-grey-5 flex items-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    View profile
+                  </Link>
                   <Link
                     href="/dashboard/settings"
                     onClick={() => setIsProfileOpen(false)}
@@ -556,123 +534,32 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
       <Modal
         isOpen={isAddBranchModalOpen}
         onClose={closeBranchModal}
-        title={branchModalStep === "current" ? "Name Current Branch" : "Create New Branch"}
-        subtitle={branchModalStep === "current" ? "Give your current branch a name before adding another." : "Create another branch for your organization."}
+        title={createdBranch ? "Assign Branch Manager" : "Create New Branch"}
+        subtitle={createdBranch
+          ? `${createdBranch.name} has no members yet. You can assign a manager from your organization now.`
+          : "Create another branch for your organization. Team members can be invited later."}
         footer={
           <>
-            <Button variant="outline" className="border-grey-4 bg-white text-grey-2 hover:bg-grey-5" onClick={closeBranchModal}>Cancel</Button>
-            <Button onClick={branchModalStep === "current" ? handleNameCurrentBranch : handleAddBranch}>
-              {branchModalStep === "current" ? "Continue" : "Add Branch"}
-            </Button>
+            <Button variant="outline" className="border-grey-4 bg-white text-grey-2 hover:bg-grey-5" onClick={closeBranchModal}>{createdBranch ? "Skip for now" : "Cancel"}</Button>
+            {createdBranch
+              ? <Button disabled={!selectedManagerId || isAssigningManager} onClick={handleAssignManager}>{isAssigningManager ? "Assigning..." : "Assign Manager"}</Button>
+              : <Button onClick={handleAddBranch}>Add Branch</Button>}
           </>
         }
       >
-        {branchModalStep === "current" ? (
-          <div>
-            <div className="space-y-2">
-              <Label htmlFor="currentBranchName">Current Branch Name</Label>
-              <Input
-                id="currentBranchName"
-                placeholder="e.g. Lagos Headquarters"
-                value={currentBranchName}
-                onChange={(e) => setCurrentBranchName(e.target.value)}
-              />
-            </div>
+        {createdBranch ? (
+          <div className="space-y-2">
+            <Label htmlFor="branchManager">Organization member</Label>
+            <select id="branchManager" value={selectedManagerId} onChange={(event) => setSelectedManagerId(event.target.value)} className="h-11 w-full rounded-[8px] border border-grey-4 bg-white px-3 text-sm text-grey-1 focus:border-primary-1 focus:outline-none">
+              <option value="">Select a manager</option>
+              {managerCandidates.map((member) => <option key={member.id} value={member.id}>{member.firstName} {member.lastName} ({member.email})</option>)}
+            </select>
+            {managerCandidates.length === 0 && <p className="text-sm text-grey-3">There are no eligible organization members to assign yet.</p>}
           </div>
         ) : (
-          <div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="branchName">New Branch Name</Label>
-                <Input
-                  id="branchName"
-                  placeholder="e.g. Abuja Office"
-                  value={newBranchName}
-                  onChange={(e) => setNewBranchName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="employees">Add/invite employee</Label>
-                <div ref={branchSearchRef} className="relative">
-                  <div className="flex gap-2">
-                    <Input
-                      id="employees"
-                      type="text"
-                      autoComplete="off"
-                      placeholder="Search users or enter an email"
-                      value={employeeQuery}
-                      onChange={(e) => setEmployeeQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addEmployeeQuery();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={addEmployeeQuery}
-                      title="Add email invitation"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {(isSearchingUsers || userMatches.length > 0) && (
-                    <div className="absolute left-0 right-12 top-[48px] z-20 max-h-48 overflow-y-auto rounded-lg border border-grey-4 bg-white shadow-lg">
-                      {isSearchingUsers ? (
-                        <div className="flex items-center gap-2 px-3 py-3 text-sm text-grey-3">
-                          <LoaderCircle className="h-4 w-4 animate-spin" />
-                          Searching users
-                        </div>
-                      ) : (
-                        userMatches.map((user) => (
-                          <button
-                            key={user.id}
-                            type="button"
-                            onClick={() => addInvitee({
-                              userId: user.id,
-                              name: user.name,
-                              email: user.email,
-                            })}
-                            className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-grey-5"
-                          >
-                            <span>
-                              <span className="block text-sm font-medium text-grey-1">{user.name}</span>
-                              <span className="block text-xs text-grey-3">{user.email}</span>
-                            </span>
-                            <Plus className="h-4 w-4 text-primary-1" />
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {invitees.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {invitees.map((invitee) => (
-                      <span
-                        key={invitee.email}
-                        className="inline-flex max-w-full items-center gap-1 rounded-md bg-primary-5 px-2 py-1 text-xs text-primary-1"
-                      >
-                        <span className="truncate">{invitee.name ?? invitee.email}</span>
-                        <button
-                          type="button"
-                          onClick={() => setInvitees((current) => current.filter((item) => item.email !== invitee.email))}
-                          className="shrink-0"
-                          aria-label={`Remove ${invitee.name ?? invitee.email}`}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="branchName">Branch Name</Label>
+            <Input id="branchName" autoFocus placeholder="e.g. Abuja Office" value={newBranchName} onChange={(e) => setNewBranchName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void handleAddBranch(); }} />
           </div>
         )}
       </Modal>

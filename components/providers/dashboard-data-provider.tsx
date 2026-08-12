@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 // path: components/providers/dashboard-data-provider.tsx
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -102,12 +102,23 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
 
   const addBranch = useCallback(async (name: string) => {
     if (!currentUser?.organizationId) throw new Error("Organization is not loaded.");
-    const created = await api.organization.createBranch(currentUser.organizationId, name);
+    const organizationId = currentUser.organizationId;
+    const created = await api.organization.createBranch(organizationId, name);
     setData((current) => ({
       ...current,
-      branches: [...current.branches, created],
+      branches: [...current.branches.filter((branch) => branch.id !== created.id), created],
       activeBranch: created.name,
     }));
+    // Reconcile with the canonical server list without requiring a browser
+    // refresh. Keep the newly-created row if a replica/cache is briefly stale.
+    void api.organization.getBranches(organizationId).then((serverBranches) => {
+      setData((current) => ({
+        ...current,
+        branches: serverBranches.some((branch) => branch.id === created.id)
+          ? serverBranches
+          : [...serverBranches, created],
+      }));
+    }).catch(() => undefined);
     return created;
   }, [currentUser?.organizationId]);
 

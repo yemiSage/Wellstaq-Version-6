@@ -1,4 +1,4 @@
-// path: types/api.ts
+﻿// path: types/api.ts
 
 export type DataSource = "mock" | "api";
 
@@ -46,6 +46,25 @@ export interface UserSearchResult {
   avatar?: string;
 }
 
+export interface DirectoryUserProfile {
+  id: string;
+  firstName: string;
+  lastName: string;
+  name: string;
+  email: string;
+  phoneNumber?: string;
+  profileImage?: string;
+  country?: string;
+  state?: string;
+  status?: string;
+  branchId?: string;
+  branchName?: string;
+  departmentId?: string;
+  departmentName?: string;
+  role?: string;
+  joinedAt: string;
+}
+
 export interface ChatMessage {
   role: "user" | "ai";
   content: string;
@@ -86,6 +105,23 @@ export interface AuthTokenResponse {
   refreshToken: string;
   tokenType: string;
 }
+
+export interface InviteRegistrationResponse {
+  message: string;
+  role: string;
+  requiresApp: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  tokenType?: string;
+}
+
+export interface TwoFaChallengeResponse {
+  requires2fa: true;
+  twoFaMethod: "totp" | "email" | "sms";
+  twoFaChallengeToken: string;
+}
+
+export type LoginResponse = AuthTokenResponse | TwoFaChallengeResponse;
 
 export interface FastApiValidationItem {
   loc: (string | number)[];
@@ -413,10 +449,31 @@ export interface OrganizationMemberInfo {
   avatarUrl: string | null;
   status: string;
   roleId: string | null;
+  roleName?: string | null;
   branchId: string | null;
+  departmentId?: string | null;
+  publicProfile?: boolean;
 }
 export interface OrganizationMembersListResponse {
   items: OrganizationMemberInfo[]; total: number; offset: number; limit: number;
+}
+export interface OrganizationInviteItem {
+  inviteId: string;
+  invitedEmail: string;
+  organizationId: string;
+  branchId: string | null;
+  invitedDepartmentId: string;
+  invitedRoleId: string;
+  invitedBy: string;
+  status: "pending" | "accepted" | "expired" | "cancelled";
+  expiresAt: string;
+  createdAt: string;
+}
+export interface OrganizationInviteListResponse {
+  items: OrganizationInviteItem[];
+  total: number;
+  offset: number;
+  limit: number;
 }
 
 export interface DepartmentItem {
@@ -585,3 +642,59 @@ export interface DepartmentMembersListResponse {
   offset: number;
   limit: number;
 }
+
+export interface NotificationItem {
+  id: string; organizationId: string | null; actorId: string | null;
+  notificationType: string; referenceId: string | null; referenceType: string | null;
+  body: string; imageUrl: string | null; isRead: boolean;
+  readAt: string | null; createdAt: string;
+}
+export interface NotificationListResponse {
+  items: NotificationItem[]; total: number; unreadCount: number; offset: number; limit: number;
+}
+export interface UnreadCountResponse { unreadCount: number; }
+export interface RoleItem { id: string; name: string; description: string | null; branchId?: string | null; isSystem?: boolean; isDefault?: boolean; userCount?: number; permissions?: string[]; permissionScopes?: Record<string, "org" | "branch">; }
+export interface SystemRolesResponse { items: RoleItem[]; total: number; }
+export interface PermissionCatalogueItem { id: string; name: string; description: string | null; category: string | null; scope: "org" | "branch" | "both"; }
+export interface PermissionCatalogueResponse { items: PermissionCatalogueItem[]; total: number; }
+export interface UserPermissionDetail {
+  permissionName: string; category: string | null; catalogueScope: "org" | "branch" | "both";
+  grantScope: "org_wide" | "branch"; branchId: string | null; grantedBy: string | null; grantedAt: string | null;
+}
+export interface UserPermissionsResponse { userId: string; organizationId: string; total: number; permissions: UserPermissionDetail[]; }
+export interface UserPreferences {
+  emailNotifications: boolean; pushNotifications: boolean; challengeReminders: boolean;
+  publicProfile: boolean; showActivity: boolean; theme: "light" | "dark";
+}
+export interface SendInviteResponse {
+  inviteId: string; invitedEmail: string; organizationId: string; branchId: string;
+  invitedDepartmentId: string; invitedRoleId: string; status: string; expiresAt: string;
+}
+
+export interface SubscriptionPlanItem {
+  id: string; name: string; billingInterval: "monthly" | "annual";
+  amount: number; currency: string; features: Record<string, unknown>;
+}
+export interface SubscriptionPlanListResponse { items: SubscriptionPlanItem[]; }
+export interface OrganizationSubscriptionInfo {
+  id: string; planId: string; status: "trialing" | "active" | "past_due" | "cancelled";
+  autoRenew: boolean; currentPeriodStart: string; currentPeriodEnd: string;
+  trialEndsAt: string | null; cancelledAt: string | null;
+}
+export interface PaymentTransactionItem {
+  id: string; amount: number; currency: string; status: "pending" | "succeeded" | "failed" | "refunded" | "cancelled";
+  paymentMethod: string | null; createdAt: string; externalReference: string;
+}
+export interface PaymentTransactionListResponse { items: PaymentTransactionItem[]; total: number; offset: number; limit: number; }
+export interface CheckoutResponse { authorizationUrl: string; reference: string; accessCode: string | null; }
+export interface PaymentVerificationResponse { transaction: PaymentTransactionItem; providerStatus: string; reconciled: boolean; }
+export interface ProfileSettingsInfo {
+  id: string; firstName: string; lastName: string; email: string;
+  avatarUrl: string | null; country: string | null; state: string | null;
+}
+export interface TwoFaSetupInfo { method: "totp" | "email" | "sms"; totpSecret: string | null; totpUri: string | null; }
+export interface SecuritySessionItem {
+  id: string; deviceName: string | null; ipAddress: string | null;
+  locationLabel: string | null; lastSeenAt: string; createdAt: string; isCurrent: boolean;
+}
+export interface SecuritySessionListResponse { items: SecuritySessionItem[]; }

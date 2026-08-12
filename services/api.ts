@@ -1,4 +1,4 @@
-// path: services/api.ts
+﻿// path: services/api.ts
 import type { OnboardingData } from "@/types";
 import type {
   AvailabilityResponse,
@@ -9,6 +9,7 @@ import type {
   UserProfile,
   UserSearchResult,
   AuthTokenResponse,
+  LoginResponse,
   CurrentUserResponse,
   OrgStatsResponse,
   ActivitySummaryResponse,
@@ -57,6 +58,24 @@ import type {
   EventItem,
   EventListResponse,
   EventParticipantsListResponse,
+  NotificationListResponse,
+  UnreadCountResponse,
+  SystemRolesResponse,
+  SendInviteResponse,
+  SubscriptionPlanListResponse,
+  OrganizationSubscriptionInfo,
+  PaymentTransactionItem,
+  PaymentTransactionListResponse,
+  CheckoutResponse,
+  PaymentVerificationResponse,
+  ProfileSettingsInfo,
+  TwoFaSetupInfo,
+  SecuritySessionListResponse,
+  RoleItem,
+  UserPreferences,
+  PermissionCatalogueResponse,
+  UserPermissionsResponse,
+  InviteRegistrationResponse,
 
 } from "@/types/api";
 import { request, type RequestOptions, ApiError } from "@/services/http";
@@ -132,6 +151,24 @@ export const api = {
   isMock: usingMockData,
 
   auth: {
+    requestInviteOtp: (inviteCode: string) => fromApiOrMock<{ message: string; sentTo: string }>(
+      "/auth/invite/otp/request", { message: "Verification code sent.", sentTo: "your email" },
+      { method: "POST", body: { inviteCode } },
+    ),
+    verifyInviteOtp: (inviteCode: string, code: string) => fromApiOrMock<{ inviteVerificationToken: string }>(
+      "/auth/invite/otp/verify", { inviteVerificationToken: `mock-invite-${code}` },
+      { method: "POST", body: { inviteCode, code } },
+    ),
+    registerInvite: (payload: {
+      inviteVerificationToken: string; firstName: string; lastName: string; password: string;
+      country: string; state: string;
+      baseline: { entries: Array<{ dimension: string; level: string; reason: string }> };
+      priorities: Array<{ priority: string; rank: number }>;
+    }) => fromApiOrMock<InviteRegistrationResponse>(
+      "/auth/register/invite",
+      { message: "Registration successful.", role: "member", requiresApp: true },
+      { method: "POST", body: payload },
+    ),
     sendOtp: (email: string) => fromApiOrMock("/auth/signup/otp/request", { accepted: true }, {
       method: "POST",
       body: { email },
@@ -143,10 +180,16 @@ export const api = {
         { method: "POST", body: { email, code } },
       ),
     login: (email: string, password: string) =>
-      fromApiOrMock<AuthTokenResponse>(
+      fromApiOrMock<LoginResponse>(
         "/auth/login",
         { accessToken: "mock-access-token", refreshToken: "mock-refresh-token", tokenType: "bearer" },
         { method: "POST", body: { email, password } },
+      ),
+    verifyTwoFa: (twoFaChallengeToken: string, code: string) =>
+      fromApiOrMock<AuthTokenResponse>(
+        "/auth/2fa/verify",
+        { accessToken: "mock-access-token", refreshToken: "mock-refresh-token", tokenType: "bearer" },
+        { method: "POST", body: { twoFaChallengeToken, code } },
       ),
     me: () => fromApiOrMock<CurrentUserResponse>("/auth/me", {
       userId: "mock-user",
@@ -212,6 +255,17 @@ export const api = {
       );
       return response.items;
     },
+    createBranch: (orgId: string, name: string) =>
+      fromApiOrMock<Branch>(`/organizations/${orgId}/branches`, {} as Branch, {
+        method: "POST",
+        body: { name },
+      }),
+    assignBranchManager: (orgId: string, branchId: string, managerId: string) =>
+      fromApiOrMock<{ branchId: string; organizationId: string; managerId: string; message: string }>(
+        `/organizations/${orgId}/branches/${branchId}/manager`,
+        { branchId, organizationId: orgId, managerId, message: "Manager assigned successfully." },
+        { method: "PUT", body: { managerId } },
+      ),
     getDepartments: (orgId: string, branchId?: string) =>
       fromApiOrMock<DepartmentListResponse>(
         branchId
@@ -292,6 +346,12 @@ export const api = {
         `/organizations/${orgId}/events/${eventId}/participants`,
         { eventId, userId, message: "" },
         { method: "POST", body: { user_id: userId, is_invite: true } },
+      ),
+    joinEvent: (orgId: string, eventId: string, userId: string) =>
+      fromApiOrMock<{ eventId: string; userId: string; message: string }>(
+        `/organizations/${orgId}/events/${eventId}/participants`,
+        { eventId, userId, message: "" },
+        { method: "POST", body: { user_id: userId, is_invite: false } },
       ),
     getChallenges: (
       orgId: string,
@@ -424,15 +484,97 @@ export const api = {
         { period, startDate: "", endDate: "", points: [] },
       );
     },
-    getMembers: (orgId: string, params: { offset?: number; limit?: number } = {}) => {
+    getMembers: (orgId: string, params: { offset?: number; limit?: number; branchId?: string } = {}) => {
     const query = new URLSearchParams();
     query.set("limit", String(params.limit ?? 200));
     query.set("offset", String(params.offset ?? 0));
+    if (params.branchId) query.set("branch_id", params.branchId);
     return fromApiOrMock<OrganizationMembersListResponse>(
       `/organizations/${orgId}/members?${query.toString()}`,
       { items: [], total: 0, offset: 0, limit: params.limit ?? 200 },
     );
   },
+    listInvites: (orgId: string, branchId?: string) => fromApiOrMock<import("@/types/api").OrganizationInviteListResponse>(
+      `/organizations/${orgId}/invites?status=pending&limit=200${branchId ? `&branch_id=${encodeURIComponent(branchId)}` : ""}`,
+      { items: [], total: 0, offset: 0, limit: 200 },
+    ),
+    cancelInvite: (orgId: string, inviteId: string) => fromApiOrMock<void>(
+      `/organizations/${orgId}/invites/${inviteId}`, undefined, { method: "DELETE" },
+    ),
+    sendInvite: (orgId: string, payload: { email: string; branchId: string; departmentId: string; roleId: string }) =>
+      fromApiOrMock<SendInviteResponse>(
+        `/organizations/${orgId}/invites`,
+        {} as SendInviteResponse,
+        { method: "POST", body: {
+          invited_email: payload.email,
+          branch_id: payload.branchId,
+          invited_department_id: payload.departmentId,
+          invited_role_id: payload.roleId,
+        } },
+      ),
+  },
+  roles: {
+    listSystem: (assignableOnly = false) => fromApiOrMock<SystemRolesResponse>(`/roles/system?assignable_only=${assignableOnly}`, { items: [], total: 0 }),
+    listOrganization: (orgId: string, branchId?: string) => fromApiOrMock<SystemRolesResponse>(
+      `/organizations/${orgId}/roles${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`,
+      { items: [], total: 0 },
+    ),
+    create: (orgId: string, body: { name: string; description?: string; branchId?: string }) => fromApiOrMock<RoleItem>(
+      `/organizations/${orgId}/roles`, {} as RoleItem, { method: "POST", body },
+    ),
+    delete: (orgId: string, roleId: string) => fromApiOrMock<void>(
+      `/organizations/${orgId}/roles/${encodeURIComponent(roleId)}`, undefined, { method: "DELETE" },
+    ),
+    copy: (orgId: string, roleId: string, body: { name: string }) => fromApiOrMock<RoleItem>(
+      `/organizations/${orgId}/roles/${encodeURIComponent(roleId)}/copy`, {} as RoleItem, { method: "POST", body },
+    ),
+    updatePermissions: (orgId: string, roleId: string, permissionNames: string[]) => fromApiOrMock<RoleItem>(
+      `/organizations/${orgId}/roles/${encodeURIComponent(roleId)}/permissions`, {} as RoleItem,
+      { method: "PUT", body: { permissionNames } },
+    ),
+    assignToMember: (orgId: string, userId: string, role: RoleItem) => fromApiOrMock<void>(
+      `/organizations/${orgId}/members/${userId}/${role.isDefault ? "system-role" : "custom-role"}`,
+      undefined, { method: "PUT", body: { roleId: role.id } },
+    ),
+    revokeFromMember: (orgId: string, userId: string, branchId?: string) => fromApiOrMock<void>(
+      `/organizations/${orgId}/members/${userId}/role${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`,
+      undefined, { method: "DELETE" },
+    ),
+  },
+  teamMembers: {
+    assignDepartment: (orgId: string, departmentId: string, userId: string) => fromApiOrMock(
+      `/organizations/${orgId}/departments/${departmentId}/members/${userId}`, {}, { method: "PUT" },
+    ),
+    transferBranch: (orgId: string, branchId: string, userId: string, departmentId: string) => fromApiOrMock(
+      `/organizations/${orgId}/branches/${branchId}/members/${userId}`, {}, { method: "PUT", body: { departmentId } },
+    ),
+  },
+  permissions: {
+    listCatalogue: (branchId?: string) => fromApiOrMock<PermissionCatalogueResponse>(
+      `/permissions${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`,
+      { items: [], total: 0 },
+    ),
+    getUser: (orgId: string, userId: string, branchId?: string) => fromApiOrMock<UserPermissionsResponse>(
+      `/organizations/${orgId}/members/${userId}/permissions${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`,
+      { userId, organizationId: orgId, total: 0, permissions: [] },
+    ),
+    grant: (orgId: string, userId: string, permissionName: string, branchId: string | null) => fromApiOrMock(
+      `/organizations/${orgId}/members/${userId}/permissions`, {},
+      { method: "POST", body: { permissionName, branchId } },
+    ),
+    revoke: (orgId: string, userId: string, permissionName: string, branchId: string | null) => fromApiOrMock(
+      `/organizations/${orgId}/members/${userId}/permissions`, {},
+      { method: "DELETE", body: { permissionName, branchId } },
+    ),
+  },
+  preferences: {
+    get: () => fromApiOrMock<UserPreferences>("/user-settings/preferences", {
+      emailNotifications: true, pushNotifications: true, challengeReminders: true,
+      publicProfile: false, showActivity: false, theme: "light",
+    }),
+    update: (body: Partial<UserPreferences>) => fromApiOrMock<UserPreferences>(
+      "/user-settings/preferences", {} as UserPreferences, { method: "PATCH", body },
+    ),
   },
 kpiSnapshots: {
   getOverview: async (
@@ -898,6 +1040,9 @@ story: {
         backendPath(`/v1/users/search?q=${encodeURIComponent(query.trim())}`),
       );
     },
+    profile: (userId: string) => fromApiOrMock<import("@/types/api").DirectoryUserProfile>(
+      `/v1/users/${userId}/profile`, {} as import("@/types/api").DirectoryUserProfile,
+    ),
   },
 
   ai: {
@@ -906,6 +1051,101 @@ story: {
       body: { messages, branchName },
       timeoutMs: 30_000,
     }),
+  },
+
+  integrations: {
+    list: (orgId: string) => fromApiOrMock<{ items: Array<{ id: string; name: string; description: string; status: "connected" | "disconnected"; enabled: boolean }> }>(`/organizations/${orgId}/integrations`, { items: [] }),
+    connect: (orgId: string, provider: string) => fromApiOrMock(`/organizations/${orgId}/integrations/${provider}/connect`, {}, { method: "POST" }),
+    toggle: (orgId: string, provider: string, enabled: boolean) => fromApiOrMock(`/organizations/${orgId}/integrations/${provider}`, {}, { method: "PATCH", body: { enabled } }),
+    disconnect: (orgId: string, provider: string) => fromApiOrMock<void>(`/organizations/${orgId}/integrations/${provider}`, undefined, { method: "DELETE" }),
+  },
+
+  billing: {
+    listPlans: () => fromApiOrMock<SubscriptionPlanListResponse>("/plans", { items: [] }),
+    getSubscription: (orgId: string) => fromApiOrMock<OrganizationSubscriptionInfo>(
+      `/organizations/${orgId}/subscription`, {} as OrganizationSubscriptionInfo,
+    ),
+    listTransactions: (orgId: string, params: { offset?: number; limit?: number } = {}) => {
+      const query = new URLSearchParams({ offset: String(params.offset ?? 0), limit: String(params.limit ?? 50) });
+      return fromApiOrMock<PaymentTransactionListResponse>(
+        `/organizations/${orgId}/transactions?${query.toString()}`,
+        { items: [], total: 0, offset: params.offset ?? 0, limit: params.limit ?? 50 },
+      );
+    },
+    getTransaction: (orgId: string, reference: string) => fromApiOrMock<PaymentTransactionItem>(
+      `/organizations/${orgId}/transactions/${encodeURIComponent(reference)}`, {} as PaymentTransactionItem,
+    ),
+    verifyTransaction: (orgId: string, reference: string) => fromApiOrMock<PaymentVerificationResponse>(
+      `/organizations/${orgId}/transactions/${encodeURIComponent(reference)}/verify`, {} as PaymentVerificationResponse, { method: "POST" },
+    ),
+    checkout: (orgId: string, payload: { planId: string; callbackUrl: string; autoRenew: boolean }) => fromApiOrMock<CheckoutResponse>(
+      `/organizations/${orgId}/checkout`, {} as CheckoutResponse, {
+        method: "POST", body: { plan_id: payload.planId, callback_url: payload.callbackUrl, auto_renew: payload.autoRenew },
+      },
+    ),
+    cancelAutoRenew: (orgId: string) => fromApiOrMock<OrganizationSubscriptionInfo>(
+      `/organizations/${orgId}/subscription/cancel-auto-renew`, {} as OrganizationSubscriptionInfo, { method: "POST" },
+    ),
+    updateAutoRenew: (orgId: string, enabled: boolean) => fromApiOrMock<OrganizationSubscriptionInfo>(
+      `/organizations/${orgId}/subscription/auto-renew`, {} as OrganizationSubscriptionInfo,
+      { method: "PATCH", body: { enabled } },
+    ),
+  },
+
+  profile: {
+    get: () => fromApiOrMock<ProfileSettingsInfo>("/user-settings/profile", {} as ProfileSettingsInfo),
+    update: (payload: { firstName: string; lastName: string; country?: string; state?: string }) =>
+      fromApiOrMock<ProfileSettingsInfo>("/user-settings/profile", {} as ProfileSettingsInfo, {
+        method: "PATCH",
+        body: { first_name: payload.firstName, last_name: payload.lastName, country: payload.country || null, state: payload.state || null },
+      }),
+    updateAvatar: (mediaUrl: string) => fromApiOrMock<{ avatarUrl: string }>(
+      "/user-settings/avatar", { avatarUrl: mediaUrl }, { method: "PUT", body: { media_url: mediaUrl } },
+    ),
+  },
+
+  security: {
+    changePassword: (currentPassword: string, newPassword: string) => fromApiOrMock<{ message: string }>(
+      "/user-settings/change-password", { message: "Password changed successfully." },
+      { method: "POST", body: { current_password: currentPassword, new_password: newPassword } },
+    ),
+    setupTwoFa: (method: "totp" | "email") => fromApiOrMock<TwoFaSetupInfo>(
+      "/auth/2fa/setup", {} as TwoFaSetupInfo, { method: "POST", body: { method } },
+    ),
+    confirmTwoFa: (code: string) => fromApiOrMock<void>(
+      "/auth/2fa/confirm", undefined, { method: "POST", body: { code } },
+    ),
+    disableTwoFa: (password: string) => fromApiOrMock<void>(
+      "/auth/2fa/disable", undefined, { method: "POST", body: { password } },
+    ),
+    listSessions: () => fromApiOrMock<SecuritySessionListResponse>("/auth/sessions", { items: [] }),
+    revokeSession: (sessionId: string) => fromApiOrMock<void>(
+      `/auth/sessions/${encodeURIComponent(sessionId)}`, undefined, { method: "DELETE" },
+    ),
+  },
+
+  notifications: {
+    list: (params: { unreadOnly?: boolean; offset?: number; limit?: number } = {}) => {
+      const query = new URLSearchParams({
+        unread_only: String(params.unreadOnly ?? false),
+        offset: String(params.offset ?? 0),
+        limit: String(params.limit ?? 50),
+      });
+      return fromApiOrMock<NotificationListResponse>(
+        `/notifications?${query.toString()}`,
+        { items: [], total: 0, unreadCount: 0, offset: params.offset ?? 0, limit: params.limit ?? 50 },
+      );
+    },
+    unreadCount: () => fromApiOrMock<UnreadCountResponse>("/notifications/unread-count", { unreadCount: 0 }),
+    markRead: (notificationId: string) => fromApiOrMock<{ notificationId: string; isRead: boolean; message: string }>(
+      `/notifications/${notificationId}/read`, { notificationId, isRead: true, message: "" }, { method: "PATCH" },
+    ),
+    markAllRead: () => fromApiOrMock<{ markedCount: number; message: string }>(
+      "/notifications/read-all", { markedCount: 0, message: "" }, { method: "PATCH" },
+    ),
+    remove: (notificationId: string) => fromApiOrMock<void>(
+      `/notifications/${notificationId}`, undefined, { method: "DELETE" },
+    ),
   },
 
   resources: {

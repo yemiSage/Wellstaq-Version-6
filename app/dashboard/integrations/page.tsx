@@ -5,10 +5,11 @@ import { Search, Plus, Calendar, Mail, MessageSquare, Video, Link as LinkIcon, C
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { api } from "@/services/api";
+import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 
 const INTEGRATIONS = [
   {
-    id: 1,
+    id: "google_calendar",
     name: "Google Calendar",
     description: "Sync your wellness events and challenges directly to your Google Calendar.",
     icon: <Calendar className="w-6 h-6 text-blue-500" />,
@@ -17,7 +18,7 @@ const INTEGRATIONS = [
     enabled: true,
   },
   {
-    id: 2,
+    id: "slack",
     name: "Slack",
     description: "Get notifications about team wellness challenges and updates in your Slack channels.",
     icon: <MessageSquare className="w-6 h-6 text-purple-500" />,
@@ -26,7 +27,7 @@ const INTEGRATIONS = [
     enabled: false,
   },
   {
-    id: 3,
+    id: "zoom",
     name: "Zoom",
     description: "Automatically generate Zoom links for your virtual wellness sessions.",
     icon: <Video className="w-6 h-6 text-blue-400" />,
@@ -35,7 +36,7 @@ const INTEGRATIONS = [
     enabled: false,
   },
   {
-    id: 4,
+    id: "microsoft_outlook",
     name: "Microsoft Outlook",
     description: "Sync events and get email reminders through your Outlook account.",
     icon: <Mail className="w-6 h-6 text-blue-600" />,
@@ -47,14 +48,13 @@ const INTEGRATIONS = [
 
 export default function IntegrationsPage() {
   const [integrations, setIntegrations] = useState(INTEGRATIONS);
+  const { organizationId } = useDashboardData();
   const [searchQuery, setSearchQuery] = useState("");
-  const [integrationToDisconnect, setIntegrationToDisconnect] = useState<number | null>(null);
+  const [integrationToDisconnect, setIntegrationToDisconnect] = useState<string | null>(null);
 
   useEffect(() => {
-    void api.resources.list<Array<Omit<(typeof INTEGRATIONS)[number], "icon" | "iconBg">>>(
-      "integrations",
-      INTEGRATIONS.map(({id, name, description, status, enabled}) => ({id, name, description, status, enabled})),
-    ).then((remoteIntegrations) => {
+    if (!organizationId) return;
+    void api.integrations.list(organizationId).then(({ items: remoteIntegrations }) => {
       setIntegrations(INTEGRATIONS.map((presentation) => ({
         ...presentation,
         ...remoteIntegrations.find((integration) => integration.id === presentation.id),
@@ -62,17 +62,18 @@ export default function IntegrationsPage() {
         iconBg: presentation.iconBg,
       })));
     });
-  }, []);
+  }, [organizationId]);
 
   const filteredIntegrations = integrations.filter(i => 
     i.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     i.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleToggle = async (id: number) => {
+  const handleToggle = async (id: string) => {
     const integration = integrations.find((item) => item.id === id);
     if (!integration) return;
-    await api.resources.mutate({ resource: "integrations", action: "toggle", id, payload: { enabled: !integration.enabled } });
+    if (!organizationId) return;
+    await api.integrations.toggle(organizationId, id, !integration.enabled);
     setIntegrations(integrations.map(i => {
       if (i.id === id) {
         const newEnabled = !i.enabled;
@@ -87,14 +88,15 @@ export default function IntegrationsPage() {
     }));
   };
 
-  const handleConnect = async (id: number) => {
+  const handleConnect = async (id: string) => {
     const integration = integrations.find(i => i.id === id);
     if (!integration) return;
 
     if (integration.status === "connected") {
       setIntegrationToDisconnect(id);
     } else {
-      await api.resources.mutate({ resource: "integrations", action: "connect", id });
+      if (!organizationId) return;
+      await api.integrations.connect(organizationId, id);
       setIntegrations(integrations.map(i => {
         if (i.id === id) {
           toast.success(`Successfully connected to ${i.name}`);
@@ -107,7 +109,8 @@ export default function IntegrationsPage() {
 
   const confirmDisconnect = async () => {
     if (integrationToDisconnect !== null) {
-      await api.resources.mutate({ resource: "integrations", action: "disconnect", id: integrationToDisconnect });
+      if (!organizationId) return;
+      await api.integrations.disconnect(organizationId, integrationToDisconnect);
       setIntegrations(integrations.map(i => {
         if (i.id === integrationToDisconnect) {
           toast.success(`Disconnected from ${i?.name}`);

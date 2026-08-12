@@ -2,6 +2,7 @@
 import type { ApiErrorBody, ApiResponse, FastApiValidationItem } from "@/types/api";
 import { getAuthTokens, updateAccessToken, clearAuthTokens } from "@/services/auth-token";
 import { backendPath } from "@/services/config";
+import { permissionDeniedMessage, permissionFromError } from "@/lib/permissions";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
@@ -44,9 +45,13 @@ function toFriendlyMessage(status: number, code: string | undefined, backendMess
   };
   if (code && knownCodes[code]) return knownCodes[code];
 
+  if (status === 403) {
+    const permission = permissionFromError(backendMessage);
+    return permission ? permissionDeniedMessage(permission) : "You don't have permission to perform this action.";
+  }
+
   const byStatus: Record<number, string> = {
     401: "Your session has expired. Please sign in again.",
-    403: "You don't have permission to do that.",
     404: "We couldn't find what you were looking for.",
     409: "That already exists — try a different value.",
     429: "You're doing that a bit too fast. Please wait a moment and try again.",
@@ -118,6 +123,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   headers.set("X-Request-Id", headers.get("X-Request-Id") ?? requestId());
 
   const tokens = getAuthTokens();
+  const method = (options.method ?? "GET").toUpperCase();
   if (tokens?.accessToken && !headers.has("Authorization")) {
     headers.set("Authorization", `${tokens.tokenType || "Bearer"} ${tokens.accessToken}`);
   }
@@ -158,6 +164,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
         }
 
         clearAuthTokens();
+        if (typeof window !== "undefined") {
+          window.location.assign("/login?error=session_revoked");
+        }
       }
     }
 
@@ -183,7 +192,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     return payload as T;
   } catch (error) {
     if (error instanceof ApiError) {
-      notify(error);
+      // Read permissions are rendered in the relevant card/page section. Keep
+      // global notifications for user-triggered mutations only.
+      if (!(error.status === 403 && (method === "GET" || method === "HEAD"))) {
+        notify(error);
+      }
       throw error;
     }
     if (error instanceof DOMException && error.name === "AbortError") {

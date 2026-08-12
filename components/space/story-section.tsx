@@ -22,11 +22,15 @@ export function Avatar({
 }) {
   const name = `${firstName ?? ""} ${lastName ?? ""}`.trim() || "Member";
   const isPlaceholder = !url;
-  const imgSrc = url || `https://picsum.photos/seed/${encodeURIComponent(seed || name)}/200/200`;
+  const initials = `${firstName?.[0] ?? ""}${lastName?.[0] ?? ""}`.toUpperCase() || "WS";
 
   return (
     <div className={`relative rounded-full overflow-hidden shrink-0 ${className}`} style={{ width: size, height: size }}>
-      <Image src={imgSrc} alt={name} fill className="object-cover" referrerPolicy="no-referrer" />
+      {url ? <Image src={url} alt={name} fill className="object-cover" referrerPolicy="no-referrer" /> : (
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-1/80 to-orange-300 text-white font-bold" style={{ fontSize: size * 0.32 }}>
+          {initials}
+        </div>
+      )}
       {isPlaceholder && showPlaceholderBadge && (
         <div
           className="absolute bottom-0 right-0 bg-grey-1/80 rounded-full flex items-center justify-center"
@@ -49,13 +53,7 @@ function StoryThumb({ story, size }: { story: Story; size: number }) {
   }
   return (
     <div className="relative rounded-full overflow-hidden bg-black" style={{ width: size, height: size }}>
-      <Image
-        src={`https://picsum.photos/seed/${story.id}/200/200`}
-        alt="Story video"
-        fill
-        className="object-cover opacity-50"
-        referrerPolicy="no-referrer"
-      />
+      <div className="absolute inset-0 bg-gradient-to-br from-grey-1 to-primary-1/70" />
       <div className="absolute inset-0 flex items-center justify-center">
         <Video className="text-white" style={{ width: size * 0.4, height: size * 0.4 }} />
       </div>
@@ -225,7 +223,7 @@ export function StoriesSection({
           const allViewed = group.stories.every((s) => viewedIds.has(s.id));
           return (
             <button key={group.userId} onClick={() => openGroup(idx)} className="flex-shrink-0 flex flex-col items-center gap-1">
-              <div className={`w-14 h-14 rounded-full p-0.5 border-2 ${allViewed ? "border-grey-4" : "border-primary-1"}`}>
+              <div className={`h-14 w-14 rounded-full p-0.5 ${allViewed ? "bg-grey-4" : "bg-primary-1"}`}>
                 <StoryThumb story={latest} size={52} />
               </div>
               <span className="text-[10px] font-medium text-grey-2 truncate w-14 text-center">{m?.firstName ?? "Member"}</span>

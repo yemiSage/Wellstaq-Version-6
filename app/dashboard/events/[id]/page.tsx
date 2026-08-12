@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { hasPermission } from "@/lib/permissions";
+import { formatRelativeTime } from "@/lib/time";
 import { Modal } from "@/components/ui/modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Input } from "@/components/ui/input";
@@ -294,17 +295,19 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               ) : messages.length === 0 ? (
                 <p className="text-sm text-grey-3 italic text-center mt-10">No messages yet — say hello!</p>
               ) : (
-                messages.map((msg) => (
-                  <div key={msg.id} className="flex gap-3 group">
+                messages.map((msg) => {
+                  const isMe = msg.senderId === currentUser?.userId;
+                  return (
+                  <div key={msg.id} className={`flex gap-3 group ${isMe ? "flex-row-reverse" : ""}`}>
                     <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 relative bg-grey-4">
                       {msg.senderAvatarUrl && <Image src={msg.senderAvatarUrl} alt={msg.senderName} fill className="object-cover" />}
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
+                    <div className={`w-fit max-w-[78%] space-y-1 ${isMe ? "ml-auto" : "mr-auto"}`}>
+                      <div className={`flex items-center gap-2 ${isMe ? "justify-end" : ""}`}>
                         <span className="font-bold text-sm text-grey-1">{msg.senderName}</span>
-                        <span className="text-xs text-grey-3">› {new Date(msg.createdAt).toLocaleString()}</span>
+                        <span className="text-xs text-grey-3">› {formatRelativeTime(msg.createdAt)}</span>
                         {msg.isPinned && <Pin className="w-3 h-3 text-primary-1" />}
-                        {msg.senderId === currentUser?.userId && (
+                        {isMe && (
                           <button
                             onClick={() => handleDeleteMessage(msg.id)}
                             className="opacity-0 group-hover:opacity-100 text-grey-3 hover:text-red-500 transition-opacity"
@@ -318,7 +321,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                       </div>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
               <div ref={chatEndRef} />
             </div>

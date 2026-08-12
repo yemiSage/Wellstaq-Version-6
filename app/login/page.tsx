@@ -1,4 +1,4 @@
-// path: app/login/page.tsx
+﻿// path: app/login/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +13,9 @@ import { FieldError } from "@/components/onboarding/field-error";
 import { Mail, LockKeyhole } from "lucide-react";
 import { api } from "@/services/api";
 import { ApiError } from "@/services/http";
-import { getAuthTokens, setAuthTokens } from "@/services/auth-token";
+import { clearAuthTokens, getAuthTokens, setAuthTokens, type AuthTokens } from "@/services/auth-token";
+import { getSwitchableScopes } from "@/lib/permissions";
+import type { TwoFaChallengeResponse } from "@/types/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,24 +26,49 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [credentialsError, setCredentialsError] = useState<string | null>(null);
+  const [twoFaChallenge, setTwoFaChallenge] = useState<TwoFaChallengeResponse | null>(null);
+  const [twoFaCode, setTwoFaCode] = useState("");
 
   const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && password.length > 0;
 
   useEffect(() => {
+    if (errorParam === "insufficient_permission") {
+      clearAuthTokens();
+      return;
+    }
     if (getAuthTokens()?.accessToken) {
       router.replace("/dashboard");
     }
-  }, [router]);
+  }, [errorParam, router]);
+
+  const finishLogin = async (tokens: AuthTokens) => {
+    setAuthTokens(tokens);
+    try {
+      const me = await api.auth.me();
+      if (!getSwitchableScopes(me.permissions).canViewOverview) {
+        clearAuthTokens();
+        setCredentialsError("You don't have permission to view this resource.");
+        return;
+      }
+      const returnTo = searchParams.get("returnTo");
+      router.replace(returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard");
+    } catch (error) {
+      clearAuthTokens();
+      throw error;
+    }
+  };
   
   const handleSubmit = async () => {
     setIsLoading(true);
     setFieldErrors({});
     setCredentialsError(null);
     try {
-      const tokens = await api.auth.login(email.trim(), password);
-      setAuthTokens(tokens);
-      const returnTo = searchParams.get("returnTo");
-      router.replace(returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard");
+      const result = await api.auth.login(email.trim(), password);
+      if ("twoFaChallengeToken" in result) {
+        setTwoFaChallenge(result);
+        return;
+      }
+      await finishLogin(result);
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.fieldErrors) {
@@ -50,6 +77,20 @@ export default function LoginPage() {
           setCredentialsError(err.message);
         }
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTwoFaSubmit = async () => {
+    if (!twoFaChallenge) return;
+    setIsLoading(true);
+    setCredentialsError(null);
+    try {
+      const tokens = await api.auth.verifyTwoFa(twoFaChallenge.twoFaChallengeToken, twoFaCode);
+      await finishLogin(tokens);
+    } catch (err) {
+      if (err instanceof ApiError) setCredentialsError(err.message);
     } finally {
       setIsLoading(false);
     }
@@ -66,15 +107,20 @@ export default function LoginPage() {
       <OnboardingPane>
         <div className="flex-1 flex flex-col justify-start">
           <div className="flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="mb-8 text-[24px] md:text-[30px] font-bold">Log In</h2>
+            <h2 className="mb-8 text-[24px] md:text-[30px] font-bold">{twoFaChallenge ? "Verify your login" : "Log In"}</h2>
 
             {errorParam === "insufficient_permission" && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2 mb-6">
-                You don&apos;t have permission to access this dashboard. Contact your administrator if you believe this is a mistake.
+                You don&apos;t have permission to view this resource. Contact your administrator if you believe this is a mistake.
+              </p>
+            )}
+            {errorParam === "session_revoked" && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2 mb-6">
+                This login session was revoked. Please sign in again.
               </p>
             )}
 
-            <div className="flex flex-col gap-6 mb-6">
+            {!twoFaChallenge ? <div className="flex flex-col gap-6 mb-6">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="email">
                   Email Address <span className="text-red-600">*</span>
@@ -112,15 +158,50 @@ export default function LoginPage() {
                 </div>
                 <FieldError errors={fieldErrors} field="password" />
               </div>
-            </div>
+            </div> : <div className="flex flex-col gap-3 mb-6">
+              <p className="text-sm text-grey-2">
+                {twoFaChallenge.twoFaMethod === "email"
+                  ? `We sent a verification code to ${email.trim()}. Enter it below to continue.`
+                  : twoFaChallenge.twoFaMethod === "totp"
+                    ? "Enter the current code from your authenticator app."
+                    : "Enter the verification code sent to your phone."}
+              </p>
+              <Label htmlFor="two-fa-code">Verification code</Label>
+              <Input
+                id="two-fa-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={8}
+                placeholder="Enter verification code"
+                value={twoFaCode}
+                onChange={(event) => {
+                  setTwoFaCode(event.target.value.replace(/\D/g, ""));
+                  setCredentialsError(null);
+                }}
+              />
+            </div>}
 
             {credentialsError && (
               <p className="text-sm text-red-600 mb-6">{credentialsError}</p>
             )}
 
-            <Button onClick={handleSubmit} disabled={!isValid || isLoading} className="w-full">
-              {isLoading ? "Logging in..." : "Log In"}
+            <Button
+              onClick={twoFaChallenge ? handleTwoFaSubmit : handleSubmit}
+              disabled={twoFaChallenge ? twoFaCode.length < 6 || isLoading : !isValid || isLoading}
+              className="w-full"
+            >
+              {isLoading ? "Please wait..." : twoFaChallenge ? "Verify and log in" : "Log In"}
             </Button>
+
+            {twoFaChallenge && (
+              <button
+                type="button"
+                onClick={() => { setTwoFaChallenge(null); setTwoFaCode(""); setCredentialsError(null); }}
+                className="mt-4 text-sm text-grey-3 hover:text-primary-1"
+              >
+                Back to login
+              </button>
+            )}
 
             <p className="text-sm text-grey-3 text-center mt-6">
               Don&apos;t have an account?{" "}

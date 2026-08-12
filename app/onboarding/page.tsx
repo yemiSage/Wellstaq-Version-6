@@ -79,7 +79,7 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleNext = async () => {
+  const handleNext = async (otpCode?: string) => {
     if (step === 1) {
       setIsLoading(true);
       try {
@@ -96,7 +96,7 @@ export default function OnboardingPage() {
     if (step === 2) {
       setIsLoading(true);
       try {
-        const result = await api.auth.verifyOtp(data.email, data.otp);
+        const result = await api.auth.verifyOtp(data.email, otpCode ?? data.otp);
         if (result.emailVerificationToken) {
           updateData({ emailVerificationToken: result.emailVerificationToken });
           setStep(3);

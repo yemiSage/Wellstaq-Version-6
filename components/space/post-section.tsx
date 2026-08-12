@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type { Post, Comment, OrganizationMemberInfo } from "@/types/api";
 import { Avatar } from "@/components/space/story-section";
+import { formatRelativeTime } from "@/lib/time";
 
 interface Badge { emoji: string; label: string; rank: number; }
 
@@ -174,7 +175,7 @@ function PostCard({
                   <span className="text-[10px] font-medium text-primary-1 bg-primary-5 px-2 py-0.5 rounded-full">Org-wide</span>
                 )}
               </div>
-              <p className="text-xs text-grey-3">{author?.email ?? ""} · {new Date(post.createdAt).toLocaleString()}</p>
+              <p className="text-xs text-grey-3">{author?.email ?? ""} · {formatRelativeTime(post.createdAt)}</p>
             </div>
           </div>
           {isMine && (
@@ -235,7 +236,7 @@ function PostCard({
                   <div className="flex-1 bg-grey-5 rounded-xl p-3 relative group">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-bold text-grey-1">{comment.userId === user.id ? "You" : cAuthor ? `${cAuthor.firstName} ${cAuthor.lastName}` : "Member"}</span>
-                      <span className="text-[10px] text-grey-3">{new Date(comment.createdAt).toLocaleTimeString()}</span>
+                      <span className="text-[10px] text-grey-3">{formatRelativeTime(comment.createdAt)}</span>
                     </div>
                     <p className="text-sm text-grey-2">{comment.content}</p>
                     {comment.userId === user.id && (

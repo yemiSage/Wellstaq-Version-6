@@ -25,6 +25,7 @@ import {
   Building2,
   Settings, 
   MessageSquare, 
+  MailPlus,
   Layers,
   PanelLeftClose,
   PanelLeftOpen,
@@ -50,6 +51,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const isOrgWide = switchable?.isOrgWide ?? false;
   const scopedBranchIdsKey = switchable?.scopedBranchIds.join(",") ?? "";
   const canCreateBranch = currentUser ? hasPermission(currentUser.permissions, "branch.create") : false;
+  const canCreateChallenge = currentUser ? hasPermission(currentUser.permissions, "challenge.create", scope.type === "branch" ? scope.branchId : undefined) : false;
+  const canManageInvites = currentUser ? hasPermission(currentUser.permissions, "member.invite", scope.type === "branch" ? scope.branchId : undefined) : false;
 
   useEffect(() => {
     if (!organizationId) return;
@@ -66,6 +69,9 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
     scope.type === "overview"
       ? "Overview"
       : visibleBranches.find((b) => b.id === scope.branchId)?.name ?? "Branch";
+  const scopedHref = (href: string) => scope.type === "branch"
+    ? `${href}${href.includes("?") ? "&" : "?"}branchId=${encodeURIComponent(scope.branchId)}`
+    : href;
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -110,7 +116,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             return (
               <Link 
                 key={item.name}
-                href={item.href} 
+                href={scopedHref(item.href)} 
                 onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${isActive ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
               >
@@ -127,7 +133,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             <div className={`flex items-center gap-2 text-grey-3 text-xs font-semibold uppercase tracking-wider ${isCollapsed ? 'justify-center' : ''}`}>
               {!isCollapsed && <span className="whitespace-nowrap">Challenges</span>}
             </div>
-            {!isCollapsed && (
+            {!isCollapsed && canCreateChallenge && (
               <button
                 type="button"
                 aria-label="Create challenge"
@@ -135,7 +141,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                   if (pathname === "/dashboard/challenges") {
                     window.dispatchEvent(new Event("wellstaq:open-create-challenge"));
                   } else {
-                    router.push("/dashboard/challenges?create=1");
+                    router.push(scopedHref("/dashboard/challenges?create=1"));
                   }
                   onClose?.();
                 }}
@@ -148,12 +154,12 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           {!isCollapsed && branchChallenges.length > 0 ? (
             <div className="space-y-0.5">
               {lastChallenges.map(challenge => (
-                <Link href="/dashboard/challenges" key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+                <Link href={scopedHref("/dashboard/challenges")} key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
                   <div className="w-3 h-3 rounded-full border border-grey-3 flex-shrink-0" />
                   <span className="truncate">{challenge.title || "Untitled challenge"}</span>
                 </Link>
               ))}
-              <Link href="/dashboard/challenges" className="flex items-center justify-between px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+              <Link href={scopedHref("/dashboard/challenges")} className="flex items-center justify-between px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 flex items-center justify-center text-grey-3 flex-shrink-0">
                     <Layers size={14} strokeWidth={2} />
@@ -181,7 +187,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 <div className="w-4 h-4 rounded-sm bg-grey-4 flex items-center justify-center text-[10px] font-bold text-grey-1 flex-shrink-0">G</div>
                 <span className="whitespace-nowrap">Google Calendar</span>
               </div>
-              <Link href="/dashboard/integrations" className="flex items-center gap-3 px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+              <Link href={scopedHref("/dashboard/integrations")} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
                 <Plus size={14} strokeWidth={2} className="flex-shrink-0" />
                 <span className="whitespace-nowrap">Add Integration</span>
               </Link>
@@ -256,21 +262,28 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           )}
           <div className="border-t border-grey-4 pt-3 space-y-1">
           <Link 
-            href="/dashboard/teams" 
+            href={scopedHref("/dashboard/teams")} 
             className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/teams' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
             <Users size={18} strokeWidth={2} className="flex-shrink-0" />
             {!isCollapsed && <span className="text-sm whitespace-nowrap">Team</span>}
           </Link>
+          {canManageInvites && <Link
+            href={scopedHref("/dashboard/invites")}
+            className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/invites' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
+          >
+            <MailPlus size={18} strokeWidth={2} className="flex-shrink-0" />
+            {!isCollapsed && <span className="text-sm whitespace-nowrap">Pending Invites</span>}
+          </Link>}
           <Link 
-            href="/dashboard/settings" 
+            href={scopedHref("/dashboard/settings")} 
             className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/settings' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
             <Settings size={18} strokeWidth={2} className="flex-shrink-0" />
             {!isCollapsed && <span className="text-sm whitespace-nowrap">Settings</span>}
           </Link>
           <Link 
-            href="/dashboard/contact" 
+            href={scopedHref("/dashboard/contact")} 
             className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/contact' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
             <MessageSquare size={18} strokeWidth={2} className="flex-shrink-0" />

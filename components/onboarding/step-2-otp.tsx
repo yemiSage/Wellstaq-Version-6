@@ -8,7 +8,7 @@ import { FieldError } from "@/components/onboarding/field-error";
 interface Step2Props {
   data: OnboardingData;
   updateData: (data: Partial<OnboardingData>) => void;
-  onNext: () => void;
+  onNext: (otpCode?: string) => void;
   isLoading: boolean;
   fieldErrors?: Record<string, string[]>;
 }
@@ -90,7 +90,7 @@ export function Step2OTP({ data, updateData, onNext, isLoading, fieldErrors }: S
       </div>
 
       <Button 
-        onClick={onNext} 
+        onClick={() => onNext(otp.join(""))}
         disabled={!isValid || isLoading}
         className="w-full"
       >
