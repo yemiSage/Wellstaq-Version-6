@@ -1175,6 +1175,6 @@ story: {
     requestDemo: (payload: { name: string; email: string; reason: string }) =>
       fromApiOrMock("/v1/public/demo-requests", { accepted: true }, { method: "POST", body: payload }),
     contactSupport: (payload: { name: string; email: string; subject: string; message: string }) =>
-      fromApiOrMock("/v1/support/tickets", { accepted: true }, { method: "POST", body: payload }),
+      fromApiOrMock("/support/tickets", { accepted: true }, { method: "POST", body: payload }),
   },
 };    
