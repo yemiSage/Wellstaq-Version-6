@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { SelectablePill } from "@/components/ui/selectable-pill";
 import { OnboardingData } from "@/types";
 
-interface Step5Props {
+interface Step6Props {
   data: OnboardingData;
   updateData: (data: Partial<OnboardingData>) => void;
   onNext: () => void;
@@ -15,7 +15,7 @@ const ORG_TYPES = [
   "Healthcare", "Consulting", "Others"
 ];
 
-export function Step5Organization({ data, updateData, onNext, isLoading }: Step5Props) {
+export function Step6Organization({ data, updateData, onNext, isLoading }: Step6Props) {
   const isValid = !!data.organizationType;
 
   return (

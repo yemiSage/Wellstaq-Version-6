@@ -8,28 +8,7 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis
 } from "recharts";
 import Image from "next/image";
-
-const engagementData = [
-  { name: 'Mon 15', value: 3000 },
-  { name: 'Tue 16', value: 6000 },
-  { name: 'Wed 17', value: 2000 },
-  { name: 'Thu 18', value: 3500 },
-  { name: 'Fri 19', value: 8000 },
-  { name: 'Sat 20', value: 15000 },
-  { name: 'Sun 21', value: 20000 },
-  { name: 'Mon 22', value: 14000 },
-  { name: 'Tue 23', value: 16000 },
-  { name: 'Wed 24', value: 28000 },
-  { name: 'Thu 25', value: 26000 },
-  { name: 'Fri 26', value: 32000 },
-  { name: 'Sat 27', value: 28000 },
-  { name: 'Sun 28', value: 38000 },
-  { name: 'Mon 29', value: 36000 },
-  { name: 'Tue 30', value: 40000 },
-  { name: 'Wed 31', value: 40000 },
-  { name: 'Thu 1', value: 32000 },
-  { name: 'Fri 2', value: 38000 },
-];
+import type { EngagementWellbeingTrendPeriod, EngagementWellbeingTrendPoint } from "@/types/api";
 
 const wellbeingData = [
   { subject: 'Mental', A: 80, fullMark: 100 },
@@ -50,7 +29,8 @@ const leaderboardData = [
   { rank: 7, name: "Jack Thompson", steps: "19560 Steps", avatar: "avatar7", trend: "up" },
 ];
 
-export function DepartmentPerformanceRadar({data = wellbeingData}: {data?: typeof wellbeingData}) {
+export function DepartmentPerformanceRadar({data}: {data?: typeof wellbeingData}) {
+  const chartData = data ?? [];
   return (
     <div className="dashboard-card border border-grey-4">
       <div className="mb-6">
@@ -59,8 +39,11 @@ export function DepartmentPerformanceRadar({data = wellbeingData}: {data?: typeo
       </div>
 
       <div className="h-[250px] w-full">
+        {chartData.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-grey-3">No wellbeing distribution data available.</div>
+        ) : (
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
             <PolarGrid stroke="#F2F4F7" />
             <PolarAngleAxis
               dataKey="subject"
@@ -77,17 +60,41 @@ export function DepartmentPerformanceRadar({data = wellbeingData}: {data?: typeo
             />
           </RadarChart>
         </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
 }
 
-export function EngagementChart({data = engagementData}: {data?: typeof engagementData}) {
-  const [engagementFilter, setEngagementFilter] = useState("Last week");
+const TREND_METRICS = [
+  { name: "Stress level", key: "stressLevel" as const, icon: <svg key="stress" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m13 14 6.7-2.3c.8-.3 1.3.4 1 1.1l-4.6 9.2"/><path d="M6 14.5 4 17"/><path d="M6 14.5 8 12l2.5 1.5"/><path d="m10.5 13.5 2-2.5-1-2.5"/><path d="M13 14v4l-2.5 1.5"/><path d="M14 6.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg> },
+  { name: "Energy level (physical + mental)", key: "energyLevel" as const, icon: <Smile className="w-4 h-4" /> },
+  { name: "Social interaction level", key: "socialInteraction" as const, icon: <Heart className="w-4 h-4" /> },
+  { name: "Productivity", key: "productivity" as const, icon: <MousePointerClick className="w-4 h-4" /> },
+];
+
+const PERIOD_LABELS: Record<EngagementWellbeingTrendPeriod, string> = {
+  week: "Last week",
+  month: "This month",
+  three_months: "Last 3 months",
+};
+
+export function EngagementChart({
+  data = [],
+  period,
+  onPeriodChange,
+  loading = false,
+}: {
+  data?: EngagementWellbeingTrendPoint[];
+  period: EngagementWellbeingTrendPeriod;
+  onPeriodChange: (period: EngagementWellbeingTrendPeriod) => void;
+  loading?: boolean;
+}) {
   const [isEngagementFilterOpen, setIsEngagementFilterOpen] = useState(false);
   const engagementFilterRef = useRef<HTMLDivElement>(null);
   useClickOutside(engagementFilterRef, () => setIsEngagementFilterOpen(false));
   const [engagementMetric, setEngagementMetric] = useState("Stress level");
+  const selectedMetric = TREND_METRICS.find((metric) => metric.name === engagementMetric) ?? TREND_METRICS[0];
 
   return (
     <div className="dashboard-card border border-grey-4">
@@ -98,20 +105,20 @@ export function EngagementChart({data = engagementData}: {data?: typeof engageme
             onClick={() => setIsEngagementFilterOpen(!isEngagementFilterOpen)}
             className="flex items-center gap-1 text-sm text-grey-2 hover:text-grey-1"
           >
-            {engagementFilter} <ChevronDown className="w-4 h-4" />
+            {PERIOD_LABELS[period]} <ChevronDown className="w-4 h-4" />
           </button>
           {isEngagementFilterOpen && (
             <div className="absolute right-0 mt-2 w-32 bg-white border border-grey-4 rounded-lg shadow-lg z-10 py-1">
-              {["Last week", "This month", "Last 3 months"].map((option) => (
+              {(Object.entries(PERIOD_LABELS) as Array<[EngagementWellbeingTrendPeriod, string]>).map(([value, label]) => (
                 <button
-                  key={option}
+                  key={value}
                   onClick={() => {
-                    setEngagementFilter(option);
+                    onPeriodChange(value);
                     setIsEngagementFilterOpen(false);
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-grey-1 hover:bg-grey-5"
                 >
-                  {option}
+                  {label}
                 </button>
               ))}
             </div>
@@ -120,12 +127,7 @@ export function EngagementChart({data = engagementData}: {data?: typeof engageme
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
-        {[
-          { name: "Stress level", icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m13 14 6.7-2.3c.8-.3 1.3.4 1 1.1l-4.6 9.2"/><path d="M6 14.5 4 17"/><path d="M6 14.5 8 12l2.5 1.5"/><path d="m10.5 13.5 2-2.5-1-2.5"/><path d="M13 14v4l-2.5 1.5"/><path d="M14 6.5a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/></svg> },
-          { name: "Energy level (physical + mental)", icon: <Smile className="w-4 h-4" /> },
-          { name: "Social interaction level", icon: <Heart className="w-4 h-4" /> },
-          { name: "Productivity", icon: <MousePointerClick className="w-4 h-4" /> }
-        ].map((metric) => (
+        {TREND_METRICS.map((metric) => (
           <button
             key={metric.name}
             onClick={() => setEngagementMetric(metric.name)}
@@ -142,21 +144,26 @@ export function EngagementChart({data = engagementData}: {data?: typeof engageme
       </div>
 
       <div className="h-[250px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data.map(d => ({ ...d, value: engagementMetric === 'Stress level' ? d.value : engagementMetric === 'Energy level (physical + mental)' ? d.value * 0.005 : d.value * 0.1 }))} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+        {loading ? (
+          <div className="h-full animate-pulse rounded-lg bg-grey-5" />
+        ) : data.length === 0 || data.every((point) => point[selectedMetric.key] === null) ? (
+          <div className="flex h-full items-center justify-center text-sm text-grey-3">Not enough responses to show this trend yet.</div>
+        ) : <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data.map((point) => ({ name: new Date(`${point.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: point[selectedMetric.key] }))} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} dy={10} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => engagementMetric === 'Stress level' ? `${val / 1000}k` : val} />
+            <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => `${val}%`} />
             <Tooltip />
             <Line type="monotone" dataKey="value" stroke="#EA6A05" strokeWidth={2} dot={false} />
           </LineChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer>}
       </div>
     </div>
   );
 }
 
-export function Leaderboard({data = leaderboardData}: {data?: typeof leaderboardData}) {
+export function Leaderboard({data}: {data?: typeof leaderboardData}) {
+  const leaderboardRows = data ?? [];
   const [leaderboardMetric, setLeaderboardMetric] = useState("Steps");
 
   return (
@@ -180,7 +187,10 @@ export function Leaderboard({data = leaderboardData}: {data?: typeof leaderboard
       </div>
 
       <div className="space-y-4">
-        {data.map((user) => (
+        {leaderboardRows.length === 0 && (
+          <p className="py-8 text-center text-sm text-grey-3">No leaderboard data available.</p>
+        )}
+        {leaderboardRows.map((user) => (
           <div key={user.rank} className="flex items-center justify-between p-2 hover:bg-grey-5 rounded-xl transition-colors">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[8px] bg-grey-4 overflow-hidden relative shrink-0">
@@ -195,9 +205,9 @@ export function Leaderboard({data = leaderboardData}: {data?: typeof leaderboard
               <span className="text-xs sm:text-sm font-bold text-grey-1">{user.rank}</span>
               {user.trend === 'up' ? (
                 <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
-              ) : (
+              ) : user.trend === 'down' ? (
                 <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
-              )}
+              ) : null}
             </div>
           </div>
         ))}

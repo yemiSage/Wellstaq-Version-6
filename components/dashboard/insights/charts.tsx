@@ -28,7 +28,9 @@ const healthDistributionData = [
   { name: 'At Risk', value: 8, color: '#DC2626' },
 ];
 
-const departmentPerformanceData = [
+type DepartmentPerformancePoint = { name: string; branchName?: string | null; engagement: number };
+
+const departmentPerformanceData: DepartmentPerformancePoint[] = [
   { name: 'Engineering', engagement: 8 },
   { name: 'Marketing', engagement: 7 },
   { name: 'TheVipers', engagement: 6 },
@@ -49,7 +51,12 @@ const weeklyActivityData = [
   { name: 'W9', steps: 62000 },
 ];
 
-export function MonthlyStepsChart({data = monthlyStepsData}: {data?: typeof monthlyStepsData}) {
+function EmptyChart() {
+  return <div className="flex h-full items-center justify-center text-sm text-grey-3">No KPI data available for this period.</div>;
+}
+
+export function MonthlyStepsChart({data}: {data?: typeof monthlyStepsData | null}) {
+  const chartData = data ?? [];
   return (
     <div className="lg:col-span-2 bg-white p-[12px] rounded-[12px]">
       <div className="flex items-center justify-between mb-6">
@@ -67,8 +74,8 @@ export function MonthlyStepsChart({data = monthlyStepsData}: {data?: typeof mont
       </div>
       
       <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+        {chartData.length === 0 ? <EmptyChart /> : <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={true} stroke="#E4E7EC" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => `${val / 1000}k`} ticks={[0, 15000, 30000, 45000, 60000, 75000, 95000, 115000]} domain={[0, 115000]} />
@@ -76,23 +83,24 @@ export function MonthlyStepsChart({data = monthlyStepsData}: {data?: typeof mont
             <Line type="monotone" dataKey="actual" stroke="#EA6A05" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
             <Line type="monotone" dataKey="target" stroke="#98A2B3" strokeWidth={2} strokeDasharray="5 5" dot={false} />
           </LineChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer>}
       </div>
     </div>
   );
 }
 
-export function HealthDistributionChart({data = healthDistributionData}: {data?: typeof healthDistributionData}) {
+export function HealthDistributionChart({data}: {data?: typeof healthDistributionData | null}) {
+  const chartData = data ?? [];
   return (
     <div className="bg-white p-[12px] rounded-[12px] flex flex-col">
       <h3 className="text-[16px] font-bold text-grey-1 mb-6">Health Distribution</h3>
       
-      <div className="flex-1 flex flex-col items-center justify-center">
+      {chartData.length === 0 ? <div className="h-[300px]"><EmptyChart /></div> : <div className="flex-1 flex flex-col items-center justify-center">
         <div className="h-[200px] w-[200px] relative mb-8">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
+                data={chartData}
                 cx="50%"
                 cy="50%"
                 innerRadius={60}
@@ -101,7 +109,7 @@ export function HealthDistributionChart({data = healthDistributionData}: {data?:
                 dataKey="value"
                 stroke="none"
               >
-                {data.map((entry, index) => (
+                {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -111,7 +119,7 @@ export function HealthDistributionChart({data = healthDistributionData}: {data?:
         </div>
 
         <div className="w-full space-y-3">
-          {data.map((item) => (
+          {chartData.map((item) => (
             <div key={item.name} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></div>
@@ -121,12 +129,13 @@ export function HealthDistributionChart({data = healthDistributionData}: {data?:
             </div>
           ))}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
 
-export function DepartmentPerformanceChart({data = departmentPerformanceData}: {data?: typeof departmentPerformanceData}) {
+export function DepartmentPerformanceChart({data}: {data?: DepartmentPerformancePoint[] | null}) {
+  const chartData = data ?? [];
   return (
     <div className="bg-white p-[20px] rounded-[12px]">
       <h3 className="text-[16px] font-bold text-grey-1 mb-4">Department Performance</h3>
@@ -142,21 +151,32 @@ export function DepartmentPerformanceChart({data = departmentPerformanceData}: {
       </div>
       
       <div className="h-[250px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }} barSize={16}>
+        {chartData.length === 0 ? <EmptyChart /> : <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }} barSize={16}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 10 }} dy={10} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} domain={[0, 100]} />
             <Tooltip cursor={{ fill: 'transparent' }} />
             <Bar dataKey="engagement" fill="#4F46E5" radius={[4, 4, 0, 0]} />
           </BarChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer>}
       </div>
+      {chartData.some((item) => item.branchName) && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {chartData.map((item) => (
+            <div key={`${item.branchName}-${item.name}`} className="flex items-center gap-1.5 text-xs text-grey-2">
+              <span>{item.name}</span>
+              <span className="rounded-full bg-grey-5 px-2 py-0.5 font-medium text-grey-1">{item.branchName}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-export function WeeklyActivityChart({data = weeklyActivityData}: {data?: typeof weeklyActivityData}) {
+export function WeeklyActivityChart({data}: {data?: typeof weeklyActivityData | null}) {
+  const chartData = data ?? [];
   const [activityTab, setActivityTab] = useState("Steps");
 
   return (
@@ -181,8 +201,8 @@ export function WeeklyActivityChart({data = weeklyActivityData}: {data?: typeof 
       </div>
       
       <div className="h-[250px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+        {chartData.length === 0 ? <EmptyChart /> : <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
             <defs>
               <linearGradient id="colorSteps" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#EA6A05" stopOpacity={0.3}/>
@@ -195,7 +215,7 @@ export function WeeklyActivityChart({data = weeklyActivityData}: {data?: typeof 
             <Tooltip />
             <Area type="monotone" dataKey="steps" stroke="#EA6A05" strokeWidth={2} fillOpacity={1} fill="url(#colorSteps)" dot={{ r: 4, fill: '#EA6A05', strokeWidth: 0 }} activeDot={{ r: 6 }} />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer>}
       </div>
     </div>
   );

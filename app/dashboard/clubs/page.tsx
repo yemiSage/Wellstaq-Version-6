@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { hasPermission } from "@/lib/permissions";
 
 const STATS = [
   {
@@ -93,8 +94,12 @@ const monthlyStepsData = [
 ];
 
 export default function ClubsPage() {
-  const { activeBranch } = useDashboardData();
+  const { activeBranch, currentUser } = useDashboardData();
+  const canCreateClub = currentUser ? hasPermission(currentUser.permissions, "club.create", currentUser.branchId) : false;
+  const canUpdateClub = currentUser ? hasPermission(currentUser.permissions, "club.update", currentUser.branchId) : false;
+  const canDeleteClub = currentUser ? hasPermission(currentUser.permissions, "club.delete", currentUser.branchId) : false;
   const [clubs, setClubs] = useState<Club[]>(MOCK_CLUBS);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -115,6 +120,11 @@ export default function ClubsPage() {
   const [activeFilter, setActiveFilter] = useState("All Clubs");
 
   const [isCopied, setIsCopied] = useState(false);
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredClubs = clubs.filter((club) => !normalizedSearch
+    || club.name.toLowerCase().includes(normalizedSearch)
+    || (club.description ?? "").toLowerCase().includes(normalizedSearch)
+    || (club.category ?? "").toLowerCase().includes(normalizedSearch));
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -166,13 +176,13 @@ export default function ClubsPage() {
           <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Clubs</h1>
           <p className="text-sm text-grey-2">Join communities that match your goals</p>
         </div>
-        <button
+        {canCreateClub && <button
           onClick={() => setIsCreateModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-[#EA6A05] text-white rounded-lg text-sm font-medium hover:bg-[#C45700]"
         >
           <Plus className="w-4 h-4" />
           Create Club
-        </button>
+        </button>}
       </div>
 
       {/* Selection Tabs */}
@@ -218,26 +228,28 @@ export default function ClubsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
             <input
               type="text"
-              placeholder="Search departments..."
+              placeholder="Search clubs..."
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               className="w-full h-10 pl-9 pr-4 rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
             />
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 no-scrollbar min-h-[400px] lg:min-h-0">
-            {clubs.length === 0 ? (
+            {filteredClubs.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white rounded-[12px]">
                 <h3 className="text-lg font-bold text-grey-1 mb-2">No Clubs Available</h3>
                 <p className="text-sm text-grey-2 mb-6">You haven&apos;t created any clubs yet. Start by creating clubs and adding team members!</p>
-                <button
+                {canCreateClub && <button
                   onClick={() => setIsCreateModalOpen(true)}
                   className="flex items-center gap-2 px-6 py-2 bg-white border border-[#EA6A05] text-[#EA6A05] rounded-lg text-sm font-medium hover:bg-orange-50"
                 >
                   <Plus className="w-4 h-4" />
                   Create Club
-                </button>
+                </button>}
               </div>
             ) : (
-              clubs.map((club) => (
+              filteredClubs.map((club) => (
                 <div
                   key={club.id}
                   onClick={() => setSelectedClub(club)}
@@ -315,15 +327,15 @@ export default function ClubsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setIsAddMemberModalOpen(true)} className="w-8 h-8 rounded-lg bg-[#EA6A05] text-white flex items-center justify-center hover:bg-[#C45700]">
+                    {canUpdateClub && <button onClick={() => setIsAddMemberModalOpen(true)} className="w-8 h-8 rounded-lg bg-[#EA6A05] text-white flex items-center justify-center hover:bg-[#C45700]">
                       <UserPlus className="w-4 h-4" />
-                    </button>
-                    <button className="w-8 h-8 rounded-lg border border-grey-4 text-grey-2 flex items-center justify-center hover:bg-grey-5">
+                    </button>}
+                    {canUpdateClub && <button className="w-8 h-8 rounded-lg border border-grey-4 text-grey-2 flex items-center justify-center hover:bg-grey-5">
                       <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button className="w-8 h-8 rounded-lg border border-red-100 text-red-500 bg-red-50 flex items-center justify-center hover:bg-red-100">
+                    </button>}
+                    {canDeleteClub && <button className="w-8 h-8 rounded-lg border border-red-100 text-red-500 bg-red-50 flex items-center justify-center hover:bg-red-100">
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </button>}
                   </div>
                 </div>
 

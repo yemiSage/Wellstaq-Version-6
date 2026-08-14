@@ -1,119 +1,110 @@
 "use client";
 
-import { useCallback, useState, useRef, useEffect } from "react";
-import { Search, Plus, Calendar, Users, TrendingUp, MoreHorizontal, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Clock, X, ChevronDown, Check } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Search, Plus, Calendar, Users, TrendingUp, MoreHorizontal, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Clock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { CreateEventModal } from "@/components/events/create-event-modal";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { useDashboardScope } from "@/lib/scope";
+import { hasPermission } from "@/lib/permissions";
 import { api } from "@/services/api";
 import { toast } from "sonner";
-import { useClickOutside } from "@/hooks/use-click-outside";
+import { StatCard } from "@/components/dashboard/stat-card";
+import type { EventItem } from "@/types/api";
+
+const TABS = ["All Events", "scheduled", "ongoing", "completed", "cancelled"] as const;
+const TAB_LABELS: Record<string, string> = {
+  "All Events": "All Events",
+  scheduled: "Upcoming",
+  ongoing: "Ongoing",
+  completed: "Completed",
+  cancelled: "Canceled",
+};
 
 export default function EventsPage() {
-  const { events: sourceEvents, participantOptions: PARTICIPANT_OPTIONS, activeBranch } = useDashboardData();
-  const [activeTab, setActiveTab] = useState("All Events");
+  const { organizationId, currentUser } = useDashboardData();
+  const { scope } = useDashboardScope();
+
+  const [activeTab, setActiveTab] = useState<string>("All Events");
   const [searchQuery, setSearchQuery] = useState("");
-  const [events, setEvents] = useState(sourceEvents);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [stats, setStats] = useState({
-    totalEvents: 0,
-    upcomingEvents: 0,
-    completedEvents: 0,
-    totalParticipants: 0
-  });
+  const [deleteConfirmEventId, setDeleteConfirmEventId] = useState<string | null>(null);
 
-  const updateStats = useCallback((branch: string, eventData: typeof sourceEvents) => {
-    const branchEvents = eventData.filter(e => e.branch === branch);
-    const upcoming = branchEvents.filter(e => e.status === 'Upcoming').length;
-    const completed = branchEvents.filter(e => e.status === 'Completed').length;
-    const participants = branchEvents.reduce((acc, e) => acc + e.participants, 0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
-    setStats({
-      totalEvents: branchEvents.length,
-      upcomingEvents: upcoming,
-      completedEvents: completed,
-      totalParticipants: participants
-    });
-  }, []);
+  const branchId = scope.type === "branch" ? scope.branchId : undefined;
+  const canCreate = currentUser ? hasPermission(currentUser.permissions, "event.create", branchId) : false;
+  const canUpdate = currentUser ? hasPermission(currentUser.permissions, "event.update", branchId) : false;
+  const canDelete = currentUser ? hasPermission(currentUser.permissions, "event.delete", branchId) : false;
+
+  const loadEvents = useCallback(async () => {
+    if (!organizationId) return;
+    setIsLoading(true);
+    try {
+      const res = await api.organization.getEvents(organizationId, {
+        branchId,
+        offset: (currentPage - 1) * itemsPerPage,
+        limit: itemsPerPage,
+      });
+      setEvents(res.items);
+      setTotal(res.total);
+    } catch {
+      // error toast handled globally
+    } finally {
+      setIsLoading(false);
+    }
+  }, [organizationId, branchId, currentPage]);
 
   useEffect(() => {
-    setEvents(sourceEvents);
+    void loadEvents();
+  }, [loadEvents]);
+
+  useEffect(() => {
     setCurrentPage(1);
-    updateStats(activeBranch, sourceEvents);
-  }, [activeBranch, sourceEvents, updateStats]);
+  }, [activeTab, branchId]);
 
-  const dashboardStats = [
-    {
-      title: "Total Events",
-      value: stats.totalEvents.toString(),
-      trend: "+4 this month",
-      icon: <Users className="w-5 h-5 text-pink-500" />,
-      iconBg: "bg-pink-100",
-      trendColor: "text-green-500"
-    },
-    {
-      title: "Upcoming Events",
-      value: stats.upcomingEvents.toString(),
-      trend: "+21%",
-      icon: <TrendingUp className="w-5 h-5 text-purple-500" />,
-      iconBg: "bg-purple-100",
-      trendColor: "text-green-500"
-    },
-    {
-      title: "Completed Events",
-      value: stats.completedEvents.toString(),
-      trend: "+12",
-      icon: <Calendar className="w-5 h-5 text-blue-500" />,
-      iconBg: "bg-blue-100",
-      trendColor: "text-green-500"
-    },
-    {
-      title: "Total Participants",
-      value: stats.totalParticipants.toString(),
-      trend: "+8",
-      icon: <Users className="w-5 h-5 text-green-500" />,
-      iconBg: "bg-green-100",
-      trendColor: "text-green-500"
-    }
-  ];
-
-  const [isParticipantDropdownOpen, setIsParticipantDropdownOpen] = useState(false);
-  const participantDropdownRef = useRef<HTMLDivElement>(null);
-  useClickOutside(participantDropdownRef, () => setIsParticipantDropdownOpen(false));
-  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
-  const [deleteConfirmEventId, setDeleteConfirmEventId] = useState<number | null>(null);
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4;
-
-  const filteredEvents = events.filter(event => {
+  // Client-side filter for tab + search since backend list endpoint doesn't
+  // filter by status/title. If this list grows large, ask backend to add
+  // `status` and `q` query params instead of filtering client-side.
+  const filteredEvents = events.filter((event) => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === "All Events" || event.status === activeTab;
-    const matchesBranch = event.branch === activeBranch;
-    return matchesSearch && matchesTab && matchesBranch;
+    return matchesSearch && matchesTab;
   });
 
-  const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
-  const paginatedEvents = filteredEvents.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const totalPages = Math.max(1, Math.ceil(total / itemsPerPage));
 
-  const toggleParticipant = (id: string) => {
-    if (selectedParticipants.includes(id)) {
-      setSelectedParticipants(selectedParticipants.filter(pId => pId !== id));
-    } else {
-      setSelectedParticipants([...selectedParticipants, id]);
-    }
+  const stats = {
+    totalEvents: total,
+    upcomingEvents: events.filter((e) => e.status === "scheduled").length,
+    completedEvents: events.filter((e) => e.status === "completed").length,
+    totalParticipants: events.reduce((acc, e) => acc + (e.participantCount ?? 0), 0),
   };
 
-  const handleDeleteEvent = async (id: number) => {
-    await api.resources.mutate({ resource: "events", action: "delete", id });
-    setEvents(events.filter(e => e.id !== id));
-    setDeleteConfirmEventId(null);
-    toast.success("Event deleted successfully");
+  const dashboardStats = [
+    { title: "Total Events", value: stats.totalEvents.toString(), subtitle: "Across the selected scope", icon: <Users className="w-5 h-5" />, iconClassName: "bg-pink-100 text-pink-500" },
+    { title: "Upcoming Events", value: stats.upcomingEvents.toString(), subtitle: "Scheduled events", icon: <TrendingUp className="w-5 h-5" />, iconClassName: "bg-purple-100 text-purple-500" },
+    { title: "Completed Events", value: stats.completedEvents.toString(), subtitle: "Completed events", icon: <Calendar className="w-5 h-5" />, iconClassName: "bg-blue-100 text-blue-500" },
+    { title: "Total Participants", value: stats.totalParticipants.toString(), subtitle: "Accepted participants", icon: <Users className="w-5 h-5" />, iconClassName: "bg-green-100 text-green-500" },
+  ];
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!organizationId) return;
+    try {
+      await api.organization.deleteEvent(organizationId, id);
+      toast.success("Event deleted successfully");
+      await loadEvents();
+    } catch {
+      // error toast handled globally
+    } finally {
+      setDeleteConfirmEventId(null);
+    }
   };
 
   return (
@@ -124,31 +115,28 @@ export default function EventsPage() {
           <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">My Events</h1>
           <p className="text-sm text-grey-2">Discover, Manage and join events across your organization.</p>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg hover:bg-[#C45700]/90 transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Create Event
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg hover:bg-[#C45700]/90 transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Event
+          </button>
+        )}
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[12px] mb-0">
-        {dashboardStats.map((stat, idx) => (
-          <div key={idx} className="bg-white p-[14px] rounded-[12px] border border-grey-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${stat.iconBg}`}>
-                {stat.icon}
-              </div>
-              <div className={`text-xs font-medium flex items-center gap-1 ${stat.trendColor}`}>
-                <TrendingUp className="w-3 h-3" />
-                {stat.trend}
-              </div>
-            </div>
-            <div className="text-sm font-medium text-grey-2 mb-1">{stat.title}</div>
-            <div className="text-2xl font-bold text-grey-1">{stat.value}</div>
-          </div>
+        {dashboardStats.map((stat) => (
+          <StatCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            subtitle={stat.subtitle}
+            icon={stat.icon}
+            iconClassName={stat.iconClassName}
+          />
         ))}
       </div>
 
@@ -161,41 +149,43 @@ export default function EventsPage() {
               type="text"
               placeholder="Search Event"
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="h-10 pl-9 pr-4 w-full rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
             />
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
-            {["All Events", "Upcoming", "Completed", "Canceled"].map((tab) => (
+            {TABS.map((tab) => (
               <button
                 key={tab}
-                onClick={() => {
-                  setActiveTab(tab);
-                  setCurrentPage(1);
-                }}
+                onClick={() => setActiveTab(tab)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab
                     ? "bg-white border border-[#C45700] text-[#C45700]"
                     : "bg-white border border-grey-4 text-grey-2 hover:bg-grey-5"
                 }`}
               >
-                {tab}
+                {TAB_LABELS[tab]}
               </button>
             ))}
           </div>
         </div>
 
-        {paginatedEvents.length > 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-[220px] bg-grey-5 rounded-lg animate-pulse" />
+            ))}
+          </div>
+        ) : filteredEvents.length > 0 ? (
           <>
             {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-              {paginatedEvents.map((event) => (
+              {filteredEvents.map((event) => (
                 <Link href={`/dashboard/events/${event.id}`} key={event.id} className="bg-[#FAFAFA] rounded-lg border border-[#F0F0F0] overflow-hidden flex flex-col p-2 gap-2 h-[220px] cursor-pointer relative">
-                  <div className="relative h-[85px] w-full rounded-lg overflow-hidden shrink-0">
-                    <Image src={event.image} alt={event.title} fill className="object-cover" referrerPolicy="no-referrer" />
+                  <div className="relative h-[85px] w-full rounded-lg overflow-hidden shrink-0 bg-grey-4">
+                    {event.imageUrl && (
+                      <Image src={event.imageUrl} alt={event.title} fill className="object-cover" referrerPolicy="no-referrer" />
+                    )}
                   </div>
                   <div className="flex flex-col flex-1 px-1 pb-2 pt-0 gap-[17px]">
                     <div className="flex flex-col gap-1">
@@ -203,7 +193,7 @@ export default function EventsPage() {
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-1 text-[12px] leading-[18px] text-[#999999]">
                           <Calendar className="w-3.5 h-3.5" />
-                          {event.date}
+                          {new Date(event.startDate).toLocaleDateString()}
                         </div>
                         <div className="flex items-center gap-1 text-[12px] leading-[18px] text-[#999999]">
                           <Clock className="w-3.5 h-3.5" />
@@ -212,31 +202,26 @@ export default function EventsPage() {
                       </div>
                     </div>
                     <div className="mt-auto flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        <div className="flex -space-x-1">
-                          {[1,2,3,4,5].map(i => (
-                            <div key={i} className="w-[18px] h-[18px] rounded-full border-[0.3191px] border-[#EA6A05] overflow-hidden relative">
-                              <Image src={`https://picsum.photos/seed/user${i}/100/100`} alt="Participant" fill className="object-cover" referrerPolicy="no-referrer" />
-                            </div>
-                          ))}
-                        </div>
-                        <span className="text-[12px] leading-[18px] text-[#999999] ml-1">{event.participants} participant{event.participants !== 1 ? 's' : ''}</span>
-                      </div>
-                      <div className="relative" onClick={(e) => e.preventDefault()}>
-                        <button className="text-[#999999] hover:text-grey-1 p-1 rounded-md hover:bg-grey-4 transition-colors peer">
-                          <MoreHorizontal className="w-3.5 h-3.5" />
-                        </button>
-                        <div className="absolute bottom-full right-0 mb-1 w-36 bg-white border border-grey-4 rounded-lg shadow-lg opacity-0 invisible peer-focus:opacity-100 peer-focus:visible hover:opacity-100 hover:visible transition-all z-10 flex flex-col py-1">
-                          <button className="px-3 py-1.5 text-left text-sm text-grey-1 hover:bg-grey-5 w-full">Edit event</button>
-                          <button className="px-3 py-1.5 text-left text-sm text-grey-1 hover:bg-grey-5 w-full">Add member</button>
-                          <button
-                            onClick={() => setDeleteConfirmEventId(event.id)}
-                            className="px-3 py-1.5 text-left text-sm text-red-500 hover:bg-red-50 w-full"
-                          >
-                            Delete event
+                      <span className="text-[12px] leading-[18px] text-[#999999]">
+                        {event.participantCount ?? 0} participant{event.participantCount !== 1 ? "s" : ""}
+                      </span>
+                      {(canUpdate || canDelete) && (
+                        <div className="relative" onClick={(e) => e.preventDefault()}>
+                          <button className="text-[#999999] hover:text-grey-1 p-1 rounded-md hover:bg-grey-4 transition-colors peer">
+                            <MoreHorizontal className="w-3.5 h-3.5" />
                           </button>
+                          <div className="absolute bottom-full right-0 mb-1 w-36 bg-white border border-grey-4 rounded-lg shadow-lg opacity-0 invisible peer-focus:opacity-100 peer-focus:visible hover:opacity-100 hover:visible transition-all z-10 flex flex-col py-1">
+                            {canDelete && (
+                              <button
+                                onClick={() => setDeleteConfirmEventId(event.id)}
+                                className="px-3 py-1.5 text-left text-sm text-red-500 hover:bg-red-50 w-full"
+                              >
+                                Delete event
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </Link>
@@ -247,50 +232,32 @@ export default function EventsPage() {
             {totalPages > 1 && (
               <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-grey-4 mt-4">
                 <div className="text-[14px] leading-[20px] text-[#1A1A1A]">
-                  Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredEvents.length)} of {filteredEvents.length} events
+                  Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, total)} of {total} events
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
-                  >
+                  <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50">
                     <ChevronsLeft className="w-4 h-4 text-[#626262]" /> First
                   </button>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
-                  >
+                  <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50">
                     <ChevronLeft className="w-4 h-4 text-[#626262]" /> Back
                   </button>
                   <div className="flex items-center gap-1.5 hidden sm:flex">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
                         className={`w-8 h-8 rounded text-sm font-medium flex items-center justify-center transition-colors ${
-                          currentPage === page
-                            ? "bg-[#C45700] text-white"
-                            : "hover:bg-grey-5 text-grey-2"
+                          currentPage === page ? "bg-[#C45700] text-white" : "hover:bg-grey-5 text-grey-2"
                         }`}
                       >
                         {page}
                       </button>
                     ))}
                   </div>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
-                  >
+                  <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50">
                     Next <ChevronRight className="w-4 h-4 text-[#626262]" />
                   </button>
-                  <button
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50"
-                  >
+                  <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="px-3 py-2 rounded bg-[#FAFAFA] text-[14px] leading-[20px] text-[#1A1A1A] hover:bg-grey-5 flex items-center justify-center gap-1 h-[36px] disabled:opacity-50">
                     Last <ChevronsRight className="w-4 h-4 text-[#626262]" />
                   </button>
                 </div>
@@ -310,154 +277,11 @@ export default function EventsPage() {
         )}
       </div>
 
-      {/* Create Event Modal */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-grey-4 sticky top-0 bg-white z-10">
-              <h2 className="text-xl font-bold text-grey-1">Create New Event</h2>
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="p-2 hover:bg-grey-5 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-grey-2" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-grey-1 mb-1">Event Title <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    placeholder="Enter event title"
-                    className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#C45700] text-sm"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-grey-1 mb-1">Date <span className="text-red-500">*</span></label>
-                    <input
-                      type="date"
-                      className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#C45700] text-sm text-grey-2"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-grey-1 mb-1">Time <span className="text-red-500">*</span></label>
-                    <input
-                      type="time"
-                      className="w-full h-10 px-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#C45700] text-sm text-grey-2"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-grey-1 mb-1">Description</label>
-                  <textarea
-                    placeholder="Enter event description"
-                    className="w-full p-3 rounded-lg border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#C45700] text-sm min-h-[100px] resize-none"
-                  />
-                </div>
-
-                <div className="relative" ref={participantDropdownRef}>
-                  <label className="block text-sm font-medium text-grey-1 mb-1">Add Participants</label>
-                  <button
-                    type="button"
-                    onClick={() => setIsParticipantDropdownOpen(!isParticipantDropdownOpen)}
-                    className="w-full h-10 px-3 rounded-lg border border-grey-4 flex items-center justify-between text-sm text-grey-2 bg-white"
-                  >
-                    {selectedParticipants.length > 0
-                      ? `${selectedParticipants.length} selected`
-                      : "Select departments or individuals"}
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-
-                  {isParticipantDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-grey-4 rounded-lg shadow-xl z-20 max-h-[300px] overflow-y-auto p-2">
-                      <div className="p-2 border-b border-grey-4 mb-2">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-grey-3" />
-                          <input type="text" placeholder="Search..." className="w-full h-8 pl-8 pr-3 text-xs border border-grey-4 rounded focus:outline-none" />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="px-2 py-1 text-[10px] font-bold text-grey-3 uppercase tracking-wider">Departments</div>
-                        {PARTICIPANT_OPTIONS.filter(o => o.type === 'department').map(option => (
-                          <button
-                            key={option.id}
-                            onClick={() => toggleParticipant(option.id)}
-                            className="w-full flex items-center justify-between p-2 hover:bg-grey-5 rounded transition-colors"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-blue-50 rounded flex items-center justify-center">
-                                <Users className="w-3.5 h-3.5 text-blue-500" />
-                              </div>
-                              <span className="text-sm text-grey-1">{option.name}</span>
-                            </div>
-                            {selectedParticipants.includes(option.id) && <Check className="w-4 h-4 text-[#C45700]" />}
-                          </button>
-                        ))}
-
-                        <div className="px-2 py-1 text-[10px] font-bold text-grey-3 uppercase tracking-wider mt-2">Individuals</div>
-                        {PARTICIPANT_OPTIONS.filter(o => o.type === 'user').map(option => (
-                          <button
-                            key={option.id}
-                            onClick={() => toggleParticipant(option.id)}
-                            className="w-full flex items-center justify-between p-2 hover:bg-grey-5 rounded transition-colors"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full overflow-hidden relative">
-                                <Image src={option.avatar!} alt={option.name} fill className="object-cover" />
-                              </div>
-                              <span className="text-sm text-grey-1">{option.name}</span>
-                            </div>
-                            {selectedParticipants.includes(option.id) && <Check className="w-4 h-4 text-[#C45700]" />}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {selectedParticipants.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedParticipants.map(id => {
-                      const option = PARTICIPANT_OPTIONS.find(o => o.id === id);
-                      return (
-                        <div key={id} className="flex items-center gap-1.5 px-2 py-1 bg-grey-5 border border-grey-4 rounded-md text-xs text-grey-1">
-                          {option?.name}
-                          <button onClick={() => toggleParticipant(id)} className="hover:text-red-500"><X className="w-3 h-3" /></button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-grey-4">
-                <button
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    await api.resources.mutate({ resource: "events", action: "create", payload: { branch: activeBranch, participantIds: selectedParticipants } });
-                    toast.success("Event created successfully");
-                    setIsCreateModalOpen(false);
-                  }}
-                  className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg hover:bg-[#C45700]/90 transition-colors"
-                >
-                  Create Event
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateEventModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreated={loadEvents}
+      />
 
       <ConfirmModal
         isOpen={deleteConfirmEventId !== null}

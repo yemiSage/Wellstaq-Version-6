@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
+// path: components/providers/dashboard-data-provider.tsx
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "@/services/api";
-import type { Branch, DashboardBootstrap, UserProfile } from "@/types/api";
+import type { Branch, CurrentUserResponse, DashboardBootstrap, UserProfile } from "@/types/api";
 
 const emptyData: DashboardBootstrap = {
   user: {
@@ -24,9 +25,11 @@ const emptyData: DashboardBootstrap = {
 interface DashboardDataContextValue extends DashboardBootstrap {
   isLoading: boolean;
   error: string | null;
+  currentUser: CurrentUserResponse | null;
+  organizationId: string | null;
   refresh: () => Promise<void>;
   nameCurrentBranch: (name: string) => Promise<Branch>;
-  addBranch: (branch: Omit<Branch, "id">) => Promise<Branch>;
+  addBranch: (name: string) => Promise<Branch>;
   setActiveBranch: (name: string) => Promise<void>;
   updateUser: (user: Partial<UserProfile>) => void;
 }
@@ -35,19 +38,41 @@ const DashboardDataContext = createContext<DashboardDataContextValue | null>(nul
 
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<DashboardBootstrap>(emptyData);
+  const [currentUser, setCurrentUser] = useState<CurrentUserResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+
+    let me: CurrentUserResponse;
     try {
-      setData(await api.dashboard.bootstrap());
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to load dashboard data.");
-    } finally {
+      me = await api.auth.me();
+      setCurrentUser(me);
+    } catch (reason) {
+      setCurrentUser(null);
+      setError(reason instanceof Error ? reason.message : "Unable to load your account.");
       setIsLoading(false);
+      return;
     }
+
+    const bootstrapResult = await Promise.resolve(api.dashboard.bootstrap(me.organizationId)).then(
+      (value) => ({ status: "fulfilled" as const, value }),
+      (reason: unknown) => ({ status: "rejected" as const, reason }),
+    );
+
+    if (bootstrapResult.status === "fulfilled") {
+      setData(bootstrapResult.value);
+    } else {
+      setError(
+        bootstrapResult.reason instanceof Error
+          ? bootstrapResult.reason.message
+          : "Unable to load dashboard data.",
+      );
+    }
+
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -58,7 +83,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     const renamed = await api.branches.nameCurrent(name);
     setData((current) => {
       const previousName = current.activeBranch;
-      const rename = <T extends {branch: string}>(items: T[]) => items.map((item) => (
+      const rename = <T extends { branch: string }>(items: T[]) => items.map((item) => (
         item.branch === previousName ? { ...item, branch: renamed.name } : item
       ));
 
@@ -75,15 +100,27 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     return renamed;
   }, []);
 
-  const addBranch = useCallback(async (branch: Omit<Branch, "id">) => {
-    const created = await api.branches.create(branch);
+  const addBranch = useCallback(async (name: string) => {
+    if (!currentUser?.organizationId) throw new Error("Organization is not loaded.");
+    const organizationId = currentUser.organizationId;
+    const created = await api.organization.createBranch(organizationId, name);
     setData((current) => ({
       ...current,
-      branches: [...current.branches, created],
+      branches: [...current.branches.filter((branch) => branch.id !== created.id), created],
       activeBranch: created.name,
     }));
+    // Reconcile with the canonical server list without requiring a browser
+    // refresh. Keep the newly-created row if a replica/cache is briefly stale.
+    void api.organization.getBranches(organizationId).then((serverBranches) => {
+      setData((current) => ({
+        ...current,
+        branches: serverBranches.some((branch) => branch.id === created.id)
+          ? serverBranches
+          : [...serverBranches, created],
+      }));
+    }).catch(() => undefined);
     return created;
-  }, []);
+  }, [currentUser?.organizationId]);
 
   const setActiveBranch = useCallback(async (name: string) => {
     await api.branches.select(name);
@@ -98,12 +135,14 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     ...data,
     isLoading,
     error,
+    currentUser,
+    organizationId: currentUser?.organizationId ?? null,
     refresh,
     nameCurrentBranch,
     addBranch,
     setActiveBranch,
     updateUser,
-  }), [addBranch, data, error, isLoading, nameCurrentBranch, refresh, setActiveBranch, updateUser]);
+  }), [addBranch, currentUser, data, error, isLoading, nameCurrentBranch, refresh, setActiveBranch, updateUser]);
 
   return <DashboardDataContext.Provider value={value}>{children}</DashboardDataContext.Provider>;
 }

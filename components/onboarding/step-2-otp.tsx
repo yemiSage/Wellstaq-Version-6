@@ -1,16 +1,19 @@
+// path: components/onboarding/step-2-otp.tsx
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { OnboardingData } from "@/types";
 import { api } from "@/services/api";
+import { FieldError } from "@/components/onboarding/field-error";
 
 interface Step2Props {
   data: OnboardingData;
   updateData: (data: Partial<OnboardingData>) => void;
-  onNext: () => void;
+  onNext: (otpCode?: string) => void;
   isLoading: boolean;
+  fieldErrors?: Record<string, string[]>;
 }
 
-export function Step2OTP({ data, updateData, onNext, isLoading }: Step2Props) {
+export function Step2OTP({ data, updateData, onNext, isLoading, fieldErrors }: Step2Props) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [timeLeft, setTimeLeft] = useState(59);
@@ -55,7 +58,7 @@ export function Step2OTP({ data, updateData, onNext, isLoading }: Step2Props) {
         Input the OTP sent to <span className="text-primary-1 font-medium">{data.email}</span> below <span className="text-red-600">*</span>
       </p>
       
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 mb-1">
         {otp.map((digit, index) => (
           <input
             key={index}
@@ -70,8 +73,9 @@ export function Step2OTP({ data, updateData, onNext, isLoading }: Step2Props) {
           />
         ))}
       </div>
-      
-      <div className="text-[12px] text-grey-3 mb-12 flex items-center gap-1">
+      <FieldError errors={fieldErrors} field="otp" />
+
+      <div className="text-[12px] text-grey-3 mb-12 mt-3 flex items-center gap-1">
         Didn&apos;t receive the code? 
         {timeLeft > 0 ? (
           <span>0:{timeLeft.toString().padStart(2, '0')}</span>
@@ -86,7 +90,7 @@ export function Step2OTP({ data, updateData, onNext, isLoading }: Step2Props) {
       </div>
 
       <Button 
-        onClick={onNext} 
+        onClick={() => onNext(otp.join(""))}
         disabled={!isValid || isLoading}
         className="w-full"
       >
