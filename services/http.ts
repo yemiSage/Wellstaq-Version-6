@@ -79,6 +79,7 @@ function notify(error: ApiError) {
 export interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   timeoutMs?: number;
+  suppressErrorNotification?: boolean;
 }
 
 function requestId() {
@@ -116,29 +117,35 @@ function toCamelCase(input: unknown): unknown {
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const {
+    body: requestBody,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    suppressErrorNotification = false,
+    ...fetchOptions
+  } = options;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-  const headers = new Headers(options.headers);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const headers = new Headers(fetchOptions.headers);
   headers.set("Accept", "application/json");
   headers.set("X-Request-Id", headers.get("X-Request-Id") ?? requestId());
 
   const tokens = getAuthTokens();
-  const method = (options.method ?? "GET").toUpperCase();
+  const method = (fetchOptions.method ?? "GET").toUpperCase();
   if (tokens?.accessToken && !headers.has("Authorization")) {
     headers.set("Authorization", `${tokens.tokenType || "Bearer"} ${tokens.accessToken}`);
   }
 
   let body: BodyInit | undefined;
-  if (options.body instanceof FormData) {
-    body = options.body;
-  } else if (options.body !== undefined) {
+  if (requestBody instanceof FormData) {
+    body = requestBody;
+  } else if (requestBody !== undefined) {
     headers.set("Content-Type", "application/json");
-    body = JSON.stringify(toSnakeCase(options.body));
+    body = JSON.stringify(toSnakeCase(requestBody));
   }
 
   try {
     const response = await fetch(path, {
-      ...options,
+      ...fetchOptions,
       body,
       headers,
       credentials: "include",
@@ -194,18 +201,18 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     if (error instanceof ApiError) {
       // Read permissions are rendered in the relevant card/page section. Keep
       // global notifications for user-triggered mutations only.
-      if (!(error.status === 403 && (method === "GET" || method === "HEAD"))) {
+      if (!suppressErrorNotification && !(error.status === 403 && (method === "GET" || method === "HEAD"))) {
         notify(error);
       }
       throw error;
     }
     if (error instanceof DOMException && error.name === "AbortError") {
       const apiError = new ApiError("The request timed out. Please try again.", 408, "REQUEST_TIMEOUT");
-      notify(apiError);
+      if (!suppressErrorNotification) notify(apiError);
       throw apiError;
     }
     const apiError = new ApiError("Unable to reach the service. Please check your connection.", 0, "NETWORK_ERROR");
-    notify(apiError);
+    if (!suppressErrorNotification) notify(apiError);
     throw apiError;
   } finally {
     clearTimeout(timeout);

@@ -1,8 +1,9 @@
 // path: components/onboarding/step-3-password.tsx
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, LockKeyhole, X } from "lucide-react";
+import { Check, Eye, EyeOff, X } from "lucide-react";
 import { OnboardingData } from "@/types";
 import { FieldError } from "@/components/onboarding/field-error";
 import { PASSWORD_RULES, isPasswordValid } from "@/lib/password-validation";
@@ -16,6 +17,7 @@ interface Step3PasswordProps {
 }
 
 export function Step3Password({ data, updateData, onNext, isLoading, fieldErrors }: Step3PasswordProps) {
+  const [showPassword, setShowPassword] = useState(false);
   const isValid = isPasswordValid(data.password);
 
   return (
@@ -29,14 +31,22 @@ export function Step3Password({ data, updateData, onNext, isLoading, fieldErrors
         <div className="relative">
           <Input
             id="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
             placeholder="Enter a secure password"
             value={data.password}
             onChange={(e) => updateData({ password: e.target.value })}
-            className="pr-10"
+            className="pr-12"
           />
-          <LockKeyhole className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-grey-3" />
+          <button
+            type="button"
+            onClick={() => setShowPassword((visible) => !visible)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded text-grey-3 transition-colors hover:text-grey-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1/30"
+          >
+            {showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}
+          </button>
         </div>
         <FieldError errors={fieldErrors} field="password" />
       </div>

@@ -172,6 +172,7 @@ export const api = {
     sendOtp: (email: string) => fromApiOrMock("/auth/signup/otp/request", { accepted: true }, {
       method: "POST",
       body: { email },
+      suppressErrorNotification: true,
     }),
     verifyOtp: (email: string, code: string) =>
       fromApiOrMock<{ emailVerificationToken: string }>(
@@ -183,7 +184,7 @@ export const api = {
       fromApiOrMock<LoginResponse>(
         "/auth/login",
         { accessToken: "mock-access-token", refreshToken: "mock-refresh-token", tokenType: "bearer" },
-        { method: "POST", body: { email, password } },
+        { method: "POST", body: { email, password }, suppressErrorNotification: true },
       ),
     verifyTwoFa: (twoFaChallengeToken: string, code: string) =>
       fromApiOrMock<AuthTokenResponse>(

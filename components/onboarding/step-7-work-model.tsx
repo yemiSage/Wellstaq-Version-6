@@ -16,7 +16,7 @@ export function Step7WorkModel({ data, updateData, onNext, isLoading }: Step7Pro
 
   return (
     <div className="flex flex-col w-full items-start text-left animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h3 className="mb-3 text-[24px] md:text-[30px] font-bold">Work model (Single choice)</h3>
+      <h3 className="mb-3 text-[24px] md:text-[30px] font-bold">Work model</h3>
       <p className="text-sm text-grey-2 mb-10">
         What work model do you operate at your organization?
       </p>

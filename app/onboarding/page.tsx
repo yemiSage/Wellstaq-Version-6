@@ -61,19 +61,31 @@ function earliestStepForErrors(fieldErrors: Record<string, string[]>): Step {
   return steps.length > 0 ? (Math.min(...steps) as Step) : 4;
 }
 
+function isExistingUserError(error: ApiError): boolean {
+  const errorText = `${error.code ?? ""} ${error.message}`.toLowerCase();
+  return (
+    error.status === 409 ||
+    /already[_\s-]?(exists?|registered)/.test(errorText) ||
+    /(user|email|account).*(exists?|registered)/.test(errorText)
+  );
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [data, setData] = useState<OnboardingData>(initialData);
   const [isLoading, setIsLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   useEffect(() => {
     router.prefetch("/dashboard");
+    router.prefetch("/login");
   }, [router]);
 
   const updateData = (newData: Partial<OnboardingData>) => {
     setData((prev) => ({ ...prev, ...newData }));
+    if (newData.email !== undefined) setEmailError(null);
     if (Object.keys(fieldErrors).length > 0) {
       setFieldErrors({});
     }
@@ -82,11 +94,20 @@ export default function OnboardingPage() {
   const handleNext = async (otpCode?: string) => {
     if (step === 1) {
       setIsLoading(true);
+      setEmailError(null);
       try {
         await api.auth.sendOtp(data.email);
         setStep(2);
-      } catch {
-        // ApiError already surfaced via the toast.
+      } catch (err) {
+        if (err instanceof ApiError && isExistingUserError(err)) {
+          router.replace(`/login?email=${encodeURIComponent(data.email.trim())}`);
+          return;
+        }
+        if (err instanceof ApiError) {
+          setEmailError(err.fieldErrors?.email?.[0] ?? err.message);
+        } else {
+          setEmailError("Something went wrong. Please try again.");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -163,7 +184,7 @@ export default function OnboardingPage() {
             <SkeletonLoader />
           ) : (
             <>
-              {step === 1 && <Step1Email data={data} updateData={updateData} onNext={handleNext} isLoading={isLoading} />}
+              {step === 1 && <Step1Email data={data} updateData={updateData} onNext={handleNext} isLoading={isLoading} error={emailError} />}
               {step === 2 && <Step2OTP data={data} updateData={updateData} onNext={handleNext} isLoading={isLoading} fieldErrors={fieldErrors} />}
               {step === 3 && <Step3Password data={data} updateData={updateData} onNext={handleNext} isLoading={isLoading} fieldErrors={fieldErrors} />}
               {step === 4 && <Step4Personal data={data} updateData={updateData} onNext={handleNext} isLoading={isLoading} fieldErrors={fieldErrors} />}

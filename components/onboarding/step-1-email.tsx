@@ -11,14 +11,16 @@ interface Step1Props {
   updateData: (data: Partial<OnboardingData>) => void;
   onNext: () => void;
   isLoading: boolean;
+  error?: string | null;
 }
 
-export function Step1Email({ data, updateData, onNext, isLoading }: Step1Props) {
+export function Step1Email({ data, updateData, onNext, isLoading, error }: Step1Props) {
   const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim());
 
   return (
     <div className="flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <h2 className="mb-8 text-[24px] md:text-[30px] font-bold">Email Address</h2>
+      <h2 className="mb-2 text-[24px] md:text-[30px] font-bold">Let&apos;s get you started</h2>
+      <p className="mb-8 text-sm text-grey-2">Enter your email address to get started.</p>
 
       <div className="flex flex-col gap-6 mb-12">
         <div className="flex flex-col gap-2">
@@ -33,10 +35,13 @@ export function Step1Email({ data, updateData, onNext, isLoading }: Step1Props) 
               placeholder="Enter your email address"
               value={data.email}
               onChange={(e) => updateData({ email: e.target.value })}
-              className="pr-10"
+              className={`pr-10 ${error ? "border-red-500" : ""}`}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "signup-email-error" : undefined}
             />
             <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-grey-3" />
           </div>
+          {error && <p id="signup-email-error" role="alert" className="text-sm text-red-600">{error}</p>}
         </div>
       </div>
 
