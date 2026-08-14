@@ -101,7 +101,7 @@ export function Step4Personal({ data, updateData, onNext, isLoading, fieldErrors
           <span className="text-sm text-red-600">This number is already registered</span>
         )}
         {phoneStatus === "error" && (
-          <span className="text-sm text-red-600">Couldn't verify right now, try again</span>
+          <span className="text-sm text-red-600">Couldn&apos;t verify right now, try again</span>
         )}
         <FieldError errors={fieldErrors} field="phone_number" />
       </div>

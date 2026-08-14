@@ -1,7 +1,7 @@
 ﻿// path: app/dashboard/layout.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { TopNav } from "@/components/dashboard/top-nav";
@@ -58,27 +58,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <DashboardDataProvider>
-      <AccessGate>
-        <div className="flex h-screen bg-grey-5 overflow-hidden">
-          {isSidebarOpen && (
-            <div
-              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-              onClick={() => setIsSidebarOpen(false)}
-            />
-          )}
+      <Suspense fallback={<div className="flex h-screen items-center justify-center text-grey-3">Loading...</div>}>
+        <AccessGate>
+          <div className="flex h-screen bg-grey-5 overflow-hidden">
+            {isSidebarOpen && (
+              <div
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+            )}
 
-          <div className={`fixed lg:relative z-50 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-            <Sidebar onClose={() => setIsSidebarOpen(false)} />
-          </div>
+            <div className={`fixed lg:relative z-50 transition-transform duration-300 lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+              <Sidebar onClose={() => setIsSidebarOpen(false)} />
+            </div>
 
-          <div className="flex-1 flex flex-col overflow-hidden w-full">
-            <TopNav onMenuClick={() => setIsSidebarOpen(true)} />
-            <main className="flex-1 overflow-y-auto p-3 no-scrollbar">
-              {children}
-            </main>
+            <div className="flex-1 flex flex-col overflow-hidden w-full">
+              <TopNav onMenuClick={() => setIsSidebarOpen(true)} />
+              <main className="flex-1 overflow-y-auto p-3 no-scrollbar">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-      </AccessGate>
+        </AccessGate>
+      </Suspense>
     </DashboardDataProvider>
   );
 }

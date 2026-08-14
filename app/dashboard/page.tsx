@@ -16,7 +16,7 @@ import { TrendBadge } from "@/components/dashboard/trend-badge";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { useDashboardScope } from "@/lib/scope";
 import { hasPermission, readablePermission } from "@/lib/permissions";
-import type { StatTrend, Challenge as ChallengeListItem, ChallengeListResponse, LivePulseResponse, EngagementWellbeingTrendPeriod, EngagementWellbeingTrendPoint } from "@/types/api";
+import type { StatTrend, ChallengeItem, ChallengeListResponse, LivePulseResponse, EngagementWellbeingTrendPeriod, EngagementWellbeingTrendPoint } from "@/types/api";
 
 const PULSE_QUESTION_META: {
   key: keyof Omit<LivePulseResponse, "windowId" | "respondentCount" | "prioritySupportPct" | "needsAttentionPct" | "doingWellPct">;
@@ -67,7 +67,7 @@ export default function DashboardPage() {
   const [trendPoints, setTrendPoints] = useState<EngagementWellbeingTrendPoint[]>([]);
   const [trendsLoading, setTrendsLoading] = useState(true);
 
-  const [challenges, setChallenges] = useState<ChallengeListItem[]>([]);
+  const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
   const [challengesLoading, setChallengesLoading] = useState(true);
 
   // Wellbeing pulse — permission-gated before any request is made, not

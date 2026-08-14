@@ -1,7 +1,7 @@
 ﻿// path: app/login/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { SplitLayout } from "@/components/layout/split-layout";
@@ -27,7 +27,7 @@ function isInvalidCredentialsError(error: ApiError): boolean {
   );
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
@@ -240,5 +240,13 @@ export default function LoginPage() {
         </div>
       </OnboardingPane>
     </SplitLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" aria-label="Loading login" />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

@@ -296,15 +296,21 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 <p className="text-sm text-grey-3 italic text-center mt-10">No messages yet — say hello!</p>
               ) : (
                 messages.map((msg) => {
-                  const isMe = msg.senderId === currentUser?.userId;
+                  const isMe = msg.userId === currentUser?.userId;
+                  const sender = organizationMembers.find((member) => member.id === msg.userId);
+                  const senderName = sender
+                    ? `${sender.firstName} ${sender.lastName}`.trim()
+                    : isMe
+                      ? `${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim() || "You"
+                      : "Member";
                   return (
                   <div key={msg.id} className={`flex gap-3 group ${isMe ? "flex-row-reverse" : ""}`}>
                     <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 relative bg-grey-4">
-                      {msg.senderAvatarUrl && <Image src={msg.senderAvatarUrl} alt={msg.senderName} fill className="object-cover" />}
+                      {sender?.avatarUrl && <Image src={sender.avatarUrl} alt={senderName} fill className="object-cover" />}
                     </div>
                     <div className={`w-fit max-w-[78%] space-y-1 ${isMe ? "ml-auto" : "mr-auto"}`}>
                       <div className={`flex items-center gap-2 ${isMe ? "justify-end" : ""}`}>
-                        <span className="font-bold text-sm text-grey-1">{msg.senderName}</span>
+                        <span className="font-bold text-sm text-grey-1">{senderName}</span>
                         <span className="text-xs text-grey-3">› {formatRelativeTime(msg.createdAt)}</span>
                         {msg.isPinned && <Pin className="w-3 h-3 text-primary-1" />}
                         {isMe && (

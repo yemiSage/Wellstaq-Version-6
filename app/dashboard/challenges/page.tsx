@@ -99,7 +99,7 @@ export default function ChallengesPage() {
   useEffect(() => {
     api.wellbeing.getChallenges().then((res) => {
       const map: Record<string, string> = {};
-      res.items.forEach((w: any) => { map[w.id] = w.name; });
+      res.items.forEach((w) => { map[w.id] = w.name; });
       setWellbeingNames(map);
     }).catch(() => setWellbeingNames({}));
   }, []);

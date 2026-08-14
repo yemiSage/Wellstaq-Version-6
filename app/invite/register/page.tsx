@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Download, MailCheck } from "lucide-react";
@@ -18,7 +18,7 @@ const reasons = ["work", "family", "sleep", "social", "food", "love", "exams", "
 const priorities = ["reduce_stress", "build_energy", "improve_balance", "save_better", "stay_active", "feel_connected"];
 const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-export default function InviteRegistrationPage() {
+function InviteRegistrationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inviteCode = searchParams.get("code") ?? searchParams.get("invite_code") ?? "";
@@ -85,4 +85,12 @@ export default function InviteRegistrationPage() {
     {step === "success" && requiresApp && <div className="flex flex-1 flex-col items-center justify-center text-center"><CheckCircle2 className="mb-5 h-16 w-16 text-green-500" /><h1 className="text-2xl font-bold text-grey-1">Registration successful</h1><p className="mt-3 max-w-sm text-sm text-grey-2">Your account is ready. Download the Wellstaq mobile app to continue your wellness journey.</p><div className="mt-7 flex flex-col gap-3 sm:flex-row"><Button disabled className="gap-2"><Download className="h-4 w-4" /> Mobile app coming soon</Button><Link href="/login" className="rounded-lg border border-grey-4 px-5 py-2.5 text-sm font-medium text-grey-2">Back to login</Link></div></div>}
     {error && <p className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
   </div></OnboardingPane></SplitLayout>;
+}
+
+export default function InviteRegistrationPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" aria-label="Loading invitation" />}>
+      <InviteRegistrationContent />
+    </Suspense>
+  );
 }

@@ -28,7 +28,6 @@ import type {
   Post, 
   PostListResponse, 
   CreatePostPayload, 
-  UpdatePostPayload,
   Comment, 
   CommentListResponse, 
   LikeActionResponse,
@@ -977,7 +976,7 @@ story: {
           image: challenge.imageUrl ?? "",
           description: challenge.description ?? "",
         };
-      }) as DashboardBootstrap["challenges"];
+      }) as unknown as DashboardBootstrap["challenges"];
       const normalizedLeaderboard = (payload.leaderboard as unknown as LeaderboardEntry[]).map((entry) => ({
         id: entry.userId,
         name: `${entry.firstName} ${entry.lastName}`.trim(),
@@ -989,7 +988,7 @@ story: {
           : entry.rank < entry.previousRank ? "up" : "down",
         branch: "",
         avatar: `https://picsum.photos/seed/${entry.userId}/100/100`,
-      })) as DashboardBootstrap["leaderboard"];
+      })) as unknown as DashboardBootstrap["leaderboard"];
       return {
         ...payload,
         user: { ...payload.user, businessName: payload.user.businessName ?? "" },
@@ -1002,7 +1001,13 @@ story: {
   },
 
   branches: {
-    nameCurrent: (name: string) => fromApiOrMock("/v1/branches/current", { name, invitees: [] }, {
+    nameCurrent: (name: string) => fromApiOrMock<Branch>("/v1/branches/current", {
+      id: "mock-current-branch",
+      organizationId: "mock-org",
+      name,
+      managerId: null,
+      createdBy: "mock-user",
+    }, {
       method: "PUT",
       body: { name },
     }),

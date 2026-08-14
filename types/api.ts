@@ -6,6 +6,7 @@ export interface ApiErrorBody {
   message?: string;
   code?: string;
   fieldErrors?: Record<string, string[]>;
+  detail?: string | FastApiValidationItem[];
 }
 
 export interface ApiResponse<T> {
@@ -535,7 +536,7 @@ export interface ChatMessageItem {
   userId: string; content: string | null; mediaUrl: string | null; mediaType: string | null;
   isPinned: boolean; pinnedBy: string | null; pinnedAt: string | null; createdAt: string;
 }
-export interface MessageResponse extends ChatMessageItem {}
+export type MessageResponse = ChatMessageItem;
 export interface MessageListResponse { items: MessageResponse[]; total: number; offset: number; limit: number; }
 export interface PinActionResponse { messageId: string; isPinned: boolean; message: string; }
 

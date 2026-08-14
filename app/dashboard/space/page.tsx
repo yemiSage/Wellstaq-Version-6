@@ -752,14 +752,14 @@ export default function SpacePage() {
        <div className={`w-full md:w-[320px] shrink-0 border-l border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "explore" ? "block" : "hidden md:block"}`}>
   <div className="w-full border-l border-grey-4 bg-[#ffffff] p-6 overflow-y-auto no-scrollbar h-full">
     <ActivitySection
-      organizationId={organizationId}
+      organizationId={organizationId ?? undefined}
       userId={currentUser?.userId}
       groupsJoined={filteredMyClubs.length}
       groupsRestricted={restrictedResources.has("clubs")}
       postDelta={postDelta}
       likeDelta={likeDelta}
     />
-    <TrendingSection organizationId={organizationId} onSelectHashtag={handleSelectHashtag} />
+    <TrendingSection organizationId={organizationId ?? undefined} onSelectHashtag={handleSelectHashtag} />
   </div>
 </div>
       </div>
