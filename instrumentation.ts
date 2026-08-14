@@ -12,7 +12,7 @@ export async function register() {
     throw new Error("Production requires NEXT_PUBLIC_DATA_SOURCE=api");
   }
 
-  for (const name of ["BACKEND_API_URL", "GEMINI_API_KEY", "GEMINI_MODEL", "APP_URL"] as const) {
+  for (const name of ["BACKEND_API_URL", "GEMINI_MODEL", "APP_URL"] as const) {
     if (!process.env[name]) throw new Error(`Production requires ${name}`);
   }
 
