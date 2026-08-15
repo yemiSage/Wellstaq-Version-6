@@ -15,35 +15,10 @@ import { useDashboardData } from "@/components/providers/dashboard-data-provider
 import { useDashboardScope } from "@/lib/scope";
 import type { InsightsOverviewResponse, InsightsPeriod } from "@/types/api";
 
-const topPerformers = [
-  { id: 1, name: 'Frank Wilson', steps: '23,500', score: 98, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=100&h=100&auto=format&fit=crop' },
-  { id: 2, name: 'Ella Johnson', steps: '19,875', score: 94, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&h=100&auto=format&fit=crop' },
-  { id: 3, name: 'Jack Thompson', steps: '19,560', score: 91, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&h=100&auto=format&fit=crop' },
-  { id: 4, name: 'Brian Kim', steps: '18,450', score: 88, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=100&h=100&auto=format&fit=crop' },
-];
-
-const defaultInsights: InsightsOverviewResponse = {
-  summary: {
-    averageDailySteps: "8,432",
-    averageDailyStepsTrend: "+12%",
-    healthScore: "76.4",
-    healthScoreTrend: "+4.2pts",
-    activeEmployees: "84%",
-    activeEmployeesTrend: "-3%",
-    challengesWon: "142",
-    challengesWonTrend: "+28",
-  },
-  topPerformers,
-  charts: {} as {
-    monthlySteps?: Array<{name: string; actual: number; target: number}>;
-    healthDistribution?: Array<{name: string; value: number; color: string}>;
-    departmentPerformance?: Array<{name: string; branchName?: string | null; engagement: number}>;
-    weeklyActivity?: Array<{name: string; steps: number}>;
-  },
-};
-
 export default function InsightsPage() {
-  const [insights, setInsights] = useState(defaultInsights);
+  const [insights, setInsights] = useState<InsightsOverviewResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<InsightsPeriod>("nine_months");
   const { organizationId } = useDashboardData();
   const { scope } = useDashboardScope();
@@ -58,16 +33,42 @@ export default function InsightsPage() {
   useEffect(() => {
     if (!organizationId) return;
     const branchId = scope.type === "branch" ? scope.branchId : undefined;
+    let cancelled = false;
+    setInsights(null);
+    setIsLoading(true);
+    setError(null);
     void api.kpiSnapshots
-      .getOverview(organizationId, period, branchId, defaultInsights)
-      .then(setInsights)
-      .catch(() => setInsights(defaultInsights));
+      .getOverview(organizationId, period, branchId)
+      .then((result) => { if (!cancelled) setInsights(result); })
+      .catch(() => { if (!cancelled) setError("Unable to load insights from the backend."); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
   }, [organizationId, scope, period]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
       {/* Header */}
       <InsightsHeader period={period} onPeriodChange={setPeriod} />
+
+      {isLoading && (
+        <div className="space-y-4" aria-label="Loading insights">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-32 animate-pulse rounded-xl bg-grey-4" />
+            ))}
+          </div>
+          <div className="h-80 animate-pulse rounded-xl bg-grey-4" />
+        </div>
+      )}
+
+      {!isLoading && error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700" role="alert">
+          {error}
+        </div>
+      )}
+
+      {!isLoading && !error && insights && (
+        <>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[12px]">
@@ -154,7 +155,13 @@ export default function InsightsPage() {
             <div key={performer.id} className="bg-white p-[20px] rounded-[12px] flex flex-col items-center text-center">
               <div className="relative mb-4">
                 <div className="w-16 h-16 rounded-[12px] overflow-hidden border-2 border-white">
-                  <Image src={performer.avatar} alt={performer.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                  {performer.avatar ? (
+                    <Image src={performer.avatar} alt={performer.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-grey-4 text-sm font-semibold text-grey-2">
+                      {performer.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
                 </div>
                 <div className="absolute -bottom-2 -right-1 w-6 h-6 rounded-full bg-[#EA6A05] text-white text-xs font-bold flex items-center justify-center border-2 border-white">
                   {performer.id}
@@ -176,6 +183,8 @@ export default function InsightsPage() {
           ))}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

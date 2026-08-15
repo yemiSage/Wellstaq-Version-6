@@ -1,7 +1,5 @@
 ﻿// path: types/api.ts
 
-export type DataSource = "mock" | "api";
-
 export interface ApiErrorBody {
   message?: string;
   code?: string;
@@ -71,12 +69,70 @@ export interface ChatMessage {
   content: string;
 }
 
-export type Member = (typeof import("@/lib/mock-data").INITIAL_MEMBERS)[number];
-export type Department = (typeof import("@/lib/mock-data").MOCK_DEPARTMENTS)[number];
-export type WellnessEvent = (typeof import("@/lib/mock-data").EVENTS)[number];
-export type Challenge = (typeof import("@/lib/mock-data").CHALLENGES)[number];
-export type LeaderboardMember = (typeof import("@/lib/mock-data").MOCK_MEMBERS)[number];
-export type ParticipantOption = (typeof import("@/lib/mock-data").PARTICIPANT_OPTIONS)[number];
+export interface Member {
+  id: string | number;
+  name: string;
+  email: string;
+  department: string;
+  status: string;
+  avatar?: string;
+  branch: string;
+  role: string;
+}
+
+export interface Department {
+  id: string | number;
+  name: string;
+  members: number;
+  activities: number;
+  rank: number;
+  branch: string;
+  avatars: string[];
+}
+
+export interface WellnessEvent {
+  id: string | number;
+  title: string;
+  date: string;
+  time: string;
+  participants: number;
+  status: string;
+  branch: string;
+  image: string;
+}
+
+export interface Challenge {
+  id: string | number;
+  title: string;
+  category: string;
+  status: string;
+  participants: number;
+  daysLeft: number;
+  progress: number;
+  branch: string;
+  image: string;
+  description: string;
+}
+
+export interface LeaderboardMember {
+  id: string | number;
+  name: string;
+  role: string;
+  steps: number;
+  rank: number;
+  trend: "up" | "down" | "flat";
+  branch: string;
+  avatar?: string;
+}
+
+export interface ParticipantOption {
+  id: string;
+  name: string;
+  type: "department" | "user";
+  icon?: string;
+  avatar?: string;
+  branch: string;
+}
 
 export interface DashboardBootstrap {
   user: UserProfile;
@@ -525,6 +581,7 @@ export interface ClubMembersListResponse {
 export interface LeaderboardEntry {
   userId: string; firstName: string; lastName: string; value: number;
   rank: number; previousRank: number | null; orgRank: number; previousOrgRank: number | null;
+  avatarUrl?: string | null;
 }
 export interface LeaderboardResponse {
   metricType: string; periodType: string; periodStart: string; periodEnd: string;

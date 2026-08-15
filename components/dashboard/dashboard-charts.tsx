@@ -10,26 +10,21 @@ import {
 import Image from "next/image";
 import type { EngagementWellbeingTrendPeriod, EngagementWellbeingTrendPoint } from "@/types/api";
 
-const wellbeingData = [
-  { subject: 'Mental', A: 80, fullMark: 100 },
-  { subject: 'Physical', A: 70, fullMark: 100 },
-  { subject: 'Social', A: 60, fullMark: 100 },
-  { subject: 'Financial', A: 50, fullMark: 100 },
-  { subject: 'Occupational', A: 65, fullMark: 100 },
-  { subject: 'Environmental', A: 75, fullMark: 100 },
-];
+export interface WellbeingDatum {
+  subject: string;
+  A: number;
+  fullMark: number;
+}
 
-const leaderboardData = [
-  { rank: 1, name: "Brian Kim", steps: "18450 Steps", avatar: "avatar1", trend: "up" },
-  { rank: 2, name: "Catherine Chen", steps: "15030 Steps", avatar: "avatar2", trend: "down" },
-  { rank: 3, name: "David Smith", steps: "10200 Steps", avatar: "avatar3", trend: "down" },
-  { rank: 4, name: "Ella Johnson", steps: "19875 Steps", avatar: "avatar4", trend: "up" },
-  { rank: 5, name: "Frank Wilson", steps: "23500 Steps", avatar: "avatar5", trend: "down" },
-  { rank: 6, name: "Isabella Martinez", steps: "21000 Steps", avatar: "avatar6", trend: "up" },
-  { rank: 7, name: "Jack Thompson", steps: "19560 Steps", avatar: "avatar7", trend: "up" },
-];
+export interface LeaderboardRow {
+  rank: number;
+  name: string;
+  steps: string;
+  avatar?: string;
+  trend: "up" | "down" | "flat";
+}
 
-export function DepartmentPerformanceRadar({data}: {data?: typeof wellbeingData}) {
+export function DepartmentPerformanceRadar({data}: {data?: WellbeingDatum[]}) {
   const chartData = data ?? [];
   return (
     <div className="dashboard-card border border-grey-4">
@@ -162,7 +157,7 @@ export function EngagementChart({
   );
 }
 
-export function Leaderboard({data}: {data?: typeof leaderboardData}) {
+export function Leaderboard({data}: {data?: LeaderboardRow[]}) {
   const leaderboardRows = data ?? [];
   const [leaderboardMetric, setLeaderboardMetric] = useState("Steps");
 
@@ -193,8 +188,12 @@ export function Leaderboard({data}: {data?: typeof leaderboardData}) {
         {leaderboardRows.map((user) => (
           <div key={user.rank} className="flex items-center justify-between p-2 hover:bg-grey-5 rounded-xl transition-colors">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[8px] bg-grey-4 overflow-hidden relative shrink-0">
-                <Image src={`https://picsum.photos/seed/${user.avatar}/100/100`} alt={user.name} fill className="object-cover" referrerPolicy="no-referrer" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[8px] bg-grey-4 overflow-hidden relative shrink-0 flex items-center justify-center text-xs font-semibold text-grey-2">
+                {user.avatar ? (
+                  <Image src={user.avatar} alt={user.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
+                )}
               </div>
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm font-medium text-grey-1 truncate">{user.name}</p>

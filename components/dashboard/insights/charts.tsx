@@ -6,56 +6,16 @@ import {
   BarChart, Bar, PieChart, Pie, Cell
 } from "recharts";
 
-const monthlyStepsData = [
-  { name: 'Jan', actual: 48000, target: 40000 },
-  { name: 'Feb', actual: 52000, target: 45000 },
-  { name: 'Mar', actual: 56000, target: 50000 },
-  { name: 'Apr', actual: 60000, target: 55000 },
-  { name: 'May', actual: 65000, target: 60000 },
-  { name: 'Jun', actual: 70000, target: 65000 },
-  { name: 'Jul', actual: 73000, target: 62000 },
-  { name: 'Aug', actual: 62000, target: 35000 },
-  { name: 'Sep', actual: 75000, target: 65000 },
-  { name: 'Oct', actual: 82000, target: 80000 },
-  { name: 'Nov', actual: 81000, target: 80000 },
-  { name: 'Dec', actual: 70000, target: 75000 },
-];
-
-const healthDistributionData = [
-  { name: 'Excellent', value: 35, color: '#22C55E' },
-  { name: 'Good', value: 42, color: '#F97316' },
-  { name: 'Fair', value: 15, color: '#FDBA74' },
-  { name: 'At Risk', value: 8, color: '#DC2626' },
-];
-
-type DepartmentPerformancePoint = { name: string; branchName?: string | null; engagement: number };
-
-const departmentPerformanceData: DepartmentPerformancePoint[] = [
-  { name: 'Engineering', engagement: 8 },
-  { name: 'Marketing', engagement: 7 },
-  { name: 'TheVipers', engagement: 6 },
-  { name: 'Unbeaten HR', engagement: 9 },
-  { name: 'Finance M...', engagement: 6.5 },
-  { name: 'Elon Musk...', engagement: 7.5 },
-];
-
-const weeklyActivityData = [
-  { name: 'W1', steps: 42000 },
-  { name: 'W2', steps: 38000 },
-  { name: 'W3', steps: 45000 },
-  { name: 'W4', steps: 52000 },
-  { name: 'W5', steps: 48000 },
-  { name: 'W6', steps: 56000 },
-  { name: 'W7', steps: 52000 },
-  { name: 'W8', steps: 59000 },
-  { name: 'W9', steps: 62000 },
-];
+export interface MonthlyStepsPoint { name: string; actual: number; target: number }
+export interface HealthDistributionPoint { name: string; value: number; color: string }
+export interface DepartmentPerformancePoint { name: string; branchName?: string | null; engagement: number }
+export interface WeeklyActivityPoint { name: string; steps: number }
 
 function EmptyChart() {
   return <div className="flex h-full items-center justify-center text-sm text-grey-3">No KPI data available for this period.</div>;
 }
 
-export function MonthlyStepsChart({data}: {data?: typeof monthlyStepsData | null}) {
+export function MonthlyStepsChart({data}: {data?: MonthlyStepsPoint[] | null}) {
   const chartData = data ?? [];
   return (
     <div className="lg:col-span-2 bg-white p-[12px] rounded-[12px]">
@@ -89,7 +49,7 @@ export function MonthlyStepsChart({data}: {data?: typeof monthlyStepsData | null
   );
 }
 
-export function HealthDistributionChart({data}: {data?: typeof healthDistributionData | null}) {
+export function HealthDistributionChart({data}: {data?: HealthDistributionPoint[] | null}) {
   const chartData = data ?? [];
   return (
     <div className="bg-white p-[12px] rounded-[12px] flex flex-col">
@@ -175,7 +135,7 @@ export function DepartmentPerformanceChart({data}: {data?: DepartmentPerformance
   );
 }
 
-export function WeeklyActivityChart({data}: {data?: typeof weeklyActivityData | null}) {
+export function WeeklyActivityChart({data}: {data?: WeeklyActivityPoint[] | null}) {
   const chartData = data ?? [];
   const [activityTab, setActivityTab] = useState("Steps");
 

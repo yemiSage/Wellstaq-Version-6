@@ -6,7 +6,6 @@ import type {
   ChatMessage,
   DashboardBootstrap,
   ResourceMutation,
-  UserProfile,
   UserSearchResult,
   AuthTokenResponse,
   LoginResponse,
@@ -22,17 +21,17 @@ import type {
   WellbeingChallengeListResponse,
   ChallengeStatsResponse,
   LivePulseResponse,
-  Club, 
+  Club,
   ClubListResponse,
   CreateClubPayload,
-  Post, 
-  PostListResponse, 
-  CreatePostPayload, 
-  Comment, 
-  CommentListResponse, 
+  Post,
+  PostListResponse,
+  CreatePostPayload,
+  Comment,
+  CommentListResponse,
   LikeActionResponse,
-  Story, 
-  StoryListResponse, 
+  Story,
+  StoryListResponse,
   CreateStoryPayload,
    OrganizationMembersListResponse,
   ClubMembersListResponse,
@@ -82,24 +81,8 @@ import { backendPath } from "@/services/config";
 import { getAuthTokens, clearAuthTokens } from "@/services/auth-token";
 
 
-const dataSource = (process.env.NEXT_PUBLIC_DATA_SOURCE ?? "mock") as "mock" | "api";
-const usingMockData = dataSource === "mock";
-
-const demoUser: UserProfile = {
-  firstName: "Demo",
-  lastName: "Admin",
-  email: "admin@example.com",
-  businessName: "Wellstaq Demo",
-};
-
-let mockUser = demoUser;
-
-async function mockResult<T>(value: T): Promise<T> {
-  return structuredClone(value);
-}
-
-async function fromApiOrMock<T>(path: string, fallback: T, options?: RequestOptions) {
-  return usingMockData ? mockResult(fallback) : request<T>(backendPath(path), options);
+async function fromApi<T>(path: string, options?: RequestOptions) {
+  return request<T>(backendPath(path), options);
 }
 
 function parseEmployeeCountToInt(range: string): number {
@@ -107,20 +90,6 @@ function parseEmployeeCountToInt(range: string): number {
   if (!numbers || numbers.length === 0) return 0;
   const highest = Math.max(...numbers.map(Number));
   return range.toLowerCase().includes("over") ? highest + 1 : highest;
-}
-
-function mockOrgStats(): OrgStatsResponse {
-  const zeroTrend = { current: 0, previous: null, changePct: null };
-  return {
-    totalUsers: 0, usersTrend: zeroTrend,
-    totalBranches: 0, branchesTrend: zeroTrend,
-    totalDepartments: 0, departmentsTrend: zeroTrend,
-    totalClubs: 0, clubsTrend: zeroTrend,
-    totalEvents: 0, eventsTrend: zeroTrend,
-    totalChallenges: 0, challengesTrend: zeroTrend,
-    activeChallenges: 0,
-    totalPosts: 0, postsTrend: zeroTrend,
-  };
 }
 
 export type StatsPeriod = "week" | "month" | "three_months" | "six_months" | "nine_months" | "year" | "custom";
@@ -146,16 +115,13 @@ function buildStatsQuery(params: StatsQueryParams): string {
 }
 
 export const api = {
-  mode: dataSource,
-  isMock: usingMockData,
-
   auth: {
-    requestInviteOtp: (inviteCode: string) => fromApiOrMock<{ message: string; sentTo: string }>(
-      "/auth/invite/otp/request", { message: "Verification code sent.", sentTo: "your email" },
+    requestInviteOtp: (inviteCode: string) => fromApi<{ message: string; sentTo: string }>(
+      "/auth/invite/otp/request",
       { method: "POST", body: { inviteCode } },
     ),
-    verifyInviteOtp: (inviteCode: string, code: string) => fromApiOrMock<{ inviteVerificationToken: string }>(
-      "/auth/invite/otp/verify", { inviteVerificationToken: `mock-invite-${code}` },
+    verifyInviteOtp: (inviteCode: string, code: string) => fromApi<{ inviteVerificationToken: string }>(
+      "/auth/invite/otp/verify",
       { method: "POST", body: { inviteCode, code } },
     ),
     registerInvite: (payload: {
@@ -163,52 +129,36 @@ export const api = {
       country: string; state: string;
       baseline: { entries: Array<{ dimension: string; level: string; reason: string }> };
       priorities: Array<{ priority: string; rank: number }>;
-    }) => fromApiOrMock<InviteRegistrationResponse>(
+    }) => fromApi<InviteRegistrationResponse>(
       "/auth/register/invite",
-      { message: "Registration successful.", role: "member", requiresApp: true },
       { method: "POST", body: payload },
     ),
-    sendOtp: (email: string) => fromApiOrMock("/auth/signup/otp/request", { accepted: true }, {
+    sendOtp: (email: string) => fromApi("/auth/signup/otp/request", {
       method: "POST",
       body: { email },
       suppressErrorNotification: true,
     }),
     verifyOtp: (email: string, code: string) =>
-      fromApiOrMock<{ emailVerificationToken: string }>(
+      fromApi<{ emailVerificationToken: string }>(
         "/auth/signup/otp/verify",
-        { emailVerificationToken: `mock-token-${code}` },
         { method: "POST", body: { email, code } },
       ),
     login: (email: string, password: string) =>
-      fromApiOrMock<LoginResponse>(
+      fromApi<LoginResponse>(
         "/auth/login",
-        { accessToken: "mock-access-token", refreshToken: "mock-refresh-token", tokenType: "bearer" },
         { method: "POST", body: { email, password }, suppressErrorNotification: true },
       ),
     verifyTwoFa: (twoFaChallengeToken: string, code: string) =>
-      fromApiOrMock<AuthTokenResponse>(
+      fromApi<AuthTokenResponse>(
         "/auth/2fa/verify",
-        { accessToken: "mock-access-token", refreshToken: "mock-refresh-token", tokenType: "bearer" },
         { method: "POST", body: { twoFaChallengeToken, code } },
       ),
-    me: () => fromApiOrMock<CurrentUserResponse>("/auth/me", {
-      userId: "mock-user",
-      email: mockUser.email,
-      firstName: mockUser.firstName,
-      lastName: mockUser.lastName,
-      role: "super_admin",
-      organizationId: "mock-org",
-      branchId: "mock-branch",
-      departmentId: "mock-department",
-      permissions: [{ name: "overview", branchId: null }],
-      twoFaEnabled: false,
-    }),
+    me: () => fromApi<CurrentUserResponse>("/auth/me"),
     logout: async () => {
       const tokens = getAuthTokens();
       try {
-        await fromApiOrMock(
+        await fromApi(
           "/auth/logout",
-          { success: true },
           { method: "POST", body: { refresh_token: tokens?.refreshToken ?? "" } },
         );
       } finally {
@@ -220,104 +170,90 @@ export const api = {
   organization: {
     getStats: (orgId: string, params: StatsQueryParams = {}) => {
       const qs = buildStatsQuery(params);
-      return fromApiOrMock<OrgStatsResponse>(`/organizations/${orgId}/stats${qs ? `?${qs}` : ""}`, mockOrgStats());
+      return fromApi<OrgStatsResponse>(`/organizations/${orgId}/stats${qs ? `?${qs}` : ""}`);
     },
     getActiveUserStats: (orgId: string) =>
-      fromApiOrMock<OrgStatsResponse>(`/organizations/${orgId}/stats?user_status=active`, mockOrgStats()),
+      fromApi<OrgStatsResponse>(`/organizations/${orgId}/stats?user_status=active`),
     getActivitySummary: (orgId: string) =>
-      fromApiOrMock<ActivitySummaryResponse>(`/organizations/${orgId}/activities/summary`, {
-        totalCount: 0,
-        byType: [],
-      }),
+      fromApi<ActivitySummaryResponse>(`/organizations/${orgId}/activities/summary`),
 
     getBranchStats: (orgId: string, branchId: string, params: StatsQueryParams = {}) => {
       const qs = buildStatsQuery(params);
-      return fromApiOrMock<OrgStatsResponse>(
+      return fromApi<OrgStatsResponse>(
         `/organizations/${orgId}/branches/${branchId}/stats${qs ? `?${qs}` : ""}`,
-        mockOrgStats(),
       );
     },
     getBranchActiveUserStats: (orgId: string, branchId: string) =>
-      fromApiOrMock<OrgStatsResponse>(
+      fromApi<OrgStatsResponse>(
         `/organizations/${orgId}/branches/${branchId}/stats?user_status=active`,
-        mockOrgStats(),
       ),
     getBranchActivitySummary: (orgId: string, branchId: string) =>
-      fromApiOrMock<ActivitySummaryResponse>(
+      fromApi<ActivitySummaryResponse>(
         `/organizations/${orgId}/branches/${branchId}/activities/summary`,
-        { totalCount: 0, byType: [] },
       ),
 
     getBranches: async (orgId: string) => {
-      const response = await fromApiOrMock<{ items: Branch[]; total: number; offset: number; limit: number }>(
+      const response = await fromApi<{ items: Branch[]; total: number; offset: number; limit: number }>(
         `/organizations/${orgId}/branches?limit=100`,
-        { items: [], total: 0, offset: 0, limit: 100 },
       );
       return response.items;
     },
     createBranch: (orgId: string, name: string) =>
-      fromApiOrMock<Branch>(`/organizations/${orgId}/branches`, {} as Branch, {
+      fromApi<Branch>(`/organizations/${orgId}/branches`, {
         method: "POST",
         body: { name },
       }),
     assignBranchManager: (orgId: string, branchId: string, managerId: string) =>
-      fromApiOrMock<{ branchId: string; organizationId: string; managerId: string; message: string }>(
+      fromApi<{ branchId: string; organizationId: string; managerId: string; message: string }>(
         `/organizations/${orgId}/branches/${branchId}/manager`,
-        { branchId, organizationId: orgId, managerId, message: "Manager assigned successfully." },
         { method: "PUT", body: { managerId } },
       ),
     getDepartments: (orgId: string, branchId?: string) =>
-      fromApiOrMock<DepartmentListResponse>(
+      fromApi<DepartmentListResponse>(
         branchId
           ? `/organizations/${orgId}/branches/${branchId}/departments?limit=200`
           : `/organizations/${orgId}/departments?limit=200`,
-        { items: [], total: 0, offset: 0, limit: 200 },
       ),
     getDepartmentRanks: (orgId: string, branchId?: string) => {
       const query = branchId ? `?branch_id=${encodeURIComponent(branchId)}` : "";
-      return fromApiOrMock<DepartmentRankListResponse>(
+      return fromApi<DepartmentRankListResponse>(
         `/organizations/${orgId}/department-rank${query}`,
-        { items: [] },
       );
     },
     getDepartmentMembers: (orgId: string, departmentId: string) =>
-      fromApiOrMock<DepartmentMembersListResponse>(
+      fromApi<DepartmentMembersListResponse>(
         `/organizations/${orgId}/departments/${departmentId}/members?limit=200`,
-        { items: [], total: 0, offset: 0, limit: 200 },
       ),
     createDepartment: (orgId: string, branchId: string, name: string) =>
-      fromApiOrMock<DepartmentItem>(`/organizations/${orgId}/departments`, {} as DepartmentItem, {
+      fromApi<DepartmentItem>(`/organizations/${orgId}/departments`, {
         method: "POST", body: { name, branch_id: branchId, avatar_initial: name.slice(0, 2).toUpperCase() },
       }),
     updateDepartment: (orgId: string, departmentId: string, name: string) =>
-      fromApiOrMock<DepartmentItem>(`/organizations/${orgId}/departments/${departmentId}`, {} as DepartmentItem, {
+      fromApi<DepartmentItem>(`/organizations/${orgId}/departments/${departmentId}`, {
         method: "PATCH", body: { name },
       }),
     deleteDepartment: (orgId: string, departmentId: string) =>
-      fromApiOrMock<{ departmentId: string; membersTransferred: number; message: string }>(
+      fromApi<{ departmentId: string; membersTransferred: number; message: string }>(
         `/organizations/${orgId}/departments/${departmentId}`,
-        { departmentId, membersTransferred: 0, message: "" },
         { method: "DELETE", body: { transfer_to_department_id: null } },
       ),
     assignDepartmentMember: (orgId: string, departmentId: string, userId: string) =>
-      fromApiOrMock<{ message: string }>(
-        `/organizations/${orgId}/departments/${departmentId}/members/${userId}`,
-        { message: "" }, { method: "PUT" },
+      fromApi<{ message: string }>(
+        `/organizations/${orgId}/departments/${departmentId}/members/${userId}`, { method: "PUT" },
       ),
     getEvents: (orgId: string, params: { branchId?: string; offset?: number; limit?: number } = {}) => {
       const query = new URLSearchParams({
         offset: String(params.offset ?? 0), limit: String(params.limit ?? 20),
       });
       if (params.branchId) query.set("branch_id", params.branchId);
-      return fromApiOrMock<EventListResponse>(
+      return fromApi<EventListResponse>(
         `/organizations/${orgId}/events?${query.toString()}`,
-        { items: [], total: 0, offset: params.offset ?? 0, limit: params.limit ?? 20 },
       );
     },
     getEvent: (orgId: string, eventId: string) =>
-      fromApiOrMock<EventItem>(`/organizations/${orgId}/events/${eventId}`, {} as EventItem),
+      fromApi<EventItem>(`/organizations/${orgId}/events/${eventId}`),
     createEvent: (orgId: string, payload: { branchId: string; title: string; description?: string; imageUrl?: string; startDate: string; endDate?: string; recurrenceRule?: string; time: string }) =>
-      fromApiOrMock<EventItem>(`/organizations/${orgId}/events`, {} as EventItem, {
+      fromApi<EventItem>(`/organizations/${orgId}/events`, {
         method: "POST", body: {
           branch_id: payload.branchId, title: payload.title, description: payload.description,
           image_url: payload.imageUrl, start_date: payload.startDate, end_date: payload.endDate,
@@ -325,7 +261,7 @@ export const api = {
         },
       }),
     updateEvent: (orgId: string, eventId: string, payload: { title?: string; description?: string; imageUrl?: string; startDate?: string; endDate?: string; recurrenceRule?: string; time?: string; status?: string }) =>
-      fromApiOrMock<EventItem>(`/organizations/${orgId}/events/${eventId}`, {} as EventItem, {
+      fromApi<EventItem>(`/organizations/${orgId}/events/${eventId}`, {
         method: "PATCH", body: {
           title: payload.title, description: payload.description, image_url: payload.imageUrl,
           start_date: payload.startDate, end_date: payload.endDate,
@@ -333,24 +269,21 @@ export const api = {
         },
       }),
     deleteEvent: (orgId: string, eventId: string) =>
-      fromApiOrMock<{ eventId: string; message: string }>(
-        `/organizations/${orgId}/events/${eventId}`, { eventId, message: "" }, { method: "DELETE" },
+      fromApi<{ eventId: string; message: string }>(
+        `/organizations/${orgId}/events/${eventId}`, { method: "DELETE" },
       ),
     getEventParticipants: (orgId: string, eventId: string) =>
-      fromApiOrMock<EventParticipantsListResponse>(
+      fromApi<EventParticipantsListResponse>(
         `/organizations/${orgId}/events/${eventId}/participants?limit=200`,
-        { items: [], total: 0, offset: 0, limit: 200 },
       ),
     inviteEventParticipant: (orgId: string, eventId: string, userId: string) =>
-      fromApiOrMock<{ eventId: string; userId: string; message: string }>(
+      fromApi<{ eventId: string; userId: string; message: string }>(
         `/organizations/${orgId}/events/${eventId}/participants`,
-        { eventId, userId, message: "" },
         { method: "POST", body: { user_id: userId, is_invite: true } },
       ),
     joinEvent: (orgId: string, eventId: string, userId: string) =>
-      fromApiOrMock<{ eventId: string; userId: string; message: string }>(
+      fromApi<{ eventId: string; userId: string; message: string }>(
         `/organizations/${orgId}/events/${eventId}/participants`,
-        { eventId, userId, message: "" },
         { method: "POST", body: { user_id: userId, is_invite: false } },
       ),
     getChallenges: (
@@ -363,16 +296,15 @@ export const api = {
       if (params.branchId) query.set("branch_id", params.branchId);
       if (params.scope) query.set("scope", params.scope);
       if (params.status) query.set("status", params.status);
-      return fromApiOrMock<ChallengeListResponse>(
+      return fromApi<ChallengeListResponse>(
         `/organizations/${orgId}/challenges?${query.toString()}`,
-        { items: [], total: 0, offset: 0, limit: params.limit ?? 8 },
       );
     },
     getChallenge: (orgId: string, challengeId: string) =>
-      fromApiOrMock<ChallengeItem>(`/organizations/${orgId}/challenges/${challengeId}`, {} as ChallengeItem),
+      fromApi<ChallengeItem>(`/organizations/${orgId}/challenges/${challengeId}`),
 
     createChallenge: (orgId: string, payload: CreateChallengePayload) =>
-      fromApiOrMock<ChallengeItem>(`/organizations/${orgId}/challenges`, {} as ChallengeItem, {
+      fromApi<ChallengeItem>(`/organizations/${orgId}/challenges`, {
         method: "POST",
         body: {
           branch_id: payload.branchId,
@@ -389,7 +321,7 @@ export const api = {
       }),
 
     updateChallenge: (orgId: string, challengeId: string, payload: UpdateChallengePayload) =>
-      fromApiOrMock<ChallengeItem>(`/organizations/${orgId}/challenges/${challengeId}`, {} as ChallengeItem, {
+      fromApi<ChallengeItem>(`/organizations/${orgId}/challenges/${challengeId}`, {
         method: "PATCH",
         body: {
           name: payload.name,
@@ -405,29 +337,26 @@ export const api = {
       }),
 
     deleteChallenge: (orgId: string, challengeId: string) =>
-      fromApiOrMock<{ success: true }>(`/organizations/${orgId}/challenges/${challengeId}`, { success: true }, {
+      fromApi<{ success: true }>(`/organizations/${orgId}/challenges/${challengeId}`, {
         method: "DELETE",
       }),
 
     cancelChallenge: (orgId: string, challengeId: string) =>
-      fromApiOrMock<ChallengeItem>(`/organizations/${orgId}/challenges/${challengeId}/cancel`, {} as ChallengeItem, {
+      fromApi<ChallengeItem>(`/organizations/${orgId}/challenges/${challengeId}/cancel`, {
         method: "POST",
       }),
 
     joinChallenge: (orgId: string, challengeId: string) =>
-      fromApiOrMock<JoinChallengeResponse>(`/organizations/${orgId}/challenges/${challengeId}/join`, {
-        challengeId, userId: "mock-user", message: "Joined",
-      }, { method: "POST" }),
+      fromApi<JoinChallengeResponse>(`/organizations/${orgId}/challenges/${challengeId}/join`, { method: "POST" }),
 
     leaveChallenge: (orgId: string, challengeId: string) =>
-      fromApiOrMock<{ success: true }>(`/organizations/${orgId}/challenges/${challengeId}/join`, { success: true }, {
+      fromApi<{ success: true }>(`/organizations/${orgId}/challenges/${challengeId}/join`, {
         method: "DELETE",
       }),
 
     getChallengeParticipants: (orgId: string, challengeId: string) =>
-      fromApiOrMock<ChallengeParticipantListResponse>(
+      fromApi<ChallengeParticipantListResponse>(
         `/organizations/${orgId}/challenges/${challengeId}/participants?limit=50`,
-        { items: [], total: 0, offset: 0, limit: 50 },
       ),
     getChallengeStats: (
       orgId: string,
@@ -444,26 +373,16 @@ export const api = {
       if (params.startDate) query.set("start_date", params.startDate);
       if (params.endDate) query.set("end_date", params.endDate);
       const qs = query.toString();
-      return fromApiOrMock<ChallengeStatsResponse>(
+      return fromApi<ChallengeStatsResponse>(
         `/organizations/${orgId}/challenges/stats${qs ? `?${qs}` : ""}`,
-        { activeChallenges: 0, activeChallengesTrend: null, totalParticipants: 0, totalParticipantsTrend: null, completionRate: 0, completionRateTrend: null },
       );
     },
 
     getLivePulse: async (orgId: string, branchId?: string): Promise<LivePulseResponse | null> => {
       const qs = branchId ? `?branch_id=${branchId}` : "";
       try {
-        return await fromApiOrMock<LivePulseResponse>(
+        return await fromApi<LivePulseResponse>(
           `/organizations/${orgId}/wellbeing-survey/pulse/live${qs}`,
-          {
-            windowId: "", respondentCount: 0,
-            stressManageability: { percent: null, status: null },
-            energyRecovery: { percent: null, status: null },
-            connectionBelonging: { percent: null, status: null },
-            workloadSustainability: { percent: null, status: null },
-            workplaceComfort: { percent: null, status: null },
-            prioritySupportPct: null, needsAttentionPct: null, doingWellPct: null,
-          },
         );
       } catch (err) {
         // 404 = no open survey window right now — a legitimate empty state,
@@ -479,9 +398,8 @@ export const api = {
     ) => {
       const query = new URLSearchParams({ period });
       if (branchId) query.set("branch_id", branchId);
-      return fromApiOrMock<EngagementWellbeingTrendsResponse>(
+      return fromApi<EngagementWellbeingTrendsResponse>(
         `/organizations/${orgId}/dashboard/engagement-wellbeing-trends?${query.toString()}`,
-        { period, startDate: "", endDate: "", points: [] },
       );
     },
     getMembers: (orgId: string, params: { offset?: number; limit?: number; branchId?: string } = {}) => {
@@ -489,22 +407,19 @@ export const api = {
     query.set("limit", String(params.limit ?? 200));
     query.set("offset", String(params.offset ?? 0));
     if (params.branchId) query.set("branch_id", params.branchId);
-    return fromApiOrMock<OrganizationMembersListResponse>(
+    return fromApi<OrganizationMembersListResponse>(
       `/organizations/${orgId}/members?${query.toString()}`,
-      { items: [], total: 0, offset: 0, limit: params.limit ?? 200 },
     );
   },
-    listInvites: (orgId: string, branchId?: string) => fromApiOrMock<import("@/types/api").OrganizationInviteListResponse>(
+    listInvites: (orgId: string, branchId?: string) => fromApi<import("@/types/api").OrganizationInviteListResponse>(
       `/organizations/${orgId}/invites?status=pending&limit=200${branchId ? `&branch_id=${encodeURIComponent(branchId)}` : ""}`,
-      { items: [], total: 0, offset: 0, limit: 200 },
     ),
-    cancelInvite: (orgId: string, inviteId: string) => fromApiOrMock<void>(
-      `/organizations/${orgId}/invites/${inviteId}`, undefined, { method: "DELETE" },
+    cancelInvite: (orgId: string, inviteId: string) => fromApi<void>(
+      `/organizations/${orgId}/invites/${inviteId}`, { method: "DELETE" },
     ),
     sendInvite: (orgId: string, payload: { email: string; branchId: string; departmentId: string; roleId: string }) =>
-      fromApiOrMock<SendInviteResponse>(
+      fromApi<SendInviteResponse>(
         `/organizations/${orgId}/invites`,
-        {} as SendInviteResponse,
         { method: "POST", body: {
           invited_email: payload.email,
           branch_id: payload.branchId,
@@ -514,66 +429,58 @@ export const api = {
       ),
   },
   roles: {
-    listSystem: (assignableOnly = false) => fromApiOrMock<SystemRolesResponse>(`/roles/system?assignable_only=${assignableOnly}`, { items: [], total: 0 }),
-    listOrganization: (orgId: string, branchId?: string) => fromApiOrMock<SystemRolesResponse>(
+    listSystem: (assignableOnly = false) => fromApi<SystemRolesResponse>(`/roles/system?assignable_only=${assignableOnly}`),
+    listOrganization: (orgId: string, branchId?: string) => fromApi<SystemRolesResponse>(
       `/organizations/${orgId}/roles${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`,
-      { items: [], total: 0 },
     ),
-    create: (orgId: string, body: { name: string; description?: string; branchId?: string }) => fromApiOrMock<RoleItem>(
-      `/organizations/${orgId}/roles`, {} as RoleItem, { method: "POST", body },
+    create: (orgId: string, body: { name: string; description?: string; branchId?: string }) => fromApi<RoleItem>(
+      `/organizations/${orgId}/roles`, { method: "POST", body },
     ),
-    delete: (orgId: string, roleId: string) => fromApiOrMock<void>(
-      `/organizations/${orgId}/roles/${encodeURIComponent(roleId)}`, undefined, { method: "DELETE" },
+    delete: (orgId: string, roleId: string) => fromApi<void>(
+      `/organizations/${orgId}/roles/${encodeURIComponent(roleId)}`, { method: "DELETE" },
     ),
-    copy: (orgId: string, roleId: string, body: { name: string }) => fromApiOrMock<RoleItem>(
-      `/organizations/${orgId}/roles/${encodeURIComponent(roleId)}/copy`, {} as RoleItem, { method: "POST", body },
+    copy: (orgId: string, roleId: string, body: { name: string }) => fromApi<RoleItem>(
+      `/organizations/${orgId}/roles/${encodeURIComponent(roleId)}/copy`, { method: "POST", body },
     ),
-    updatePermissions: (orgId: string, roleId: string, permissionNames: string[]) => fromApiOrMock<RoleItem>(
-      `/organizations/${orgId}/roles/${encodeURIComponent(roleId)}/permissions`, {} as RoleItem,
+    updatePermissions: (orgId: string, roleId: string, permissionNames: string[]) => fromApi<RoleItem>(
+      `/organizations/${orgId}/roles/${encodeURIComponent(roleId)}/permissions`,
       { method: "PUT", body: { permissionNames } },
     ),
-    assignToMember: (orgId: string, userId: string, role: RoleItem) => fromApiOrMock<void>(
-      `/organizations/${orgId}/members/${userId}/${role.isDefault ? "system-role" : "custom-role"}`,
-      undefined, { method: "PUT", body: { roleId: role.id } },
+    assignToMember: (orgId: string, userId: string, role: RoleItem) => fromApi<void>(
+      `/organizations/${orgId}/members/${userId}/${role.isDefault ? "system-role" : "custom-role"}`, { method: "PUT", body: { roleId: role.id } },
     ),
-    revokeFromMember: (orgId: string, userId: string, branchId?: string) => fromApiOrMock<void>(
-      `/organizations/${orgId}/members/${userId}/role${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`,
-      undefined, { method: "DELETE" },
+    revokeFromMember: (orgId: string, userId: string, branchId?: string) => fromApi<void>(
+      `/organizations/${orgId}/members/${userId}/role${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`, { method: "DELETE" },
     ),
   },
   teamMembers: {
-    assignDepartment: (orgId: string, departmentId: string, userId: string) => fromApiOrMock(
-      `/organizations/${orgId}/departments/${departmentId}/members/${userId}`, {}, { method: "PUT" },
+    assignDepartment: (orgId: string, departmentId: string, userId: string) => fromApi(
+      `/organizations/${orgId}/departments/${departmentId}/members/${userId}`, { method: "PUT" },
     ),
-    transferBranch: (orgId: string, branchId: string, userId: string, departmentId: string) => fromApiOrMock(
-      `/organizations/${orgId}/branches/${branchId}/members/${userId}`, {}, { method: "PUT", body: { departmentId } },
+    transferBranch: (orgId: string, branchId: string, userId: string, departmentId: string) => fromApi(
+      `/organizations/${orgId}/branches/${branchId}/members/${userId}`, { method: "PUT", body: { departmentId } },
     ),
   },
   permissions: {
-    listCatalogue: (branchId?: string) => fromApiOrMock<PermissionCatalogueResponse>(
+    listCatalogue: (branchId?: string) => fromApi<PermissionCatalogueResponse>(
       `/permissions${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`,
-      { items: [], total: 0 },
     ),
-    getUser: (orgId: string, userId: string, branchId?: string) => fromApiOrMock<UserPermissionsResponse>(
+    getUser: (orgId: string, userId: string, branchId?: string) => fromApi<UserPermissionsResponse>(
       `/organizations/${orgId}/members/${userId}/permissions${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`,
-      { userId, organizationId: orgId, total: 0, permissions: [] },
     ),
-    grant: (orgId: string, userId: string, permissionName: string, branchId: string | null) => fromApiOrMock(
-      `/organizations/${orgId}/members/${userId}/permissions`, {},
+    grant: (orgId: string, userId: string, permissionName: string, branchId: string | null) => fromApi(
+      `/organizations/${orgId}/members/${userId}/permissions`,
       { method: "POST", body: { permissionName, branchId } },
     ),
-    revoke: (orgId: string, userId: string, permissionName: string, branchId: string | null) => fromApiOrMock(
-      `/organizations/${orgId}/members/${userId}/permissions`, {},
+    revoke: (orgId: string, userId: string, permissionName: string, branchId: string | null) => fromApi(
+      `/organizations/${orgId}/members/${userId}/permissions`,
       { method: "DELETE", body: { permissionName, branchId } },
     ),
   },
   preferences: {
-    get: () => fromApiOrMock<UserPreferences>("/user-settings/preferences", {
-      emailNotifications: true, pushNotifications: true, challengeReminders: true,
-      publicProfile: false, showActivity: false, theme: "light",
-    }),
-    update: (body: Partial<UserPreferences>) => fromApiOrMock<UserPreferences>(
-      "/user-settings/preferences", {} as UserPreferences, { method: "PATCH", body },
+    get: () => fromApi<UserPreferences>("/user-settings/preferences"),
+    update: (body: Partial<UserPreferences>) => fromApi<UserPreferences>(
+      "/user-settings/preferences", { method: "PATCH", body },
     ),
   },
 kpiSnapshots: {
@@ -581,20 +488,7 @@ kpiSnapshots: {
     orgId: string,
     period: InsightsPeriod = "month",
     branchId?: string,
-    fallback?: InsightsOverviewResponse,
   ) => {
-    const empty = fallback ?? {
-      summary: {
-        averageDailySteps: "0", averageDailyStepsTrend: "0%",
-        healthScore: "0", healthScoreTrend: "0pts",
-        activeEmployees: "0%", activeEmployeesTrend: "0%",
-        challengesWon: "0", challengesWonTrend: "0",
-      },
-      topPerformers: [],
-      charts: {},
-    };
-    if (usingMockData) return mockResult(empty);
-
     const query = new URLSearchParams({ period });
     if (branchId) query.set("branch_id", branchId);
     const raw = await request<KPIOverviewApiResponse>(
@@ -624,7 +518,7 @@ kpiSnapshots: {
         name: `${performer.firstName} ${performer.lastName}`.trim(),
         steps: performer.steps.toLocaleString(),
         score: performer.score,
-        avatar: performer.avatarUrl || `https://picsum.photos/seed/${performer.userId}/100/100`,
+        avatar: performer.avatarUrl ?? "",
       })),
     } satisfies InsightsOverviewResponse;
   },
@@ -636,9 +530,8 @@ leaderboard: {
     query.set("period_type", "daily");
     query.set("limit", "3");
     if (branchId) query.set("branch_id", branchId);
-    return fromApiOrMock<LeaderboardResponse>(
+    return fromApi<LeaderboardResponse>(
       `/organizations/${orgId}/leaderboard/branch?${query.toString()}`,
-      { metricType, periodType: "daily", periodStart: "", periodEnd: "", scope: "branch", items: [] } as unknown as LeaderboardResponse,
     );
   },
   getOrg: (orgId: string, metricType: string) => {
@@ -646,9 +539,8 @@ leaderboard: {
     query.set("metric_type", metricType);
     query.set("period_type", "daily");
     query.set("limit", "3");
-    return fromApiOrMock<LeaderboardResponse>(
+    return fromApi<LeaderboardResponse>(
       `/organizations/${orgId}/leaderboard/org?${query.toString()}`,
-      { metricType, periodType: "daily", periodStart: "", periodEnd: "", scope: "org", items: [] } as unknown as LeaderboardResponse,
     );
   },
 },
@@ -663,15 +555,15 @@ club: {
     const path = params.branchId
       ? `/organizations/${orgId}/branches/${params.branchId}/clubs?${query.toString()}`
       : `/organizations/${orgId}/clubs?${query.toString()}`;
-    return fromApiOrMock<ClubListResponse>(path, { items: [], total: 0, offset: 0, limit: params.limit ?? 20 });
+    return fromApi<ClubListResponse>(path);
   },
 
   getClub: (orgId: string, clubId: string) =>
-    fromApiOrMock<Club>(`/organizations/${orgId}/clubs/${clubId}`, {} as Club),
+    fromApi<Club>(`/organizations/${orgId}/clubs/${clubId}`),
 
   // Creation is always branch-scoped — there's no org-wide create route.
   createClub: (orgId: string, branchId: string, payload: CreateClubPayload) =>
-    fromApiOrMock<Club>(`/organizations/${orgId}/branches/${branchId}/clubs`, {} as Club, {
+    fromApi<Club>(`/organizations/${orgId}/branches/${branchId}/clubs`, {
       method: "POST",
       body: {
         name: payload.name,
@@ -683,7 +575,7 @@ club: {
     }),
 
   updateClub: (orgId: string, clubId: string, payload: Partial<CreateClubPayload>) =>
-    fromApiOrMock<Club>(`/organizations/${orgId}/clubs/${clubId}`, {} as Club, {
+    fromApi<Club>(`/organizations/${orgId}/clubs/${clubId}`, {
       method: "PATCH",
       body: {
         name: payload.name,
@@ -695,28 +587,25 @@ club: {
     }),
 
   deleteClub: (orgId: string, clubId: string) =>
-    fromApiOrMock<{ clubId: string; organizationId: string; message: string }>(
-      `/organizations/${orgId}/clubs/${clubId}`, { clubId, organizationId: orgId, message: "" }, { method: "DELETE" },
+    fromApi<{ clubId: string; organizationId: string; message: string }>(
+      `/organizations/${orgId}/clubs/${clubId}`, { method: "DELETE" },
     ),
 
   joinClub: (orgId: string, clubId: string, userId: string) =>
-    fromApiOrMock<{ userId: string; clubId: string; organizationId: string; message: string }>(
-      `/organizations/${orgId}/clubs/${clubId}/members/${userId}`,
-      { userId, clubId, organizationId: orgId, message: "Joined" }, { method: "PUT" },
+    fromApi<{ userId: string; clubId: string; organizationId: string; message: string }>(
+      `/organizations/${orgId}/clubs/${clubId}/members/${userId}`, { method: "PUT" },
     ),
 
   leaveClub: (orgId: string, clubId: string, userId: string) =>
-    fromApiOrMock<{ userId: string; clubId: string; organizationId: string; message: string }>(
-      `/organizations/${orgId}/clubs/${clubId}/members/${userId}/leave`,
-      { userId, clubId, organizationId: orgId, message: "Left" }, { method: "DELETE" },
+    fromApi<{ userId: string; clubId: string; organizationId: string; message: string }>(
+      `/organizations/${orgId}/clubs/${clubId}/members/${userId}/leave`, { method: "DELETE" },
     ),
     getClubMembers: (orgId: string, clubId: string, params: { offset?: number; limit?: number } = {}) => {
     const query = new URLSearchParams();
     query.set("limit", String(params.limit ?? 200));
     query.set("offset", String(params.offset ?? 0));
-    return fromApiOrMock<ClubMembersListResponse>(
+    return fromApi<ClubMembersListResponse>(
       `/organizations/${orgId}/clubs/${clubId}/members?${query.toString()}`,
-      { items: [], total: 0, offset: 0, limit: params.limit ?? 200 },
     );
   },
 
@@ -724,9 +613,8 @@ club: {
 
 hashtag: {
   getTrending: (orgId: string) =>
-    fromApiOrMock<TrendingHashtagListResponse>(
+    fromApi<TrendingHashtagListResponse>(
       `/organizations/${orgId}/hashtags/trending`,
-      { items: [] },
     ),
 
   getPostsByTag: (
@@ -737,9 +625,8 @@ hashtag: {
     const query = new URLSearchParams();
     query.set("limit", String(params.limit ?? 20));
     query.set("offset", String(params.offset ?? 0));
-    return fromApiOrMock<HashtagPostListResponse>(
+    return fromApi<HashtagPostListResponse>(
       `/organizations/${orgId}/hashtags/${encodeURIComponent(tagName)}/posts?${query.toString()}`,
-      { items: [], total: 0, offset: 0, limit: params.limit ?? 20 },
     );
   },
 },
@@ -749,9 +636,8 @@ activity: {
     query.set("metric_type", "steps");
     query.set("granularity", "weekly");
     query.set("limit", "1");
-    return fromApiOrMock<ActivityTrendResponse>(
+    return fromApi<ActivityTrendResponse>(
       `/organizations/${orgId}/activity-log/trend?${query.toString()}`,
-      { metricType: "steps", granularity: "weekly", points: [] },
     );
   },
 },
@@ -760,33 +646,28 @@ chat: {
     const query = new URLSearchParams();
     query.set("limit", String(params.limit ?? 50));
     query.set("offset", String(params.offset ?? 0));
-    return fromApiOrMock<MessageListResponse>(
+    return fromApi<MessageListResponse>(
       `/organizations/${orgId}/conversations/${conversationType}/${conversationId}/messages?${query.toString()}`,
-      { items: [], total: 0, offset: 0, limit: params.limit ?? 50 },
     );
   },
   sendMessage: (orgId: string, conversationType: string, conversationId: string, payload: { content?: string; mediaUrl?: string; mediaType?: string }) =>
-    fromApiOrMock<MessageResponse>(
+    fromApi<MessageResponse>(
       `/organizations/${orgId}/conversations/${conversationType}/${conversationId}/messages`,
-      {} as MessageResponse,
       { method: "POST", body: { content: payload.content, media_url: payload.mediaUrl, media_type: payload.mediaType } },
     ),
   deleteMessage: (orgId: string, messageId: string) =>
-    fromApiOrMock<{ messageId: string; message: string }>(
+    fromApi<{ messageId: string; message: string }>(
       `/organizations/${orgId}/conversations/messages/${messageId}`,
-      { messageId, message: "" },
       { method: "DELETE" },
     ),
   pinMessage: (orgId: string, messageId: string) =>
-    fromApiOrMock<PinActionResponse>(
+    fromApi<PinActionResponse>(
       `/organizations/${orgId}/conversations/messages/${messageId}/pin`,
-      { messageId, isPinned: true, message: "" } as unknown as PinActionResponse,
       { method: "POST" },
     ),
   unpinMessage: (orgId: string, messageId: string) =>
-    fromApiOrMock<PinActionResponse>(
+    fromApi<PinActionResponse>(
       `/organizations/${orgId}/conversations/messages/${messageId}/pin`,
-      { messageId, isPinned: false, message: "" } as unknown as PinActionResponse,
       { method: "DELETE" },
     ),
 },
@@ -800,9 +681,8 @@ post: {
     query.set("offset", String(params.offset ?? 0));
     query.set("scope", params.scope);
     if (params.branchId) query.set("branch_id", params.branchId);
-    return fromApiOrMock<PostListResponse>(
+    return fromApi<PostListResponse>(
       `/organizations/${orgId}/posts?${query.toString()}`,
-      { items: [], total: 0, offset: 0, limit: params.limit ?? 20 },
     );
   },
   getPostsByUser: (
@@ -815,9 +695,8 @@ post: {
   query.set("offset", String(params.offset ?? 0));
   if (params.periodStart) query.set("period_start", params.periodStart);
   if (params.periodEnd) query.set("period_end", params.periodEnd);
-  return fromApiOrMock<PostListResponse>(
+  return fromApi<PostListResponse>(
     `/organizations/${orgId}/posts/users/${userId}?${query.toString()}`,
-    { items: [], total: 0, offset: 0, limit: params.limit ?? 1 },
     );
   },
 
@@ -826,48 +705,42 @@ post: {
     if (params.periodStart) query.set("period_start", params.periodStart);
     if (params.periodEnd) query.set("period_end", params.periodEnd);
     const qs = query.toString();
-    return fromApiOrMock<LikesGivenCountResponse>(
+    return fromApi<LikesGivenCountResponse>(
       `/organizations/${orgId}/posts/likes/given/count${qs ? `?${qs}` : ""}`,
-      { count: 0 },
     );
   },
   createPost: (orgId: string, payload: CreatePostPayload) =>
-    fromApiOrMock<Post>(`/organizations/${orgId}/posts`, {} as Post, {
+    fromApi<Post>(`/organizations/${orgId}/posts`, {
       method: "POST",
       body: { branch_id: payload.branchId, content: payload.content, media_url: payload.mediaUrl, media_type: payload.mediaType },
     }),
 
   deletePost: (orgId: string, postId: string) =>
-    fromApiOrMock<{ success: true }>(`/organizations/${orgId}/posts/${postId}`, { success: true }, { method: "DELETE" }),
+    fromApi<{ success: true }>(`/organizations/${orgId}/posts/${postId}`, { method: "DELETE" }),
 
   likePost: (orgId: string, postId: string) =>
-    fromApiOrMock<LikeActionResponse>(`/organizations/${orgId}/posts/${postId}/like`, {
-      postId, userId: "mock-user", liked: true, likeCount: 1, message: "Liked.",
-    }, { method: "POST" }),
+    fromApi<LikeActionResponse>(`/organizations/${orgId}/posts/${postId}/like`, { method: "POST" }),
 
   unlikePost: (orgId: string, postId: string) =>
-    fromApiOrMock<LikeActionResponse>(`/organizations/${orgId}/posts/${postId}/like`, {
-      postId, userId: "mock-user", liked: false, likeCount: 0, message: "Unliked.",
-    }, { method: "DELETE" }),
+    fromApi<LikeActionResponse>(`/organizations/${orgId}/posts/${postId}/like`, { method: "DELETE" }),
 
   getComments: (orgId: string, postId: string, params: { offset?: number; limit?: number } = {}) => {
     const query = new URLSearchParams();
     query.set("limit", String(params.limit ?? 50));
     query.set("offset", String(params.offset ?? 0));
-    return fromApiOrMock<CommentListResponse>(
+    return fromApi<CommentListResponse>(
       `/organizations/${orgId}/posts/${postId}/comments?${query.toString()}`,
-      { items: [], total: 0, offset: 0, limit: params.limit ?? 50 },
     );
   },
 
   addComment: (orgId: string, postId: string, content: string) =>
-    fromApiOrMock<Comment>(`/organizations/${orgId}/posts/${postId}/comments`, {} as Comment, {
+    fromApi<Comment>(`/organizations/${orgId}/posts/${postId}/comments`, {
       method: "POST", body: { content },
     }),
 
   deleteComment: (orgId: string, postId: string, commentId: string) =>
-    fromApiOrMock<{ success: true }>(
-      `/organizations/${orgId}/posts/${postId}/comments/${commentId}`, { success: true }, { method: "DELETE" },
+    fromApi<{ success: true }>(
+      `/organizations/${orgId}/posts/${postId}/comments/${commentId}`, { method: "DELETE" },
     ),
 },
 
@@ -881,43 +754,39 @@ story: {
     query.set("offset", String(params.offset ?? 0));
     query.set("scope", params.scope);
     if (params.branchId) query.set("branch_id", params.branchId);
-    return fromApiOrMock<StoryListResponse>(
+    return fromApi<StoryListResponse>(
       `/organizations/${orgId}/stories?${query.toString()}`,
-      { items: [], total: 0, offset: 0, limit: params.limit ?? 50 },
     );
   },
 
   createStory: (orgId: string, payload: CreateStoryPayload) =>
-    fromApiOrMock<Story>(`/organizations/${orgId}/stories`, {} as Story, {
+    fromApi<Story>(`/organizations/${orgId}/stories`, {
       method: "POST",
       body: { branch_id: payload.branchId, media_url: payload.mediaUrl, media_type: payload.mediaType },
     }),
 
   deleteStory: (orgId: string, storyId: string) =>
-    fromApiOrMock<{ success: true }>(`/organizations/${orgId}/stories/${storyId}`, { success: true }, { method: "DELETE" }),
+    fromApi<{ success: true }>(`/organizations/${orgId}/stories/${storyId}`, { method: "DELETE" }),
 },
   storage: {
     requestUploadUrl: (payload: { domain: string; contentType: string }) =>
-      fromApiOrMock<{ uploadUrl: string; objectKey: string; mediaUrl: string; contentType: string }>(
+      fromApi<{ uploadUrl: string; objectKey: string; mediaUrl: string; contentType: string }>(
         "/storage/upload-url",
-        { uploadUrl: "", objectKey: "", mediaUrl: "", contentType: payload.contentType },
         { method: "POST", body: payload },
       ),
   },
   wellbeing: {
     getChallenges: () =>
-      fromApiOrMock<WellbeingChallengeListResponse>("/wellbeing/challenges", { items: [] }),
+      fromApi<WellbeingChallengeListResponse>("/wellbeing/challenges"),
   },
   onboarding: {
     checkBusinessName: (name: string) =>
-      fromApiOrMock<AvailabilityResponse>(
+      fromApi<AvailabilityResponse>(
         `/auth/signup/check/business-name?name=${encodeURIComponent(name)}`,
-        { available: true },
       ),
     checkPhoneNumber: (number: string) =>
-      fromApiOrMock<AvailabilityResponse>(
+      fromApi<AvailabilityResponse>(
         `/auth/signup/check/phone?number=${encodeURIComponent(number)}`,
-        { available: true },
       ),
     complete: async (data: OnboardingData) => {
       const payload = {
@@ -932,19 +801,6 @@ story: {
         work_model: data.workModel,
       };
 
-      if (usingMockData) {
-        mockUser = {
-          ...mockUser,
-          firstName: data.firstName.trim(),
-          lastName: data.lastName.trim(),
-          businessName: data.businessName.trim(),
-        };
-        return mockResult<AuthTokenResponse>({
-          accessToken: "mock-access-token",
-          refreshToken: "mock-refresh-token",
-          tokenType: "bearer",
-        });
-      }
       return request<AuthTokenResponse>(backendPath("/auth/signup"), {
         method: "POST",
         body: payload,
@@ -954,10 +810,6 @@ story: {
 
   dashboard: {
     bootstrap: async (orgId: string): Promise<DashboardBootstrap> => {
-      if (usingMockData) {
-        const { mockDashboardBootstrap } = await import("@/services/mock-api");
-        return mockResult({ ...mockDashboardBootstrap, user: mockUser });
-      }
       const payload = await request<DashboardBootstrap>(
         backendPath(`/organizations/${orgId}/dashboard/bootstrap`),
       );
@@ -987,7 +839,7 @@ story: {
           ? "flat"
           : entry.rank < entry.previousRank ? "up" : "down",
         branch: "",
-        avatar: `https://picsum.photos/seed/${entry.userId}/100/100`,
+        avatar: entry.avatarUrl ?? "",
       })) as unknown as DashboardBootstrap["leaderboard"];
       return {
         ...payload,
@@ -1001,21 +853,15 @@ story: {
   },
 
   branches: {
-    nameCurrent: (name: string) => fromApiOrMock<Branch>("/v1/branches/current", {
-      id: "mock-current-branch",
-      organizationId: "mock-org",
-      name,
-      managerId: null,
-      createdBy: "mock-user",
-    }, {
+    nameCurrent: (name: string) => fromApi<Branch>("/v1/branches/current", {
       method: "PUT",
       body: { name },
     }),
-    create: (branch: Omit<Branch, "id">) => fromApiOrMock("/v1/branches", branch, {
+    create: (branch: Omit<Branch, "id">) => fromApi("/v1/branches", {
       method: "POST",
       body: branch,
     }),
-    select: (branchName: string) => fromApiOrMock("/v1/branches/active", { activeBranch: branchName }, {
+    select: (branchName: string) => fromApi("/v1/branches/active", {
       method: "PUT",
       body: { branchName },
     }),
@@ -1023,31 +869,15 @@ story: {
 
   users: {
     search: async (query: string): Promise<UserSearchResult[]> => {
-      const normalized = query.trim().toLowerCase();
+      const normalized = query.trim();
       if (!normalized) return [];
 
-      if (usingMockData) {
-        const { mockDashboardBootstrap } = await import("@/services/mock-api");
-        return mockDashboardBootstrap.members
-          .filter((member) => (
-            member.name.toLowerCase().includes(normalized) ||
-            member.email.toLowerCase().includes(normalized)
-          ))
-          .slice(0, 6)
-          .map((member) => ({
-            id: member.id,
-            name: member.name,
-            email: member.email,
-            avatar: member.avatar,
-          }));
-      }
-
       return request<UserSearchResult[]>(
-        backendPath(`/v1/users/search?q=${encodeURIComponent(query.trim())}`),
+        backendPath(`/v1/users/search?q=${encodeURIComponent(normalized)}`),
       );
     },
-    profile: (userId: string) => fromApiOrMock<import("@/types/api").DirectoryUserProfile>(
-      `/v1/users/${userId}/profile`, {} as import("@/types/api").DirectoryUserProfile,
+    profile: (userId: string) => fromApi<import("@/types/api").DirectoryUserProfile>(
+      `/v1/users/${userId}/profile`,
     ),
   },
 
@@ -1060,73 +890,72 @@ story: {
   },
 
   integrations: {
-    list: (orgId: string) => fromApiOrMock<{ items: Array<{ id: string; name: string; description: string; status: "connected" | "disconnected"; enabled: boolean }> }>(`/organizations/${orgId}/integrations`, { items: [] }),
-    connect: (orgId: string, provider: string) => fromApiOrMock(`/organizations/${orgId}/integrations/${provider}/connect`, {}, { method: "POST" }),
-    toggle: (orgId: string, provider: string, enabled: boolean) => fromApiOrMock(`/organizations/${orgId}/integrations/${provider}`, {}, { method: "PATCH", body: { enabled } }),
-    disconnect: (orgId: string, provider: string) => fromApiOrMock<void>(`/organizations/${orgId}/integrations/${provider}`, undefined, { method: "DELETE" }),
+    list: (orgId: string) => fromApi<{ items: Array<{ id: string; name: string; description: string; status: "connected" | "disconnected"; enabled: boolean }> }>(`/organizations/${orgId}/integrations`),
+    connect: (orgId: string, provider: string) => fromApi(`/organizations/${orgId}/integrations/${provider}/connect`, { method: "POST" }),
+    toggle: (orgId: string, provider: string, enabled: boolean) => fromApi(`/organizations/${orgId}/integrations/${provider}`, { method: "PATCH", body: { enabled } }),
+    disconnect: (orgId: string, provider: string) => fromApi<void>(`/organizations/${orgId}/integrations/${provider}`, { method: "DELETE" }),
   },
 
   billing: {
-    listPlans: () => fromApiOrMock<SubscriptionPlanListResponse>("/plans", { items: [] }),
-    getSubscription: (orgId: string) => fromApiOrMock<OrganizationSubscriptionInfo>(
-      `/organizations/${orgId}/subscription`, {} as OrganizationSubscriptionInfo,
+    listPlans: () => fromApi<SubscriptionPlanListResponse>("/plans"),
+    getSubscription: (orgId: string) => fromApi<OrganizationSubscriptionInfo>(
+      `/organizations/${orgId}/subscription`,
     ),
     listTransactions: (orgId: string, params: { offset?: number; limit?: number } = {}) => {
       const query = new URLSearchParams({ offset: String(params.offset ?? 0), limit: String(params.limit ?? 50) });
-      return fromApiOrMock<PaymentTransactionListResponse>(
+      return fromApi<PaymentTransactionListResponse>(
         `/organizations/${orgId}/transactions?${query.toString()}`,
-        { items: [], total: 0, offset: params.offset ?? 0, limit: params.limit ?? 50 },
       );
     },
-    getTransaction: (orgId: string, reference: string) => fromApiOrMock<PaymentTransactionItem>(
-      `/organizations/${orgId}/transactions/${encodeURIComponent(reference)}`, {} as PaymentTransactionItem,
+    getTransaction: (orgId: string, reference: string) => fromApi<PaymentTransactionItem>(
+      `/organizations/${orgId}/transactions/${encodeURIComponent(reference)}`,
     ),
-    verifyTransaction: (orgId: string, reference: string) => fromApiOrMock<PaymentVerificationResponse>(
-      `/organizations/${orgId}/transactions/${encodeURIComponent(reference)}/verify`, {} as PaymentVerificationResponse, { method: "POST" },
+    verifyTransaction: (orgId: string, reference: string) => fromApi<PaymentVerificationResponse>(
+      `/organizations/${orgId}/transactions/${encodeURIComponent(reference)}/verify`, { method: "POST" },
     ),
-    checkout: (orgId: string, payload: { planId: string; callbackUrl: string; autoRenew: boolean }) => fromApiOrMock<CheckoutResponse>(
-      `/organizations/${orgId}/checkout`, {} as CheckoutResponse, {
+    checkout: (orgId: string, payload: { planId: string; callbackUrl: string; autoRenew: boolean }) => fromApi<CheckoutResponse>(
+      `/organizations/${orgId}/checkout`, {
         method: "POST", body: { plan_id: payload.planId, callback_url: payload.callbackUrl, auto_renew: payload.autoRenew },
       },
     ),
-    cancelAutoRenew: (orgId: string) => fromApiOrMock<OrganizationSubscriptionInfo>(
-      `/organizations/${orgId}/subscription/cancel-auto-renew`, {} as OrganizationSubscriptionInfo, { method: "POST" },
+    cancelAutoRenew: (orgId: string) => fromApi<OrganizationSubscriptionInfo>(
+      `/organizations/${orgId}/subscription/cancel-auto-renew`, { method: "POST" },
     ),
-    updateAutoRenew: (orgId: string, enabled: boolean) => fromApiOrMock<OrganizationSubscriptionInfo>(
-      `/organizations/${orgId}/subscription/auto-renew`, {} as OrganizationSubscriptionInfo,
+    updateAutoRenew: (orgId: string, enabled: boolean) => fromApi<OrganizationSubscriptionInfo>(
+      `/organizations/${orgId}/subscription/auto-renew`,
       { method: "PATCH", body: { enabled } },
     ),
   },
 
   profile: {
-    get: () => fromApiOrMock<ProfileSettingsInfo>("/user-settings/profile", {} as ProfileSettingsInfo),
+    get: () => fromApi<ProfileSettingsInfo>("/user-settings/profile"),
     update: (payload: { firstName: string; lastName: string; country?: string; state?: string }) =>
-      fromApiOrMock<ProfileSettingsInfo>("/user-settings/profile", {} as ProfileSettingsInfo, {
+      fromApi<ProfileSettingsInfo>("/user-settings/profile", {
         method: "PATCH",
         body: { first_name: payload.firstName, last_name: payload.lastName, country: payload.country || null, state: payload.state || null },
       }),
-    updateAvatar: (mediaUrl: string) => fromApiOrMock<{ avatarUrl: string }>(
-      "/user-settings/avatar", { avatarUrl: mediaUrl }, { method: "PUT", body: { media_url: mediaUrl } },
+    updateAvatar: (mediaUrl: string) => fromApi<{ avatarUrl: string }>(
+      "/user-settings/avatar", { method: "PUT", body: { media_url: mediaUrl } },
     ),
   },
 
   security: {
-    changePassword: (currentPassword: string, newPassword: string) => fromApiOrMock<{ message: string }>(
-      "/user-settings/change-password", { message: "Password changed successfully." },
+    changePassword: (currentPassword: string, newPassword: string) => fromApi<{ message: string }>(
+      "/user-settings/change-password",
       { method: "POST", body: { current_password: currentPassword, new_password: newPassword } },
     ),
-    setupTwoFa: (method: "totp" | "email") => fromApiOrMock<TwoFaSetupInfo>(
-      "/auth/2fa/setup", {} as TwoFaSetupInfo, { method: "POST", body: { method } },
+    setupTwoFa: (method: "totp" | "email") => fromApi<TwoFaSetupInfo>(
+      "/auth/2fa/setup", { method: "POST", body: { method } },
     ),
-    confirmTwoFa: (code: string) => fromApiOrMock<void>(
-      "/auth/2fa/confirm", undefined, { method: "POST", body: { code } },
+    confirmTwoFa: (code: string) => fromApi<void>(
+      "/auth/2fa/confirm", { method: "POST", body: { code } },
     ),
-    disableTwoFa: (password: string) => fromApiOrMock<void>(
-      "/auth/2fa/disable", undefined, { method: "POST", body: { password } },
+    disableTwoFa: (password: string) => fromApi<void>(
+      "/auth/2fa/disable", { method: "POST", body: { password } },
     ),
-    listSessions: () => fromApiOrMock<SecuritySessionListResponse>("/auth/sessions", { items: [] }),
-    revokeSession: (sessionId: string) => fromApiOrMock<void>(
-      `/auth/sessions/${encodeURIComponent(sessionId)}`, undefined, { method: "DELETE" },
+    listSessions: () => fromApi<SecuritySessionListResponse>("/auth/sessions"),
+    revokeSession: (sessionId: string) => fromApi<void>(
+      `/auth/sessions/${encodeURIComponent(sessionId)}`, { method: "DELETE" },
     ),
   },
 
@@ -1137,37 +966,33 @@ story: {
         offset: String(params.offset ?? 0),
         limit: String(params.limit ?? 50),
       });
-      return fromApiOrMock<NotificationListResponse>(
+      return fromApi<NotificationListResponse>(
         `/notifications?${query.toString()}`,
-        { items: [], total: 0, unreadCount: 0, offset: params.offset ?? 0, limit: params.limit ?? 50 },
       );
     },
-    unreadCount: () => fromApiOrMock<UnreadCountResponse>("/notifications/unread-count", { unreadCount: 0 }),
-    markRead: (notificationId: string) => fromApiOrMock<{ notificationId: string; isRead: boolean; message: string }>(
-      `/notifications/${notificationId}/read`, { notificationId, isRead: true, message: "" }, { method: "PATCH" },
+    unreadCount: () => fromApi<UnreadCountResponse>("/notifications/unread-count"),
+    markRead: (notificationId: string) => fromApi<{ notificationId: string; isRead: boolean; message: string }>(
+      `/notifications/${notificationId}/read`, { method: "PATCH" },
     ),
-    markAllRead: () => fromApiOrMock<{ markedCount: number; message: string }>(
-      "/notifications/read-all", { markedCount: 0, message: "" }, { method: "PATCH" },
+    markAllRead: () => fromApi<{ markedCount: number; message: string }>(
+      "/notifications/read-all", { method: "PATCH" },
     ),
-    remove: (notificationId: string) => fromApiOrMock<void>(
-      `/notifications/${notificationId}`, undefined, { method: "DELETE" },
+    remove: (notificationId: string) => fromApi<void>(
+      `/notifications/${notificationId}`, { method: "DELETE" },
     ),
   },
 
   resources: {
-    get: <T>(resource: string, id: string | number, fallback: T) =>
-      fromApiOrMock(`/v1/${resource}/${encodeURIComponent(String(id))}`, fallback),
-    list: <T>(resource: string, fallback: T, query = "") =>
-      fromApiOrMock(`/v1/${resource}${query ? `?${query}` : ""}`, fallback),
+    get: <T>(resource: string, id: string | number) =>
+      fromApi<T>(`/v1/${resource}/${encodeURIComponent(String(id))}`),
+    list: <T>(resource: string, query = "") =>
+      fromApi<T>(`/v1/${resource}${query ? `?${query}` : ""}`),
     mutate: <T = { success: true }>({ resource, action, id, payload }: ResourceMutation) =>
-      fromApiOrMock(`/v1/${resource}${id === undefined ? "" : `/${encodeURIComponent(String(id))}`}/${action}`, { success: true } as T, {
+      fromApi(`/v1/${resource}${id === undefined ? "" : `/${encodeURIComponent(String(id))}`}/${action}`, {
         method: "POST",
         body: payload,
       }),
     upload: (resource: string, file: File) => {
-      if (usingMockData) {
-        return mockResult({ url: URL.createObjectURL(file) });
-      }
       const form = new FormData();
       form.append("file", file);
       return request<{ url: string }>(backendPath(`/v1/${resource}/upload`), {
@@ -1179,8 +1004,8 @@ story: {
 
   public: {
     requestDemo: (payload: { name: string; email: string; reason: string }) =>
-      fromApiOrMock("/v1/public/demo-requests", { accepted: true }, { method: "POST", body: payload }),
+      fromApi("/v1/public/demo-requests", { method: "POST", body: payload }),
     contactSupport: (payload: { name: string; email: string; subject: string; message: string }) =>
-      fromApiOrMock("/support/tickets", { accepted: true }, { method: "POST", body: payload }),
+      fromApi("/support/tickets", { method: "POST", body: payload }),
   },
-};    
+};
