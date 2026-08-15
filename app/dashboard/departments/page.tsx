@@ -257,11 +257,9 @@ export default function DepartmentsPage() {
           <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Departments</h1>
           <p className="text-grey-2">Manage and track your organization&apos;s departments.</p>
         </div>
-        {canCreateDepartment && <button
-          onClick={() => scope.type === "branch" && setIsCreateModalOpen(true)}
-          disabled={scope.type !== "branch"}
-          title={scope.type === "overview" ? "Select a branch before creating a department" : undefined}
-          className="flex items-center gap-2 px-4 py-2 bg-[#EA6A05] text-white rounded-lg text-sm font-medium hover:bg-[#C45700] disabled:cursor-not-allowed disabled:bg-grey-3"
+        {canCreateDepartment && scope.type === "branch" && <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-[#EA6A05] text-white rounded-lg text-sm font-medium hover:bg-[#C45700]"
         >
           <Plus className="w-4 h-4" />
           Create Department
@@ -300,9 +298,13 @@ export default function DepartmentsPage() {
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 no-scrollbar min-h-[400px] lg:min-h-0">
             {filteredDepartments.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white rounded-[12px]">
-                <h3 className="text-lg font-bold text-grey-1 mb-2">No Departments Available</h3>
-                <p className="text-sm text-grey-2 mb-6">You haven&apos;t created any departments yet. Start by creating departments and adding team members!</p>
-                {canCreateDepartment && <button
+                <h3 className="text-lg font-bold text-grey-1 mb-2">No department available</h3>
+                <p className="text-sm text-grey-2 mb-6">
+                  {scope.type === "overview"
+                    ? "To create a department, kindly switch to a branch and create the department from that branch."
+                    : "No department has been created for this branch yet."}
+                </p>
+                {canCreateDepartment && scope.type === "branch" && <button
                   onClick={() => setIsCreateModalOpen(true)}
                   className="flex items-center gap-2 px-6 py-2 bg-white border border-[#EA6A05] text-[#EA6A05] rounded-lg text-sm font-medium hover:bg-orange-50"
                 >

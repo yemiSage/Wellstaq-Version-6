@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Menu, Plus, Settings2, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus, UserPlus } from "lucide-react";
+import { Search, MessageSquare, Bell, Sparkles, ChevronDown, X, Menu, Settings2, ArrowUp, ArrowUpRight, LogOut, History, MessageCirclePlus, UserPlus } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -52,10 +52,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const routeKey = `${pathname}?${searchParams.toString()}`;
-  const { user: userData, activeBranch, addBranch, members, organizationId } = useDashboardData();
-
-  const currentUserRole = members.find((member) => (member.email ?? "").toLowerCase() === (userData.email ?? "").toLowerCase() && member.branch === activeBranch)?.role;
-  const isAdmin = !currentUserRole || ["Super Admin", "Branch Manager"].includes(currentUserRole) || userData.email.toLowerCase().includes("admin");
+  const { user: userData, activeBranch, addBranch, organizationId } = useDashboardData();
   const signedInUserName = `${userData.firstName} ${userData.lastName}`.trim();
 
   useEffect(() => {
@@ -229,34 +226,17 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                   setGlobalSearch("");
                 }
               }}
-              className="h-11 w-full rounded-[8px] border border-grey-4 bg-white pl-10 pr-16 text-sm focus:border-primary-1 focus:outline-none focus:ring-2 focus:ring-primary-1/20"
+              className="h-11 w-full rounded-[8px] border border-grey-4 bg-white pl-10 pr-4 text-sm focus:border-primary-1 focus:outline-none focus:ring-2 focus:ring-primary-1/20"
             />
             {globalSearch.trim().length >= 2 && (globalNavigationMatches.length > 0 || globalUserMatches.length > 0) && <div className="absolute left-0 right-0 top-12 z-50 max-h-80 overflow-y-auto rounded-xl border border-grey-4 bg-white p-2 shadow-xl">
               {globalNavigationMatches.map(([label, href]) => <button key={href} onClick={() => { router.push(href); setGlobalSearch(""); }} className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-grey-5">{label}</button>)}
               {globalUserMatches.map((match) => <button key={match.id} onClick={() => { router.push(`/dashboard/profile/${match.id}`); setGlobalSearch(""); }} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-grey-5"><div className="text-sm font-medium text-grey-1">{match.name}</div><div className="text-xs text-grey-3">{match.email}</div></button>)}
             </div>}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden lg:flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">⌘</kbd>
-              <kbd className="px-1.5 py-0.5 rounded bg-grey-5 text-[10px] font-medium text-grey-2 border border-grey-4">K</kbd>
-            </div>
           </div>
 
         </div>
 
         <div className="flex items-center gap-2 lg:gap-4 ml-2 lg:ml-4">
-          <button
-            onClick={() => {
-              if (!isAdmin) {
-                toast.error("Messaging is only available to admins.");
-                return;
-              }
-              router.push("/dashboard/messages");
-            }}
-            className="w-8 h-8 lg:w-10 lg:h-10 rounded-[12px] border border-grey-4 flex items-center justify-center text-grey-2 hover:bg-grey-5 hidden sm:flex"
-            title="Messages"
-          >
-            <MessageSquare className="w-4 h-4 lg:w-5 lg:h-5" />
-          </button>
           <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => setIsNotificationsOpen((current) => !current)}

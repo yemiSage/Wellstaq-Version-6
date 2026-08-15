@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, ArrowDownRight, Activity, Heart, Zap, Award } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Activity, Heart, Zap, Award, Medal } from "lucide-react";
 import Image from "next/image";
 import { InsightsHeader } from "@/components/dashboard/insights/header";
 import {
@@ -14,6 +14,7 @@ import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { useDashboardScope } from "@/lib/scope";
 import type { InsightsOverviewResponse, InsightsPeriod } from "@/types/api";
+import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
 
 export default function InsightsPage() {
   const [insights, setInsights] = useState<InsightsOverviewResponse | null>(null);
@@ -145,14 +146,26 @@ export default function InsightsPage() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-[16px] font-bold text-grey-1">Top Performers This Month</h3>
-          <button className="text-sm font-medium text-[#EA6A05] hover:underline">
-            View all
-          </button>
+          {insights.topPerformers.length > 0 && (
+            <button className="text-sm font-medium text-[#EA6A05] hover:underline">
+              View all
+            </button>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[12px]">
-          {insights.topPerformers.map((performer) => (
-            <div key={performer.id} className="bg-white p-[20px] rounded-[12px] flex flex-col items-center text-center">
+        {insights.topPerformers.length === 0 ? (
+          <div className="rounded-[12px] border border-grey-4 bg-white">
+            <DashboardEmptyState
+              icon={Medal}
+              title="No top performers yet"
+              description="Top performers will appear here as team activity is recorded."
+              className="min-h-[260px]"
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[12px]">
+            {insights.topPerformers.map((performer) => (
+              <div key={performer.id} className="bg-white p-[20px] rounded-[12px] flex flex-col items-center text-center">
               <div className="relative mb-4">
                 <div className="w-16 h-16 rounded-[12px] overflow-hidden border-2 border-white">
                   {performer.avatar ? (
@@ -179,9 +192,10 @@ export default function InsightsPage() {
                 </div>
                 <p className="text-xs font-bold text-[#EA6A05]">Score: {performer.score}</p>
               </div>
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
         </>
       )}

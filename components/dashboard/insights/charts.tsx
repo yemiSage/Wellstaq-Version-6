@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Building2, HeartPulse } from "lucide-react";
 import { 
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell
 } from "recharts";
+import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
 
 export interface MonthlyStepsPoint { name: string; actual: number; target: number }
 export interface HealthDistributionPoint { name: string; value: number; color: string }
@@ -55,7 +57,14 @@ export function HealthDistributionChart({data}: {data?: HealthDistributionPoint[
     <div className="bg-white p-[12px] rounded-[12px] flex flex-col">
       <h3 className="text-[16px] font-bold text-grey-1 mb-6">Health Distribution</h3>
       
-      {chartData.length === 0 ? <div className="h-[300px]"><EmptyChart /></div> : <div className="flex-1 flex flex-col items-center justify-center">
+      {chartData.length === 0 ? (
+        <DashboardEmptyState
+          icon={HeartPulse}
+          title="No health distribution data yet"
+          description="Health distribution will appear here when wellbeing responses are available."
+          className="min-h-[300px] flex-1"
+        />
+      ) : <div className="flex-1 flex flex-col items-center justify-center">
         <div className="h-[200px] w-[200px] relative mb-8">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -99,37 +108,48 @@ export function DepartmentPerformanceChart({data}: {data?: DepartmentPerformance
   return (
     <div className="bg-white p-[20px] rounded-[12px]">
       <h3 className="text-[16px] font-bold text-grey-1 mb-4">Department Performance</h3>
-      <div className="flex items-center gap-4 text-xs text-grey-2 mb-6">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#EA6A05]"></div>
-          <span>Health Score</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#4F46E5]"></div>
-          <span>Engagement</span>
-        </div>
-      </div>
-      
-      <div className="h-[250px] w-full">
-        {chartData.length === 0 ? <EmptyChart /> : <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }} barSize={16}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 10 }} dy={10} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} domain={[0, 100]} />
-            <Tooltip cursor={{ fill: 'transparent' }} />
-            <Bar dataKey="engagement" fill="#4F46E5" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>}
-      </div>
-      {chartData.some((item) => item.branchName) && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {chartData.map((item) => (
-            <div key={`${item.branchName}-${item.name}`} className="flex items-center gap-1.5 text-xs text-grey-2">
-              <span>{item.name}</span>
-              <span className="rounded-full bg-grey-5 px-2 py-0.5 font-medium text-grey-1">{item.branchName}</span>
+      {chartData.length === 0 ? (
+        <DashboardEmptyState
+          icon={Building2}
+          title="No department performance data yet"
+          description="Department performance will appear here when team activity is available."
+          className="min-h-[300px]"
+        />
+      ) : (
+        <>
+          <div className="flex items-center gap-4 text-xs text-grey-2 mb-6">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#EA6A05]"></div>
+              <span>Health Score</span>
             </div>
-          ))}
-        </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#4F46E5]"></div>
+              <span>Engagement</span>
+            </div>
+          </div>
+
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }} barSize={16}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 10 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} domain={[0, 100]} />
+                <Tooltip cursor={{ fill: 'transparent' }} />
+                <Bar dataKey="engagement" fill="#4F46E5" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          {chartData.some((item) => item.branchName) && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {chartData.map((item) => (
+                <div key={`${item.branchName}-${item.name}`} className="flex items-center gap-1.5 text-xs text-grey-2">
+                  <span>{item.name}</span>
+                  <span className="rounded-full bg-grey-5 px-2 py-0.5 font-medium text-grey-1">{item.branchName}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

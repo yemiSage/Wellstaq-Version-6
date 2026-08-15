@@ -1,13 +1,12 @@
 // path: components/dashboard/dashboard-header.tsx
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
-import { useClickOutside } from "@/hooks/use-click-outside";
+import React, { useEffect, useState } from "react";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { FilterDropdown, type FilterDropdownOption } from "@/components/ui/filter-dropdown";
 import type { StatsPeriod } from "@/services/api";
 
-const TIME_FILTER_OPTIONS: { label: string; value: StatsPeriod | "" }[] = [
+const TIME_FILTER_OPTIONS: FilterDropdownOption<StatsPeriod | "">[] = [
   { label: "Overall", value: "" },
   { label: "This Month", value: "month" },
   { label: "Last 3 Months", value: "three_months" },
@@ -34,19 +33,13 @@ export function DashboardHeader({
   onCustomStartChange,
   onCustomEndChange,
 }: DashboardHeaderProps) {
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { currentUser } = useDashboardData();
   const [greeting, setGreeting] = useState("Good morning");
-  const filterRef = useRef<HTMLDivElement>(null);
-
-  useClickOutside(filterRef, () => setIsFilterOpen(false));
 
   useEffect(() => {
     const hour = new Date().getHours();
     setGreeting(hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening");
   }, []);
-
-  const currentLabel = TIME_FILTER_OPTIONS.find((opt) => opt.value === period)?.label ?? "Overall";
 
   return (
     <div className="flex items-center justify-between flex-wrap gap-3">
@@ -76,31 +69,14 @@ export function DashboardHeader({
           </>
         )}
 
-        <div className="relative" ref={filterRef}>
-          <button
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-grey-4 rounded-lg text-sm font-medium text-grey-1 hover:bg-grey-5"
-          >
-            {currentLabel}
-            <ChevronDown className="w-4 h-4" />
-          </button>
-          {isFilterOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-grey-4 rounded-lg shadow-lg z-10 py-1">
-              {TIME_FILTER_OPTIONS.map((option) => (
-                <button
-                  key={option.label}
-                  onClick={() => {
-                    onPeriodChange(option.value);
-                    setIsFilterOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-grey-1 hover:bg-grey-5"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <FilterDropdown
+          value={period}
+          options={TIME_FILTER_OPTIONS}
+          onValueChange={onPeriodChange}
+          ariaLabel="Dashboard period"
+          align="right"
+          menuClassName="w-48"
+        />
       </div>
     </div>
   );

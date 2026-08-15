@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { ChevronDown, ArrowUpRight, ArrowDownRight, Smile, Heart, MousePointerClick } from "lucide-react";
+import { ChevronDown, ArrowUpRight, ArrowDownRight, Smile, Heart, MousePointerClick, Trophy } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Radar, RadarChart, PolarGrid, PolarAngleAxis
@@ -16,6 +17,15 @@ export interface WellbeingDatum {
   fullMark: number;
 }
 
+const ZERO_WELLBEING_DISTRIBUTION: WellbeingDatum[] = [
+  { subject: "Mental", A: 0, fullMark: 100 },
+  { subject: "Physical", A: 0, fullMark: 100 },
+  { subject: "Social", A: 0, fullMark: 100 },
+  { subject: "Financial", A: 0, fullMark: 100 },
+  { subject: "Occupational", A: 0, fullMark: 100 },
+  { subject: "Environmental", A: 0, fullMark: 100 },
+];
+
 export interface LeaderboardRow {
   rank: number;
   name: string;
@@ -25,18 +35,18 @@ export interface LeaderboardRow {
 }
 
 export function DepartmentPerformanceRadar({data}: {data?: WellbeingDatum[]}) {
-  const chartData = data ?? [];
+  const hasDistributionData = Boolean(data?.length);
+  const chartData = hasDistributionData ? data! : ZERO_WELLBEING_DISTRIBUTION;
   return (
     <div className="dashboard-card border border-grey-4">
       <div className="mb-6">
         <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-1">Wellbeing Distribution</h3>
-        <p className="text-xs text-grey-3">Aggregated across all departments Â· 6 dimensions</p>
+        <p className="text-xs text-grey-3">
+          {hasDistributionData ? "Aggregated across all departments · 6 dimensions" : "No responses yet · values shown at 0"}
+        </p>
       </div>
 
       <div className="h-[250px] w-full">
-        {chartData.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-grey-3">No wellbeing distribution data available.</div>
-        ) : (
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
             <PolarGrid stroke="#F2F4F7" />
@@ -55,7 +65,6 @@ export function DepartmentPerformanceRadar({data}: {data?: WellbeingDatum[]}) {
             />
           </RadarChart>
         </ResponsiveContainer>
-        )}
       </div>
     </div>
   );
@@ -74,6 +83,12 @@ const PERIOD_LABELS: Record<EngagementWellbeingTrendPeriod, string> = {
   three_months: "Last 3 months",
 };
 
+const ZERO_TREND_LABELS: Record<EngagementWellbeingTrendPeriod, string[]> = {
+  week: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  month: ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"],
+  three_months: ["Month 1", "Month 2", "Month 3"],
+};
+
 export function EngagementChart({
   data = [],
   period,
@@ -90,6 +105,12 @@ export function EngagementChart({
   useClickOutside(engagementFilterRef, () => setIsEngagementFilterOpen(false));
   const [engagementMetric, setEngagementMetric] = useState("Stress level");
   const selectedMetric = TREND_METRICS.find((metric) => metric.name === engagementMetric) ?? TREND_METRICS[0];
+  const chartData = data.length > 0
+    ? data.map((point) => ({
+        name: new Date(`${point.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        value: point[selectedMetric.key] ?? 0,
+      }))
+    : ZERO_TREND_LABELS[period].map((name) => ({ name, value: 0 }));
 
   return (
     <div className="dashboard-card border border-grey-4">
@@ -141,10 +162,8 @@ export function EngagementChart({
       <div className="h-[250px] w-full">
         {loading ? (
           <div className="h-full animate-pulse rounded-lg bg-grey-5" />
-        ) : data.length === 0 || data.every((point) => point[selectedMetric.key] === null) ? (
-          <div className="flex h-full items-center justify-center text-sm text-grey-3">Not enough responses to show this trend yet.</div>
         ) : <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data.map((point) => ({ name: new Date(`${point.date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: point[selectedMetric.key] }))} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+          <LineChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} dy={10} />
             <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} tickFormatter={(val) => `${val}%`} />
@@ -162,55 +181,63 @@ export function Leaderboard({data}: {data?: LeaderboardRow[]}) {
   const [leaderboardMetric, setLeaderboardMetric] = useState("Steps");
 
   return (
-    <div className="dashboard-card border border-grey-4">
+    <div className="dashboard-card flex h-full flex-col border border-grey-4">
       <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-4">Leaderboard</h3>
 
-      <div className="flex gap-4 border-b border-grey-4 mb-4 overflow-x-auto no-scrollbar">
-        {["Steps", "Distance", "Run", "7 Minutes workout"].map((metric) => (
-          <button
-            key={metric}
-            onClick={() => setLeaderboardMetric(metric)}
-            className={`px-3 py-1.5 text-sm whitespace-nowrap ${
-              leaderboardMetric === metric
-                ? "border-b-2 border-primary-1 text-primary-1 font-medium"
-                : "text-grey-2 hover:text-grey-1"
-            }`}
-          >
-            {metric}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-4">
-        {leaderboardRows.length === 0 && (
-          <p className="py-8 text-center text-sm text-grey-3">No leaderboard data available.</p>
-        )}
-        {leaderboardRows.map((user) => (
-          <div key={user.rank} className="flex items-center justify-between p-2 hover:bg-grey-5 rounded-xl transition-colors">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[8px] bg-grey-4 overflow-hidden relative shrink-0 flex items-center justify-center text-xs font-semibold text-grey-2">
-                {user.avatar ? (
-                  <Image src={user.avatar} alt={user.name} fill className="object-cover" referrerPolicy="no-referrer" />
-                ) : (
-                  user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-grey-1 truncate">{user.name}</p>
-                <p className="text-[10px] sm:text-xs text-grey-3 truncate">{leaderboardMetric === 'Steps' ? user.steps : leaderboardMetric === 'Distance' ? '12.5 km' : leaderboardMetric === 'Run' ? '45 mins' : '15 mins'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <span className="text-xs sm:text-sm font-bold text-grey-1">{user.rank}</span>
-              {user.trend === 'up' ? (
-                <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
-              ) : user.trend === 'down' ? (
-                <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
-              ) : null}
-            </div>
+      {leaderboardRows.length === 0 ? (
+        <DashboardEmptyState
+          icon={Trophy}
+          title="No leaderboard activity yet"
+          description="Team rankings will appear here as members complete activities."
+          className="min-h-[260px] flex-1"
+        />
+      ) : (
+        <>
+          <div className="flex gap-4 border-b border-grey-4 mb-4 overflow-x-auto no-scrollbar">
+            {["Steps", "Distance", "Run", "7 Minutes workout"].map((metric) => (
+              <button
+                key={metric}
+                onClick={() => setLeaderboardMetric(metric)}
+                className={`px-3 py-1.5 text-sm whitespace-nowrap ${
+                  leaderboardMetric === metric
+                    ? "border-b-2 border-primary-1 text-primary-1 font-medium"
+                    : "text-grey-2 hover:text-grey-1"
+                }`}
+              >
+                {metric}
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
+
+          <div className="space-y-4">
+            {leaderboardRows.map((user) => (
+              <div key={user.rank} className="flex items-center justify-between p-2 hover:bg-grey-5 rounded-xl transition-colors">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-[8px] bg-grey-4 overflow-hidden relative shrink-0 flex items-center justify-center text-xs font-semibold text-grey-2">
+                    {user.avatar ? (
+                      <Image src={user.avatar} alt={user.name} fill className="object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-grey-1 truncate">{user.name}</p>
+                    <p className="text-[10px] sm:text-xs text-grey-3 truncate">{leaderboardMetric === 'Steps' ? user.steps : leaderboardMetric === 'Distance' ? '12.5 km' : leaderboardMetric === 'Run' ? '45 mins' : '15 mins'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                  <span className="text-xs sm:text-sm font-bold text-grey-1">{user.rank}</span>
+                  {user.trend === 'up' ? (
+                    <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
+                  ) : user.trend === 'down' ? (
+                    <ArrowDownRight className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

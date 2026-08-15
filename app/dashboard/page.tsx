@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { CalendarDays, Lock } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import {
   DepartmentPerformanceRadar,
@@ -14,6 +14,7 @@ import { useDashboardData } from "@/components/providers/dashboard-data-provider
 import { api, type StatsPeriod } from "@/services/api";
 import { TrendBadge } from "@/components/dashboard/trend-badge";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
 import { useDashboardScope } from "@/lib/scope";
 import { hasPermission, readablePermission } from "@/lib/permissions";
 import type { StatTrend, ChallengeItem, ChallengeListResponse, LivePulseResponse, EngagementWellbeingTrendPeriod, EngagementWellbeingTrendPoint } from "@/types/api";
@@ -404,7 +405,7 @@ export default function DashboardPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-[12px]">
                 {/* Upcoming Challenge */}
-                <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
+                <div className="flex h-full flex-col bg-white p-[14px] rounded-[12px] border border-grey-4">
                   <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-6">Upcoming Challenge</h3>
 
                   {challengesLoading && (
@@ -416,7 +417,12 @@ export default function DashboardPage() {
                   )}
 
                   {!challengesLoading && challenges.length === 0 && (
-                    <p className="text-sm text-grey-3 italic">No upcoming challenges yet.</p>
+                    <DashboardEmptyState
+                      icon={CalendarDays}
+                      title="No upcoming challenges yet"
+                      description="Scheduled challenges will appear here when your team is ready to begin."
+                      className="min-h-[260px] flex-1"
+                    />
                   )}
 
                   {!challengesLoading && challenges.length > 0 && (
