@@ -445,7 +445,7 @@ export default function DashboardPage() {
                               <div className="flex items-center gap-2 mb-1">
                                 <h4 className="font-bold text-[#4D4D4D] text-sm leading-[20px] truncate">{challenge.name}</h4>
                                 {scope.type === "overview" && !challenge.branchId && (
-                                  <span className="shrink-0 text-[10px] font-medium text-primary-1 bg-primary-5 px-1.5 py-0.5 rounded">Org-wide</span>
+                                  <span className="shrink-0 text-[10px] font-medium text-primary-1 bg-primary-5 px-1.5 py-0.5 rounded">General</span>
                                 )}
                               </div>
                               <p className="text-xs text-grey-3 line-clamp-1">{challenge.description}</p>

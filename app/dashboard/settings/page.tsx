@@ -18,6 +18,7 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
+  ChevronDown,
   Monitor,
   Trash2,
 } from "lucide-react";
@@ -84,6 +85,7 @@ export default function SettingsPage() {
   const [preferences, setPreferences] = useState<UserPreferences>({ emailNotifications: true, pushNotifications: true, challengeReminders: true, publicProfile: false, showActivity: false, theme: "light" });
   const [preferencesSaving, setPreferencesSaving] = useState(false);
   const [rolesList, setRolesList] = useState<RoleItem[]>([]);
+  const [expandedRoleIds, setExpandedRoleIds] = useState<Set<string>>(() => new Set());
   const [roleMembers, setRoleMembers] = useState<OrganizationMemberInfo[]>([]);
   const [permissionCatalogue, setPermissionCatalogue] = useState<PermissionCatalogueItem[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState("");
@@ -114,7 +116,17 @@ export default function SettingsPage() {
     setIsAddRoleModalOpen(false);
     setPlanPickerOpen(false);
     setSelectedRoleForEdit(null);
+    setExpandedRoleIds(new Set());
   }, [activeTab, selectedBranchId]);
+
+  const toggleRoleExpanded = (roleId: string) => {
+    setExpandedRoleIds((current) => {
+      const next = new Set(current);
+      if (next.has(roleId)) next.delete(roleId);
+      else next.add(roleId);
+      return next;
+    });
+  };
 
   const handleAddRole = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -450,7 +462,7 @@ export default function SettingsPage() {
                 {item.icon}
               </div>
               <div>
-                <div className={`text-sm font-bold ${activeTab === item.id ? "text-grey-1" : "text-grey-2"}`}>{item.label}</div>
+                <div className={`text-sm font-semibold ${activeTab === item.id ? "text-grey-1" : "text-grey-2"}`}>{item.label}</div>
                 <div className={`text-[12px] ${activeTab === item.id ? "text-grey-2" : "text-grey-3"}`}>{item.sublabel}</div>
               </div>
             </button>
@@ -677,7 +689,11 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between mb-0">
                 <div>
                   <h2 className="text-[18px] font-bold text-grey-1 leading-[32px]">Roles & Permissions</h2>
-                  <p className="text-[14px] text-grey-2 pb-[12px]">Manage user roles and their access levels across the platform.</p>
+                  <p className="text-[14px] text-grey-2 pb-[12px]">
+                    {selectedBranchId
+                      ? "Manage user roles and their access level for this branch."
+                      : "Manage General user roles and their access levels."}
+                  </p>
                 </div>
                 {canAssignRoles && <Button
                   onClick={() => { setNewRoleData({ role: "", description: "" }); setIsAddRoleModalOpen(true); }}
@@ -689,42 +705,55 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-6 mt-4">
-                {rolesList.map((role) => (
-                  <div key={role.id} className="p-5 rounded-xl border border-grey-4 hover:border-primary-1/30 transition-all">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-base font-bold text-grey-1">{humanizeIdentifier(role.name)}</h3>
-                        <p className="text-xs text-grey-2 mt-1">{role.description}</p>
+                {rolesList.map((role) => {
+                  const isExpanded = expandedRoleIds.has(role.id);
+                  return (
+                    <div key={role.id} className="rounded-[12px] border border-grey-4 p-3">
+                      <div className={`flex items-start justify-between gap-4 ${isExpanded ? "mb-4" : ""}`}>
+                        <div>
+                          <h3 className="text-base font-semibold text-grey-1">{humanizeIdentifier(role.name)}</h3>
+                          <p className="text-xs text-grey-2 mt-1">{role.description}</p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          aria-controls={`role-permissions-${role.id}`}
+                          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${humanizeIdentifier(role.name)} permissions`}
+                          onClick={() => toggleRoleExpanded(role.id)}
+                          className="inline-flex shrink-0 items-center gap-2 rounded-full bg-grey-5 px-3 py-1 text-[10px] font-bold text-grey-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1"
+                        >
+                          {role.userCount ?? 0} USERS
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                        </button>
                       </div>
-                      <div className="px-3 py-1 bg-grey-5 rounded-full text-[10px] font-bold text-grey-2">
-                        {role.userCount ?? 0} USERS
-                      </div>
+                      {isExpanded && <div id={`role-permissions-${role.id}`}>
+                        <div className="flex flex-wrap gap-2">
+                          {(role.permissions ?? []).map((permission) => <span key={permission} className="px-2 py-1 bg-primary-1/5 text-primary-1 text-[10px] font-medium rounded-md border border-primary-1/10">{readablePermission(permission)}</span>)}
+                          {(role.permissions ?? []).length === 0 && <span className="px-2 py-1 bg-grey-5 text-grey-3 text-[10px] font-medium rounded-md">No default permissions</span>}
+                        </div>
+                        <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-grey-4/50">
+                          <button
+                            disabled={role.isSystem || role.isDefault || !canRevokeRoles}
+                            onClick={() => void handleDeleteRole(role)}
+                            className={`text-xs font-bold ${role.isSystem || role.isDefault || !canRevokeRoles ? "text-grey-4 cursor-not-allowed" : "text-red-500 hover:text-red-600"}`}
+                          >
+                            Delete Role
+                          </button>
+                          <button
+                            disabled={cannotEditRole(role) || (!canGrantPermissions && !canRevokePermissions)}
+                            onClick={() => {
+                              setSelectedRoleForEdit(role);
+                              setIsEditPermissionsModalOpen(true);
+                            }}
+                            className="text-xs font-bold text-primary-1 hover:text-primary-2 disabled:text-grey-4 disabled:cursor-not-allowed"
+                          >
+                            {cannotEditRole(role) ? "Protected" : "Edit Permissions"}
+                          </button>
+                        </div>
+                      </div>}
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {(role.permissions ?? []).map((permission) => <span key={permission} className="px-2 py-1 bg-primary-1/5 text-primary-1 text-[10px] font-medium rounded-md border border-primary-1/10">{readablePermission(permission)} · {role.branchId ? "This branch" : "Organization-wide"}</span>)}
-                      {(role.permissions ?? []).length === 0 && <span className="px-2 py-1 bg-grey-5 text-grey-3 text-[10px] font-medium rounded-md">No default permissions</span>}
-                    </div>
-                    <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-grey-4/50">
-                      <button
-                        disabled={role.isSystem || role.isDefault || !canRevokeRoles}
-                        onClick={() => void handleDeleteRole(role)}
-                        className={`text-xs font-bold ${role.isSystem || role.isDefault || !canRevokeRoles ? "text-grey-4 cursor-not-allowed" : "text-red-500 hover:text-red-600"}`}
-                      >
-                        Delete Role
-                      </button>
-                      <button
-                        disabled={cannotEditRole(role) || (!canGrantPermissions && !canRevokePermissions)}
-                        onClick={() => {
-                          setSelectedRoleForEdit(role);
-                          setIsEditPermissionsModalOpen(true);
-                        }}
-                        className="text-xs font-bold text-primary-1 hover:text-primary-2 disabled:text-grey-4 disabled:cursor-not-allowed"
-                      >
-                        {cannotEditRole(role) ? "Protected" : "Edit Permissions"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
@@ -795,7 +824,7 @@ export default function SettingsPage() {
               <div className="flex shrink-0 items-center justify-between border-b border-grey-4 p-6">
                 <div>
                   <h3 className="text-lg font-bold text-grey-1">Manage Permissions: {humanizeIdentifier(selectedRoleForEdit.name)}</h3>
-                  <p className="text-xs text-grey-2">{selectedRoleForEdit.branchId ? "Only permissions for this branch are shown and changes apply only to this branch." : "Only organization-wide permissions are shown and changes apply across the organization."}</p>
+                  <p className="text-xs text-grey-2">{selectedRoleForEdit.branchId ? "Only permissions for this branch are shown and changes apply only to this branch." : "General permissions are shown and changes apply across the organization."}</p>
                 </div>
                 <button
                   onClick={() => setIsEditPermissionsModalOpen(false)}
@@ -809,7 +838,7 @@ export default function SettingsPage() {
                 <div className="flex flex-wrap gap-2">
                   {permissionCatalogue.filter((permission) => selectedRoleForEdit.branchId ? permission.scope !== "org" : permission.scope !== "branch").map((permission) => {
                     const isSelected = (selectedRoleForEdit.permissions ?? []).includes(permission.name);
-                    return <button key={permission.id} disabled={selectedRoleForEdit.name === "super_admin"} onClick={() => toggleRolePermission(permission.name)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${isSelected ? "bg-white border-primary-1 text-primary-1 shadow-sm" : "bg-white border-grey-4 text-grey-2 hover:border-grey-3"} disabled:cursor-default`}>{readablePermission(permission.name)} · {selectedRoleForEdit.branchId ? "This branch" : "Organization-wide"}</button>;
+                    return <button key={permission.id} disabled={selectedRoleForEdit.name === "super_admin"} onClick={() => toggleRolePermission(permission.name)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${isSelected ? "bg-white border-primary-1 text-primary-1 shadow-sm" : "bg-white border-grey-4 text-grey-2 hover:border-grey-3"} disabled:cursor-default`}>{readablePermission(permission.name)}</button>;
                   })}
                 </div>
               </div>

@@ -214,7 +214,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                     <Trophy className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Scope</span>
                   </div>
-                  <p className="text-xs font-bold text-grey-1">{challenge.branchId ? "Branch" : "Org-wide"}</p>
+                  <p className="text-xs font-bold text-grey-1">{challenge.branchId ? "Branch" : "General"}</p>
                 </div>
               </div>
 
