@@ -28,7 +28,7 @@ export function InsightsHeader({
     <div className="flex items-center justify-between">
       <div>
         <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Insights</h1>
-        <p className="text-sm text-grey-2">Deep dive into your team&apos;s health & performance data.</p>
+        <p className="text-sm text-grey-2">Understand your team&apos;s wellbeing and engagement through weekly check-ins.</p>
       </div>
       <div ref={filterRef} className="relative">
         <button 

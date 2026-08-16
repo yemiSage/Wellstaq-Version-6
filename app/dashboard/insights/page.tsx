@@ -1,28 +1,36 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowUpRight, ArrowDownRight, Activity, Heart, Zap, Award, Medal } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, HeartPulse, Medal, MessageSquareHeart, Trophy, UsersRound } from "lucide-react";
 import Image from "next/image";
 import { InsightsHeader } from "@/components/dashboard/insights/header";
 import {
-  MonthlyStepsChart,
+  MonthlyWellbeingTrendChart,
   HealthDistributionChart,
   DepartmentPerformanceChart,
-  WeeklyActivityChart
+  WeeklyWellbeingChart,
 } from "@/components/dashboard/insights/charts-dynamic";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { useDashboardScope } from "@/lib/scope";
-import type { InsightsOverviewResponse, InsightsPeriod } from "@/types/api";
+import type { EngagementWellbeingTrendPoint, InsightsOverviewResponse, InsightsPeriod, LivePulseResponse } from "@/types/api";
 import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
+import { hasPermission } from "@/lib/permissions";
 
 export default function InsightsPage() {
   const [insights, setInsights] = useState<InsightsOverviewResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<InsightsPeriod>("nine_months");
-  const { organizationId } = useDashboardData();
+  const [pulse, setPulse] = useState<LivePulseResponse | null>(null);
+  const [wellbeingTrend, setWellbeingTrend] = useState<EngagementWellbeingTrendPoint[]>([]);
+  const [wellbeingLoading, setWellbeingLoading] = useState(true);
+  const { organizationId, currentUser } = useDashboardData();
   const { scope } = useDashboardScope();
+  const selectedBranchId = scope.type === "branch" ? scope.branchId : undefined;
+  const canViewWellbeing = currentUser
+    ? hasPermission(currentUser.permissions, "wellbeing.view_team", selectedBranchId)
+    : false;
   const selectedPeriodLabel: Record<InsightsPeriod, string> = {
     month: "This month",
     three_months: "Last 3 months",
@@ -33,18 +41,49 @@ export default function InsightsPage() {
 
   useEffect(() => {
     if (!organizationId) return;
-    const branchId = scope.type === "branch" ? scope.branchId : undefined;
     let cancelled = false;
     setInsights(null);
     setIsLoading(true);
     setError(null);
     void api.kpiSnapshots
-      .getOverview(organizationId, period, branchId)
+      .getOverview(organizationId, period, selectedBranchId)
       .then((result) => { if (!cancelled) setInsights(result); })
       .catch(() => { if (!cancelled) setError("Unable to load insights from the backend."); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, [organizationId, scope, period]);
+  }, [organizationId, period, selectedBranchId]);
+
+  useEffect(() => {
+    if (!organizationId || !canViewWellbeing) {
+      setPulse(null);
+      setWellbeingTrend([]);
+      setWellbeingLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setWellbeingLoading(true);
+    void Promise.allSettled([
+      api.organization.getLivePulse(organizationId, selectedBranchId),
+      api.organization.getEngagementWellbeingTrends(organizationId, "month", selectedBranchId),
+    ]).then(([pulseResult, trendResult]) => {
+      if (cancelled) return;
+      setPulse(pulseResult.status === "fulfilled" ? pulseResult.value : null);
+      setWellbeingTrend(trendResult.status === "fulfilled" ? trendResult.value.points ?? [] : []);
+    }).finally(() => {
+      if (!cancelled) setWellbeingLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [canViewWellbeing, organizationId, selectedBranchId]);
+
+  const weeklyWellbeingData = [
+    { name: "Stress", value: pulse?.stressManageability?.percent ?? 0, status: pulse?.stressManageability?.status },
+    { name: "Energy", value: pulse?.energyRecovery?.percent ?? 0, status: pulse?.energyRecovery?.status },
+    { name: "Connection", value: pulse?.connectionBelonging?.percent ?? 0, status: pulse?.connectionBelonging?.status },
+    { name: "Workload", value: pulse?.workloadSustainability?.percent ?? 0, status: pulse?.workloadSustainability?.status },
+    { name: "Comfort", value: pulse?.workplaceComfort?.percent ?? 0, status: pulse?.workplaceComfort?.status },
+  ];
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">
@@ -76,27 +115,25 @@ export default function InsightsPage() {
         <div className="dashboard-card">
           <div className="flex items-start justify-between mb-4">
             <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-500 flex items-center justify-center">
-              <Activity className="w-5 h-5" />
+              <MessageSquareHeart className="w-5 h-5" />
             </div>
-            <span className="flex items-center text-xs font-medium text-green-600">
-              <ArrowUpRight className="w-3 h-3 mr-1" /> {insights.summary.averageDailyStepsTrend}
-            </span>
+            <span className="rounded-full bg-grey-5 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-grey-2">Latest pulse</span>
           </div>
-          <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Avg Daily Steps</p>
-          <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{insights.summary.averageDailySteps}</h3>
-          <p className="text-xs text-grey-3">vs previous comparable period</p>
+          <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Weekly Check-ins</p>
+          <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{wellbeingLoading ? "—" : canViewWellbeing ? pulse?.respondentCount ?? 0 : "—"}</h3>
+          <p className="text-xs text-grey-3">{canViewWellbeing ? "employee wellbeing responses" : "wellbeing insights unavailable"}</p>
         </div>
 
         <div className="dashboard-card">
           <div className="flex items-start justify-between mb-4">
             <div className="w-10 h-10 rounded-xl bg-red-100 text-red-500 flex items-center justify-center">
-              <Heart className="w-5 h-5" />
+              <HeartPulse className="w-5 h-5" />
             </div>
             <span className="flex items-center text-xs font-medium text-green-600">
               <ArrowUpRight className="w-3 h-3 mr-1" /> {insights.summary.healthScoreTrend}
             </span>
           </div>
-          <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Health Score</p>
+          <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Wellbeing Score</p>
           <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{insights.summary.healthScore}</h3>
           <p className="text-xs text-grey-3">overall average</p>
         </div>
@@ -104,13 +141,13 @@ export default function InsightsPage() {
         <div className="dashboard-card">
           <div className="flex items-start justify-between mb-4">
             <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center">
-              <Zap className="w-5 h-5" />
+              <UsersRound className="w-5 h-5" />
             </div>
             <span className="flex items-center text-xs font-medium text-red-500">
               <ArrowDownRight className="w-3 h-3 mr-1" /> {insights.summary.activeEmployeesTrend}
             </span>
           </div>
-          <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Active Employees</p>
+          <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Employee Engagement</p>
           <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{insights.summary.activeEmployees}</h3>
           <p className="text-xs text-grey-3">participation rate</p>
         </div>
@@ -118,13 +155,13 @@ export default function InsightsPage() {
         <div className="dashboard-card">
           <div className="flex items-start justify-between mb-4">
             <div className="w-10 h-10 rounded-xl bg-lime-100 text-lime-600 flex items-center justify-center">
-              <Award className="w-5 h-5" />
+              <Trophy className="w-5 h-5" />
             </div>
             <span className="flex items-center text-xs font-medium text-green-600">
               <ArrowUpRight className="w-3 h-3 mr-1" /> {insights.summary.challengesWonTrend}
             </span>
           </div>
-          <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Challenges Won</p>
+          <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Wellness Challenges Won</p>
           <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{insights.summary.challengesWon}</h3>
           <p className="text-xs text-grey-3">{selectedPeriodLabel[period]}</p>
         </div>
@@ -132,14 +169,14 @@ export default function InsightsPage() {
 
       {/* Row 1 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-[12px]">
-        <MonthlyStepsChart data={insights.charts?.monthlySteps ?? []} />
+        <MonthlyWellbeingTrendChart data={wellbeingTrend} loading={wellbeingLoading} />
         <HealthDistributionChart data={insights.charts?.healthDistribution ?? []} />
       </div>
 
       {/* Row 2 Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[12px]">
         <DepartmentPerformanceChart data={insights.charts?.departmentPerformance ?? []} />
-        <WeeklyActivityChart data={insights.charts?.weeklyActivity ?? []} />
+        <WeeklyWellbeingChart data={weeklyWellbeingData} respondentCount={pulse?.respondentCount ?? 0} loading={wellbeingLoading} />
       </div>
 
       {/* Top Performers */}
@@ -180,8 +217,7 @@ export default function InsightsPage() {
                   {performer.id}
                 </div>
               </div>
-              <h4 className="font-medium text-grey-1 text-sm mb-1">{performer.name}</h4>
-              <p className="text-xs text-grey-3 mb-6">{performer.steps} steps</p>
+              <h4 className="mb-5 text-sm font-medium text-grey-1">{performer.name}</h4>
 
               <div className="w-full">
                 <div className="h-1.5 w-full bg-grey-4 rounded-full overflow-hidden mb-2">
