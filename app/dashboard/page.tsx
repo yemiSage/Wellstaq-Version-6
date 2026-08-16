@@ -349,20 +349,18 @@ export default function DashboardPage() {
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-3 text-sm text-grey-2 mb-6">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-[#E64A19]" />
-                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulseData.prioritySupportPct ?? 0}% Priority support</span>
+                    <div className="mb-6 grid w-full grid-cols-3 text-sm text-grey-2">
+                      <div className="flex min-w-0 items-start gap-1.5 pr-2">
+                        <div className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#E64A19]" />
+                        <span className="min-w-0 text-left text-[12px] font-medium leading-4 text-[#4D4D4D]">{pulseData.prioritySupportPct ?? 0}% Priority support</span>
                       </div>
-                      <div className="w-px h-4 bg-grey-4" />
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-[#FFCC80]" />
-                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulseData.needsAttentionPct ?? 0}% Needs attention</span>
+                      <div className="flex min-w-0 items-start gap-1.5 border-l border-grey-4 px-2">
+                        <div className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#FFCC80]" />
+                        <span className="min-w-0 text-left text-[12px] font-medium leading-4 text-[#4D4D4D]">{pulseData.needsAttentionPct ?? 0}% Needs attention</span>
                       </div>
-                      <div className="w-px h-4 bg-grey-4" />
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-[#4CAF50]" />
-                        <span className="text-[12px] text-left text-[#4D4D4D] font-medium">{pulseData.doingWellPct ?? 0}% Doing well</span>
+                      <div className="flex min-w-0 items-start gap-1.5 border-l border-grey-4 pl-2">
+                        <div className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#4CAF50]" />
+                        <span className="min-w-0 text-left text-[12px] font-medium leading-4 text-[#4D4D4D]">{pulseData.doingWellPct ?? 0}% Doing well</span>
                       </div>
                     </div>
 

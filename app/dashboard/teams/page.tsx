@@ -3,13 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Search, Users, Activity, UserCheck, Plus, X } from "lucide-react";
+import { Activity, Building2, Mail, Network, Plus, Search, UserCheck, UserRound, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { useDashboardScope } from "@/lib/scope";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Button } from "@/components/ui/button";
+import { FilterDropdown, type FilterDropdownOption } from "@/components/ui/filter-dropdown";
+import { Input } from "@/components/ui/input";
 import type { DepartmentItem, OrganizationMemberInfo, RoleItem } from "@/types/api";
 import { hasPermission } from "@/lib/permissions";
 import { humanizeIdentifier } from "@/lib/format";
@@ -94,6 +97,22 @@ export default function TeamsPage() {
   const activeMembers = scopedMembers.filter((member) => member.status?.toLowerCase() === "active").length;
   const inviteDepartments = departments.filter((department) => department.branchId === invite.branchId);
   const inviteRoles = roles.filter((role) => !role.branchId || role.branchId === invite.branchId);
+  const inviteBranchOptions: FilterDropdownOption<string>[] = [
+    { label: "Select branch", value: "" },
+    ...branches.map((branch) => ({ label: branch.name, value: branch.id })),
+  ];
+  const inviteDepartmentOptions: FilterDropdownOption<string>[] = [
+    { label: "Select department", value: "" },
+    ...inviteDepartments.map((department) => ({ label: department.name, value: department.id })),
+  ];
+  const inviteRoleOptions: FilterDropdownOption<string>[] = [
+    {
+      label: inviteRolesLoading ? "Loading roles..." : invite.branchId ? "Select role" : "Select a branch first",
+      value: "",
+    },
+    ...inviteRoles.map((role) => ({ label: humanizeIdentifier(role.name), value: role.id })),
+  ];
+  const canSendInvite = Boolean(invite.email && invite.branchId && invite.departmentId && invite.roleId) && !isInviting;
 
   const openInvite = () => {
     const branchId = scope.type === "branch" ? scope.branchId : branches[0]?.id ?? "";
@@ -225,11 +244,25 @@ export default function TeamsPage() {
       {isInviteOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
         <form onSubmit={sendInvite} className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl">
           <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-grey-1">Invite Team Member</h2><button type="button" onClick={() => setIsInviteOpen(false)}><X className="h-5 w-5" /></button></div>
-          <label className="block text-sm font-medium">Email<input required type="email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-grey-4 px-3" /></label>
-          <label className="block text-sm font-medium">Branch<select required disabled={scope.type === "branch"} value={invite.branchId} onChange={(event) => setInvite({ ...invite, branchId: event.target.value, departmentId: "" })} className="mt-1 h-10 w-full rounded-lg border border-grey-4 px-3"><option value="">Select branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>
-          <label className="block text-sm font-medium">Department<select required value={invite.departmentId} onChange={(event) => setInvite({ ...invite, departmentId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-grey-4 px-3"><option value="">Select department</option>{inviteDepartments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
-          <label className="block text-sm font-medium">Role<select required disabled={!invite.branchId || inviteRolesLoading} value={invite.roleId} onChange={(event) => setInvite({ ...invite, roleId: event.target.value })} className="mt-1 h-10 w-full rounded-lg border border-grey-4 px-3 disabled:bg-grey-5"><option value="">{inviteRolesLoading ? "Loading roles..." : invite.branchId ? "Select role" : "Select a branch first"}</option>{inviteRoles.map((role) => <option key={role.id} value={role.id}>{humanizeIdentifier(role.name)}</option>)}</select></label>
-          <button disabled={isInviting} className="h-10 w-full rounded-lg bg-[#C45700] text-sm font-medium text-white disabled:opacity-50">{isInviting ? "Sending..." : "Send Invitation"}</button>
+          <label className="block text-sm font-medium text-grey-1">Email
+            <div className="relative mt-1">
+              <Input required type="email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} className="pr-11" />
+              <Mail className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-grey-3" />
+            </div>
+          </label>
+          <div className="text-sm font-medium text-grey-1">
+            <span>Branch</span>
+            <FilterDropdown value={invite.branchId} options={inviteBranchOptions} onValueChange={(branchId) => setInvite({ ...invite, branchId, departmentId: "" })} ariaLabel="Branch" disabled={scope.type === "branch"} leadingIcon={<Building2 className="h-4 w-4" />} buttonClassName="mt-1 h-12 w-full rounded-[8px] font-normal" menuClassName="w-full" />
+          </div>
+          <div className="text-sm font-medium text-grey-1">
+            <span>Department</span>
+            <FilterDropdown value={invite.departmentId} options={inviteDepartmentOptions} onValueChange={(departmentId) => setInvite({ ...invite, departmentId })} ariaLabel="Department" disabled={!invite.branchId} leadingIcon={<Network className="h-4 w-4" />} buttonClassName="mt-1 h-12 w-full rounded-[8px] font-normal" menuClassName="w-full" />
+          </div>
+          <div className="text-sm font-medium text-grey-1">
+            <span>Role</span>
+            <FilterDropdown value={invite.roleId} options={inviteRoleOptions} onValueChange={(roleId) => setInvite({ ...invite, roleId })} ariaLabel="Role" disabled={!invite.branchId || inviteRolesLoading} leadingIcon={<UserRound className="h-4 w-4" />} buttonClassName="mt-1 h-12 w-full rounded-[8px] font-normal" menuClassName="w-full" />
+          </div>
+          <Button type="submit" disabled={!canSendInvite} className="w-full">{isInviting ? "Sending..." : "Send Invitation"}</Button>
         </form>
       </div>}
     </div>

@@ -16,10 +16,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           variant === "default" && "bg-primary-1 text-grey-5 hover:bg-primary-hover",
           variant === "outline" && "border border-primary-1 bg-primary-5 text-primary-1 hover:bg-primary-5",
           variant === "ghost" && "text-primary-1 hover:bg-primary-5",
-          size === "default" && "h-11 px-6",
+          size === "default" && "h-10 px-6",
           size === "sm" && "h-9 rounded-[8px] px-3",
           size === "lg" && "h-12 px-6",
-          size === "icon" && "h-11 w-11",
+          size === "icon" && "h-10 w-10",
           className
         )}
         {...props}

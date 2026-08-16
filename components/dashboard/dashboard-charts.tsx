@@ -41,9 +41,7 @@ export function DepartmentPerformanceRadar({data}: {data?: WellbeingDatum[]}) {
     <div className="dashboard-card border border-grey-4">
       <div className="mb-6">
         <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-1">Wellbeing Distribution</h3>
-        <p className="text-xs text-grey-3">
-          {hasDistributionData ? "Aggregated across all departments · 6 dimensions" : "No responses yet · values shown at 0"}
-        </p>
+        <p className="text-xs text-grey-3">Wellbeing distribution across all team members</p>
       </div>
 
       <div className="h-[250px] w-full">

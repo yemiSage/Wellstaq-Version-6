@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -22,6 +22,7 @@ interface FilterDropdownProps<T extends string> {
   buttonClassName?: string;
   menuClassName?: string;
   disabled?: boolean;
+  leadingIcon?: ReactNode;
 }
 
 export function FilterDropdown<T extends string>({
@@ -34,6 +35,7 @@ export function FilterDropdown<T extends string>({
   buttonClassName,
   menuClassName,
   disabled = false,
+  leadingIcon,
 }: FilterDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -56,7 +58,10 @@ export function FilterDropdown<T extends string>({
           buttonClassName,
         )}
       >
-        <span className="truncate">{selectedOption?.label}</span>
+        <span className="flex min-w-0 items-center gap-3">
+          {leadingIcon && <span className="shrink-0 text-grey-3">{leadingIcon}</span>}
+          <span className="truncate">{selectedOption?.label}</span>
+        </span>
         <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isOpen && "rotate-180")} />
       </button>
 
