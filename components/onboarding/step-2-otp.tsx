@@ -58,7 +58,7 @@ export function Step2OTP({ data, updateData, onNext, isLoading, fieldErrors }: S
         Input the OTP sent to <span className="text-primary-1 font-medium">{data.email}</span> below <span className="text-red-600">*</span>
       </p>
       
-      <div className="flex gap-3 mb-1">
+      <div className="mb-1 grid w-full grid-cols-6 gap-2 sm:gap-3">
         {otp.map((digit, index) => (
           <input
             key={index}
@@ -68,7 +68,7 @@ export function Step2OTP({ data, updateData, onNext, isLoading, fieldErrors }: S
             value={digit}
             onChange={(e) => handleChange(index, e.target.value.replace(/\D/g, ""))}
             onKeyDown={(e) => handleKeyDown(index, e)}
-            className="w-12 h-12 text-center text-lg font-medium rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-primary-1 transition-all"
+            className="h-12 w-full min-w-0 rounded-xl border border-grey-4 text-center text-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-primary-1"
             maxLength={1}
           />
         ))}
@@ -92,6 +92,7 @@ export function Step2OTP({ data, updateData, onNext, isLoading, fieldErrors }: S
       <Button 
         onClick={() => onNext(otp.join(""))}
         disabled={!isValid || isLoading}
+        size="lg"
         className="w-full"
       >
         {isLoading ? "Verifying..." : "Continue"}

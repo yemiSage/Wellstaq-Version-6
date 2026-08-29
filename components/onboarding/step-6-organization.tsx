@@ -40,6 +40,7 @@ export function Step6Organization({ data, updateData, onNext, isLoading }: Step6
       <Button 
         onClick={onNext} 
         disabled={!isValid || isLoading}
+        size="lg"
         className="w-full"
       >
         {isLoading ? "Saving..." : "Continue"}

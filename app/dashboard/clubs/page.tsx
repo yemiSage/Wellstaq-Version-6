@@ -45,7 +45,7 @@ export default function ClubsPage() {
       const response = await api.club.getClubs(organizationId, { branchId, limit: 100 });
       setClubs(response.items);
     } catch {
-      setError("Unable to load clubs from the backend.");
+      setError("We couldn't load clubs. Try again.");
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +100,7 @@ export default function ClubsPage() {
       toast.success("Club created successfully");
       await loadClubs();
     } catch {
-      toast.error("Unable to create the club");
+      toast.error("We couldn't create the club. Try again.");
     } finally {
       setIsCreating(false);
     }
@@ -132,7 +132,7 @@ export default function ClubsPage() {
         ].map(([label, value]) => (
           <div key={label} className="dashboard-card border border-grey-4">
             <p className="text-xs font-medium text-grey-2 sm:text-sm">{label}</p>
-            <p className="mt-2 text-2xl font-bold text-grey-1">{value}</p>
+            <p className="mt-2 text-xl font-bold text-grey-1">{value}</p>
           </div>
         ))}
       </div>

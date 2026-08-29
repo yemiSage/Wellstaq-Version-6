@@ -69,7 +69,7 @@ export default function MessagesPage() {
     setError(null);
     void api.chat.getMessages(organizationId, activeThread.type, conversationId)
       .then((response) => { if (!cancelled) setMessages(response.items); })
-      .catch(() => { if (!cancelled) setError("Unable to load this conversation from the backend."); })
+      .catch(() => { if (!cancelled) setError("We couldn't load this conversation. Try again."); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
   }, [activeThread, organizationId]);
@@ -90,7 +90,7 @@ export default function MessagesPage() {
       setMessages((current) => [...current, created]);
       setDraft("");
     } catch {
-      setError("Unable to send your message.");
+      setError("We couldn't send your message. Try again.");
     } finally {
       setIsSending(false);
     }

@@ -7,6 +7,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell
 } from "recharts";
 import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
+import { SelectablePill } from "@/components/ui/selectable-pill";
 import type { EngagementWellbeingTrendPoint } from "@/types/api";
 
 export interface HealthDistributionPoint { name: string; value: number; color: string }
@@ -43,16 +44,17 @@ export function MonthlyWellbeingTrendChart({
           <h3 className="text-[16px] font-bold text-grey-1">Monthly Wellbeing Trend</h3>
           <p className="mt-1 text-xs text-grey-3">Employee wellbeing scores from weekly check-ins</p>
         </div>
-        <div className="flex gap-1 overflow-x-auto rounded-lg bg-grey-5 p-1">
+        <div className="flex gap-0 overflow-x-auto">
           {WELLBEING_TREND_METRICS.map((item) => (
-            <button
+            <SelectablePill
               key={item.key}
-              type="button"
               onClick={() => setSelectedMetric(item.key)}
-              className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium ${selectedMetric === item.key ? "bg-white text-primary-1" : "text-grey-2"}`}
+              selected={selectedMetric === item.key}
+              appearance="plain"
+              className="whitespace-nowrap"
             >
               {item.label}
-            </button>
+            </SelectablePill>
           ))}
         </div>
       </div>

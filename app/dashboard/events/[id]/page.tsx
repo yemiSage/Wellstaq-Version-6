@@ -121,7 +121,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       setMessage("");
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch {
-      toast.error("Failed to send message.");
+      toast.error("We couldn't send the message. Try again.");
     }
   };
 
@@ -132,7 +132,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       setMessages((prev) => prev.filter((m) => m.id !== messageId));
       toast.success("Message deleted");
     } catch {
-      toast.error("Failed to delete message.");
+      toast.error("We couldn't delete the message. Try again.");
     }
   };
 
@@ -322,7 +322,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                           </button>
                         )}
                       </div>
-                      <div className="mt-2 p-3 bg-grey-5/50 rounded-[0_16px_16px_0] border-l-2 border-primary-1">
+                      <div className="mt-2 p-3 bg-grey-5/50 rounded-[0_12px_12px_0] border-l-2 border-primary-1">
                         <p className="text-sm text-grey-1 leading-relaxed">{msg.content}</p>
                       </div>
                     </div>

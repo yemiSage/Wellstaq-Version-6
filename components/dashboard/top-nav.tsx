@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
+import { getUserErrorMessage } from "@/lib/errors";
 import type { Branch, NotificationItem, OrganizationMemberInfo, UserSearchResult } from "@/types/api";
 
 
@@ -122,7 +123,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
       setMessages([...newMessages, { role: 'ai', content: aiResponse }]);
     } catch (e) {
       console.error("AI Chat Error:", e);
-      const errorMessage = e instanceof Error ? e.message : "Sorry, I couldn't process that right now.";
+      const errorMessage = getUserErrorMessage(e, "I couldn't process that right now. Try again.");
       setMessages([...newMessages, { role: 'ai', content: errorMessage.includes("API Key") ? "AI service is currently unavailable. Please contact support to configure the API key." : "Sorry, I couldn't process that right now. Please check your connection." }]);
     } finally {
       setIsTyping(false);

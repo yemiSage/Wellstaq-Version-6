@@ -29,7 +29,7 @@ export function Step5Business({ data, updateData, onNext, isLoading, fieldErrors
     <div className="flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
       <h2 className="mb-8 text-[24px] md:text-[30px] font-bold">Business Information</h2>
 
-      <div className="grid grid-cols-2 gap-6 mb-2">
+      <div className="mb-2 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="flex flex-col gap-2">
           <Label htmlFor="businessName">
             Business Name <span className="text-red-600">*</span>
@@ -84,7 +84,7 @@ export function Step5Business({ data, updateData, onNext, isLoading, fieldErrors
         <FieldError errors={fieldErrors} field="employee_count" />
       </div>
 
-      <Button onClick={onNext} disabled={!isValid || isLoading} className="w-full">
+      <Button onClick={onNext} disabled={!isValid || isLoading} size="lg" className="w-full">
         {isLoading ? "Saving..." : "Continue"}
       </Button>
     </div>

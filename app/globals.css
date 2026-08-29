@@ -59,8 +59,11 @@
     --spacing-4xl: 2.5rem;
     --radius-sm: 0.5rem;
     --radius-md: 0.75rem;
-    --radius-lg: 0.875rem;
-    --radius-xl: 1.25rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 0.75rem;
+    --radius-3xl: 0.75rem;
+    --radius-4xl: 0.75rem;
   }
 
   .dark {
@@ -165,6 +168,6 @@
   }
 
   .dashboard-card {
-    @apply rounded-[14px] border border-grey-4 bg-white p-3;
+    @apply rounded-[12px] border border-grey-4 bg-white p-3;
   }
 }

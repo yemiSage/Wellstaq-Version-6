@@ -74,7 +74,7 @@ export default function IntegrationsPage() {
         };
       }));
     }).catch(() => {
-      if (!cancelled) setError("Unable to load integrations from the backend.");
+      if (!cancelled) setError("We couldn't load integrations. Try again.");
     }).finally(() => {
       if (!cancelled) setIsLoading(false);
     });

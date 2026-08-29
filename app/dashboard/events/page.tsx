@@ -12,6 +12,7 @@ import { hasPermission } from "@/lib/permissions";
 import { api } from "@/services/api";
 import { toast } from "sonner";
 import { StatCard } from "@/components/dashboard/stat-card";
+import { SelectablePill } from "@/components/ui/selectable-pill";
 import type { EventItem } from "@/types/api";
 
 const TABS = ["All Events", "scheduled", "ongoing", "completed", "cancelled"] as const;
@@ -88,10 +89,10 @@ export default function EventsPage() {
   };
 
   const dashboardStats = [
-    { title: "Total Events", value: stats.totalEvents.toString(), subtitle: "Across the selected scope", icon: <Users className="w-5 h-5" />, iconClassName: "bg-pink-100 text-pink-500" },
-    { title: "Upcoming Events", value: stats.upcomingEvents.toString(), subtitle: "Scheduled events", icon: <TrendingUp className="w-5 h-5" />, iconClassName: "bg-purple-100 text-purple-500" },
-    { title: "Completed Events", value: stats.completedEvents.toString(), subtitle: "Completed events", icon: <Calendar className="w-5 h-5" />, iconClassName: "bg-blue-100 text-blue-500" },
-    { title: "Total Participants", value: stats.totalParticipants.toString(), subtitle: "Accepted participants", icon: <Users className="w-5 h-5" />, iconClassName: "bg-green-100 text-green-500" },
+    { title: "Total Events", value: stats.totalEvents.toString(), icon: <Users className="w-5 h-5" />, iconClassName: "bg-pink-100 text-pink-500" },
+    { title: "Upcoming Events", value: stats.upcomingEvents.toString(), icon: <TrendingUp className="w-5 h-5" />, iconClassName: "bg-purple-100 text-purple-500" },
+    { title: "Completed Events", value: stats.completedEvents.toString(), icon: <Calendar className="w-5 h-5" />, iconClassName: "bg-blue-100 text-blue-500" },
+    { title: "Total Participants", value: stats.totalParticipants.toString(), icon: <Users className="w-5 h-5" />, iconClassName: "bg-green-100 text-green-500" },
   ];
 
   const handleDeleteEvent = async (id: string) => {
@@ -133,7 +134,6 @@ export default function EventsPage() {
             key={stat.title}
             title={stat.title}
             value={stat.value}
-            subtitle={stat.subtitle}
             icon={stat.icon}
             iconClassName={stat.iconClassName}
           />
@@ -142,8 +142,8 @@ export default function EventsPage() {
 
       <div className="bg-white rounded-[12px] p-6 flex flex-col gap-[20px] border border-grey-4">
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="relative w-full sm:w-[320px]">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+          <div className="relative w-full xl:w-[320px] xl:shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
             <input
               type="text"
@@ -153,19 +153,17 @@ export default function EventsPage() {
               className="h-10 pl-9 pr-4 w-full rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
             />
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
+          <div className="flex w-full items-center gap-0 overflow-x-auto pb-2 xl:w-auto xl:pb-0 no-scrollbar">
             {TABS.map((tab) => (
-              <button
+              <SelectablePill
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab
-                    ? "bg-white border border-[#C45700] text-[#C45700]"
-                    : "bg-white border border-grey-4 text-grey-2 hover:bg-grey-5"
-                }`}
+                selected={activeTab === tab}
+                appearance="plain"
+                className="whitespace-nowrap"
               >
                 {TAB_LABELS[tab]}
-              </button>
+              </SelectablePill>
             ))}
           </div>
         </div>

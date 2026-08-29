@@ -21,7 +21,7 @@ export function StatCard({ title, value, subtitle, icon, iconClassName, trend }:
         {trend !== undefined && <TrendBadge trend={trend} />}
       </div>
       <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">{title}</p>
-      <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{value}</h3>
+      <h3 className="text-xl font-bold text-[#1A1A1A] mb-1">{value}</h3>
       {subtitle && <p className="text-[10px] text-grey-3 truncate">{subtitle}</p>}
     </div>
   );

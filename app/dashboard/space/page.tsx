@@ -226,7 +226,7 @@ export default function SpacePage() {
         setAllClubs((prev) => prev.map((c) => (c.id === id ? { ...c, isMember: true, memberCount: c.memberCount + 1 } : c)));
         toast.success(`Successfully joined ${club.name}!`);
       } catch {
-        toast.error("Failed to join club.");
+        toast.error("We couldn't join the club. Try again.");
       }
     }
     setClubToJoin(null);
@@ -292,7 +292,7 @@ export default function SpacePage() {
       setClubImagePreview(null);
       toast.success(`${created.name} created successfully!`);
     } catch {
-      toast.error("Failed to create club. Please try again.");
+      toast.error("We couldn't create the club. Try again.");
     }
   };
 
@@ -379,7 +379,7 @@ export default function SpacePage() {
       setPostLocation(null);
       toast.success("Post created successfully!");
     } catch {
-      toast.error("Failed to post. Please try again.");
+      toast.error("We couldn't publish the post. Try again.");
     }
   };
 
@@ -390,7 +390,7 @@ export default function SpacePage() {
       setPosts((prev) => prev.filter((p) => p.id !== id));
       toast.success("Post deleted successfully");
     } catch {
-      toast.error("Failed to delete post.");
+      toast.error("We couldn't delete the post. Try again.");
     } finally {
       setDeleteConfirmPostId(null);
     }
@@ -411,7 +411,7 @@ export default function SpacePage() {
       setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, likeCount: result.likeCount } : p)));
       if (!isLiked && result.liked) setLikeDelta((d) => d + 1);
     } catch {
-      toast.error("Failed to update like.");
+      toast.error("We couldn't update your reaction. Try again.");
     }
   };
 
@@ -436,7 +436,7 @@ export default function SpacePage() {
       if (!expandedComments.includes(postId)) setExpandedComments((prev) => [...prev, postId]);
       toast.success("Comment added!");
     } catch {
-      toast.error("Failed to add comment.");
+      toast.error("We couldn't add the comment. Try again.");
     }
   };
 
@@ -448,7 +448,7 @@ export default function SpacePage() {
       setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p)));
       toast.success("Comment deleted!");
     } catch {
-      toast.error("Failed to delete comment.");
+      toast.error("We couldn't delete the comment. Try again.");
     } finally {
       setDeleteConfirmComment(null);
     }
@@ -540,7 +540,7 @@ export default function SpacePage() {
       toast.success("Story posted!");
     } catch (err) {
       console.error("Story upload error:", err);
-      toast.error("Failed to post story.");
+      toast.error("We couldn't publish the story. Try again.");
     } finally {
       setIsUploadingStory(false);
       e.target.value = "";
@@ -603,7 +603,7 @@ export default function SpacePage() {
       setChatMessagesList((prev) => [...prev, created]);
       setChatInput("");
     } catch {
-      toast.error("Failed to send message. Make sure you're still a club member.");
+      toast.error("We couldn't send the message. Check your club access and try again.");
     }
   };
 
@@ -617,7 +617,7 @@ export default function SpacePage() {
       await handleSendMessage(mediaUrl, isVideo ? "video" : "image");
       toast.success("Attachment sent!");
     } catch {
-      toast.error("Failed to send attachment.");
+      toast.error("We couldn't send the attachment. Try again.");
     }
   };
 
@@ -628,7 +628,7 @@ export default function SpacePage() {
       setChatMessagesList((prev) => prev.filter((m) => m.id !== messageId));
       toast.success("Message deleted");
     } catch {
-      toast.error("Failed to delete message.");
+      toast.error("We couldn't delete the message. Try again.");
     }
   };
 
@@ -643,7 +643,7 @@ export default function SpacePage() {
         setChatMessagesList((prev) => prev.map((m) => ({ ...m, isPinned: m.id === message.id })));
       }
     } catch {
-      toast.error("Failed to update pin.");
+      toast.error("We couldn't update the pin. Try again.");
     }
   };
 

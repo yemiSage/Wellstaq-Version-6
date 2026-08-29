@@ -2,7 +2,7 @@
 import type { ApiErrorBody, ApiResponse, FastApiValidationItem } from "@/types/api";
 import { getAuthTokens, updateAccessToken, clearAuthTokens } from "@/services/auth-token";
 import { backendPath } from "@/services/config";
-import { permissionDeniedMessage, permissionFromError } from "@/lib/permissions";
+import { getApiErrorMessage, getFieldErrorMessage, getFriendlyFieldErrors, getRequestErrorMessage } from "@/lib/errors";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
@@ -12,6 +12,7 @@ export class ApiError extends Error {
     public readonly status: number,
     public readonly code?: string,
     public readonly fieldErrors?: Record<string, string[]>,
+    public readonly rawMessage?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -19,15 +20,16 @@ export class ApiError extends Error {
 }
 
 function extractFieldErrors(body: ApiErrorBody): Record<string, string[]> | undefined {
-  if (!Array.isArray(body.detail)) return undefined;
+  const directErrors = getFriendlyFieldErrors(body.fieldErrors);
+  if (!Array.isArray(body.detail)) return directErrors;
   const fieldErrors: Record<string, string[]> = {};
   for (const item of body.detail as FastApiValidationItem[]) {
     if (!item || !Array.isArray(item.loc)) continue;
     const parts = item.loc.filter((p) => p !== "body" && p !== "query" && p !== "path");
     const field = String(parts[parts.length - 1] ?? "form");
-    (fieldErrors[field] ??= []).push(item.msg);
+    (fieldErrors[field] ??= []).push(getFieldErrorMessage(item.msg, field));
   }
-  return Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined;
+  return Object.keys(fieldErrors).length > 0 ? { ...directErrors, ...fieldErrors } : directErrors;
 }
 
 function extractMessage(body: ApiErrorBody, status: number): string {
@@ -38,39 +40,12 @@ function extractMessage(body: ApiErrorBody, status: number): string {
   return body.message || `Request failed with status ${status}`;
 }
 
-function toFriendlyMessage(status: number, code: string | undefined, backendMessage: string): string {
-  const knownCodes: Record<string, string> = {
-    REQUEST_TIMEOUT: "That took too long to respond. Please try again.",
-    NETWORK_ERROR: "We couldn't connect. Check your internet connection and try again.",
-  };
-  if (code && knownCodes[code]) return knownCodes[code];
-
-  if (status === 403) {
-    const permission = permissionFromError(backendMessage);
-    return permission ? permissionDeniedMessage(permission) : "You don't have permission to perform this action.";
-  }
-
-  const byStatus: Record<number, string> = {
-    401: "Your session has expired. Please sign in again.",
-    404: "We couldn't find what you were looking for.",
-    409: "That already exists — try a different value.",
-    429: "You're doing that a bit too fast. Please wait a moment and try again.",
-    500: "Something went wrong on our end. Please try again in a moment.",
-    503: "The service is temporarily unavailable. Please try again shortly.",
-  };
-  if (byStatus[status]) return byStatus[status];
-
-  if (backendMessage && /[.!?]\s*$/.test(backendMessage.trim())) return backendMessage;
-  return "Something went wrong. Please try again.";
-}
-
 function notify(error: ApiError) {
   if (error.fieldErrors) return;
   if (typeof window !== "undefined") {
-    const friendlyMessage = toFriendlyMessage(error.status, error.code, error.message);
     window.dispatchEvent(
       new CustomEvent("wellstaq:api-error", {
-        detail: { message: friendlyMessage, status: error.status, code: error.code },
+        detail: { message: error.message, status: error.status, code: error.code },
       }),
     );
   }
@@ -78,6 +53,7 @@ function notify(error: ApiError) {
 
 export interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
+  errorMessage?: string;
   timeoutMs?: number;
   suppressErrorNotification?: boolean;
 }
@@ -119,6 +95,7 @@ function toCamelCase(input: unknown): unknown {
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const {
     body: requestBody,
+    errorMessage,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     suppressErrorNotification = false,
     ...fetchOptions
@@ -178,18 +155,35 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     }
 
     const contentType = response.headers.get("content-type") ?? "";
-    const rawPayload = contentType.includes("application/json")
-      ? await response.json()
-      : await response.text();
+    let rawPayload: unknown;
+    try {
+      rawPayload = contentType.includes("application/json")
+        ? await response.json()
+        : await response.text();
+    } catch {
+      throw new ApiError(
+        getApiErrorMessage(
+          response.status,
+          "INVALID_RESPONSE",
+          "",
+          errorMessage ?? getRequestErrorMessage(path, method, response.status),
+        ),
+        response.status,
+        "INVALID_RESPONSE",
+      );
+    }
     const payload = contentType.includes("application/json") ? toCamelCase(rawPayload) : rawPayload;
 
     if (!response.ok) {
       const errorBody = (typeof payload === "object" && payload ? payload : {}) as ApiErrorBody;
+      const rawMessage = extractMessage(errorBody, response.status);
+      const requestMessage = errorMessage ?? getRequestErrorMessage(path, method, response.status);
       throw new ApiError(
-        extractMessage(errorBody, response.status),
+        getApiErrorMessage(response.status, errorBody.code, rawMessage, requestMessage),
         response.status,
         errorBody.code,
         extractFieldErrors(errorBody),
+        rawMessage,
       );
     }
 
@@ -207,11 +201,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       throw error;
     }
     if (error instanceof DOMException && error.name === "AbortError") {
-      const apiError = new ApiError("The request timed out. Please try again.", 408, "REQUEST_TIMEOUT");
+      const apiError = new ApiError(errorMessage ?? getRequestErrorMessage(path, method, 408), 408, "REQUEST_TIMEOUT");
       if (!suppressErrorNotification) notify(apiError);
       throw apiError;
     }
-    const apiError = new ApiError("Unable to reach the service. Please check your connection.", 0, "NETWORK_ERROR");
+    const apiError = new ApiError(errorMessage ?? getRequestErrorMessage(path, method, 0), 0, "NETWORK_ERROR");
     if (!suppressErrorNotification) notify(apiError);
     throw apiError;
   } finally {

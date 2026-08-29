@@ -153,7 +153,7 @@ export default function DashboardPage() {
           departmentsTrend: orgStats.departmentsTrend,
         });
       } catch {
-        if (!cancelled) setStatsError("Unable to load organization stats.");
+        if (!cancelled) setStatsError("We couldn't load organization stats. Try again.");
       } finally {
         if (!cancelled) setStatsLoading(false);
       }
@@ -286,7 +286,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Total Activity</p>
-                <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.activity.toLocaleString()}</h3>
+                <h3 className="text-xl font-bold text-[#1A1A1A] mb-1">{stats.activity.toLocaleString()}</h3>
                 <p className="text-[10px] text-grey-3 truncate">From last week</p>
               </div>
 
@@ -298,7 +298,7 @@ export default function DashboardPage() {
                   <TrendBadge trend={stats.eventsTrend} />
                 </div>
                 <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Events Created</p>
-                <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.events}</h3>
+                <h3 className="text-xl font-bold text-[#1A1A1A] mb-1">{stats.events}</h3>
                 <p className="text-[10px] text-grey-3 truncate">Scheduled</p>
               </div>
 
@@ -310,7 +310,7 @@ export default function DashboardPage() {
                   <TrendBadge trend={stats.departmentsTrend} />
                 </div>
                 <p className="text-[10px] sm:text-sm text-[#4D4D4D] mb-1 font-medium truncate">Departments</p>
-                <h3 className="text-lg sm:text-2xl font-bold text-[#1A1A1A] mb-1">{stats.departments}</h3>
+                <h3 className="text-xl font-bold text-[#1A1A1A] mb-1">{stats.departments}</h3>
                 <p className="text-[10px] text-grey-3 truncate">Wellness</p>
               </div>
             </div>
@@ -320,7 +320,7 @@ export default function DashboardPage() {
             {/* Left Column */}
             <div className="space-y-[12px]">
               {/* Wellbeing Pulse */}
-              <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
+              <div className="bg-white p-2 rounded-[12px] border border-grey-4">
                 <h3 className="text-[16px] font-bold font-sans text-grey-1 mb-4">Wellbeing Pulse</h3>
 
                 {!canViewPulse && (
@@ -364,7 +364,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="bg-[#FAFAFA] rounded-[12px] p-4 space-y-6">
+                    <div className="bg-[#FAFAFA] rounded-[12px] p-3 space-y-6">
                       {PULSE_QUESTION_META.map(({ key, name }) => {
                         const q = pulseData[key] ?? { status: null, percent: null };
                         return (

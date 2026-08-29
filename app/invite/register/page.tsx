@@ -9,8 +9,10 @@ import { OnboardingPane } from "@/components/layout/onboarding-pane";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SelectablePill } from "@/components/ui/selectable-pill";
 import { api } from "@/services/api";
 import { setAuthTokens } from "@/services/auth-token";
+import { getUserErrorMessage } from "@/lib/errors";
 
 const dimensions = ["mood", "energy", "stress", "work_life_balance"] as const;
 const levels = ["amazed", "excited", "tired", "stressed", "infuriated"];
@@ -37,7 +39,7 @@ function InviteRegistrationContent() {
     if (!inviteCode) return setError("This invitation link is incomplete. Ask your administrator for a new link.");
     setLoading(true); setError("");
     try { const response = await api.auth.requestInviteOtp(inviteCode); setSentTo(response.sentTo); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to send verification code."); }
+    catch (reason) { setError(getUserErrorMessage(reason, "We couldn't send the verification code. Try again.")); }
     finally { setLoading(false); }
   };
 
@@ -45,7 +47,7 @@ function InviteRegistrationContent() {
     if (code.length !== 6) return setError("Enter the six-digit verification code.");
     setLoading(true); setError("");
     try { const response = await api.auth.verifyInviteOtp(inviteCode, code); setVerificationToken(response.inviteVerificationToken); setStep("profile"); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : "The verification code is incorrect or expired."); }
+    catch (reason) { setError(getUserErrorMessage(reason, "That verification code is invalid or expired.")); }
     finally { setLoading(false); }
   };
 
@@ -65,10 +67,10 @@ function InviteRegistrationContent() {
       if (response.requiresApp || response.role.toLowerCase() === "member") {
         setRequiresApp(true); setStep("success"); return;
       }
-      if (!response.accessToken || !response.refreshToken || !response.tokenType) throw new Error("Registration completed but no login session was returned.");
+      if (!response.accessToken || !response.refreshToken || !response.tokenType) throw new Error("Your account is ready. Sign in to continue.");
       setAuthTokens({ accessToken: response.accessToken, refreshToken: response.refreshToken, tokenType: response.tokenType });
       router.replace("/dashboard");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to complete registration."); }
+    } catch (reason) { setError(getUserErrorMessage(reason, "We couldn't complete registration. Try again.")); }
     finally { setLoading(false); }
   };
 
@@ -79,7 +81,7 @@ function InviteRegistrationContent() {
     {step === "profile" && <div className="space-y-6"><div><h1 className="text-2xl font-bold text-grey-1">Create your account</h1><p className="mt-2 text-sm text-grey-2">Complete your profile and wellness baseline.</p></div>
       <div className="grid gap-4 sm:grid-cols-2"><div><Label>First name</Label><Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></div><div><Label>Last name</Label><Input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></div><div><Label>Country</Label><Input value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} /></div><div><Label>State</Label><Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} /></div><div><Label>Password</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div><div><Label>Confirm password</Label><Input type="password" value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} /></div></div>
       <div><h2 className="mb-3 text-sm font-bold text-grey-1">Wellness baseline</h2><div className="space-y-3">{dimensions.map((dimension) => <div key={dimension} className="grid gap-2 rounded-xl border border-grey-4 p-3 sm:grid-cols-3"><span className="text-sm font-medium text-grey-1">{label(dimension)}</span><select value={baseline[dimension].level} onChange={(e) => setBaseline({ ...baseline, [dimension]: { ...baseline[dimension], level: e.target.value } })} className="h-9 rounded-lg border border-grey-4 px-2 text-sm">{levels.map((item) => <option key={item} value={item}>{label(item)}</option>)}</select><select value={baseline[dimension].reason} onChange={(e) => setBaseline({ ...baseline, [dimension]: { ...baseline[dimension], reason: e.target.value } })} className="h-9 rounded-lg border border-grey-4 px-2 text-sm">{reasons.map((item) => <option key={item} value={item}>{label(item)}</option>)}</select></div>)}</div></div>
-      <div><h2 className="mb-2 text-sm font-bold text-grey-1">Your priorities</h2><div className="flex flex-wrap gap-2">{priorities.map((priority) => { const selected = selectedPriorities.includes(priority); return <button type="button" key={priority} onClick={() => setSelectedPriorities(selected ? selectedPriorities.filter((item) => item !== priority) : [...selectedPriorities, priority])} className={`rounded-full border px-3 py-2 text-xs ${selected ? "border-primary-1 bg-primary-1/5 text-primary-1" : "border-grey-4 text-grey-2"}`}>{label(priority)}</button>; })}</div></div>
+      <div><h2 className="mb-2 text-sm font-bold text-grey-1">Your priorities</h2><div className="flex flex-wrap gap-2">{priorities.map((priority) => { const selected = selectedPriorities.includes(priority); return <SelectablePill key={priority} selected={selected} onClick={() => setSelectedPriorities(selected ? selectedPriorities.filter((item) => item !== priority) : [...selectedPriorities, priority])} className="whitespace-nowrap">{label(priority)}</SelectablePill>; })}</div></div>
       <Button disabled={loading || selectedPriorities.length === 0} onClick={() => void register()} className="w-full">{loading ? "Creating account..." : "Complete registration"}</Button>
     </div>}
     {step === "success" && requiresApp && <div className="flex flex-1 flex-col items-center justify-center text-center"><CheckCircle2 className="mb-5 h-16 w-16 text-green-500" /><h1 className="text-2xl font-bold text-grey-1">Registration successful</h1><p className="mt-3 max-w-sm text-sm text-grey-2">Your account is ready. Download the Wellstaq mobile app to continue your wellness journey.</p><div className="mt-7 flex flex-col gap-3 sm:flex-row"><Button disabled className="gap-2"><Download className="h-4 w-4" /> Mobile app coming soon</Button><Link href="/login" className="rounded-lg border border-grey-4 px-5 py-2.5 text-sm font-medium text-grey-2">Back to login</Link></div></div>}

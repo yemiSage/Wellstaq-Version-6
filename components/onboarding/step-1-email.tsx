@@ -45,7 +45,7 @@ export function Step1Email({ data, updateData, onNext, isLoading, error }: Step1
         </div>
       </div>
 
-      <Button onClick={onNext} disabled={!isValid || isLoading} className="w-full">
+      <Button onClick={onNext} disabled={!isValid || isLoading} size="lg" className="w-full">
         {isLoading ? "Sending OTP..." : "Continue"}
       </Button>
       <p className="text-sm text-grey-3 text-center mt-6">

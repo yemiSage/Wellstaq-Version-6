@@ -118,11 +118,11 @@ export const api = {
   auth: {
     requestInviteOtp: (inviteCode: string) => fromApi<{ message: string; sentTo: string }>(
       "/auth/invite/otp/request",
-      { method: "POST", body: { inviteCode } },
+      { method: "POST", body: { inviteCode }, suppressErrorNotification: true },
     ),
     verifyInviteOtp: (inviteCode: string, code: string) => fromApi<{ inviteVerificationToken: string }>(
       "/auth/invite/otp/verify",
-      { method: "POST", body: { inviteCode, code } },
+      { method: "POST", body: { inviteCode, code }, suppressErrorNotification: true },
     ),
     registerInvite: (payload: {
       inviteVerificationToken: string; firstName: string; lastName: string; password: string;
@@ -131,9 +131,16 @@ export const api = {
       priorities: Array<{ priority: string; rank: number }>;
     }) => fromApi<InviteRegistrationResponse>(
       "/auth/register/invite",
-      { method: "POST", body: payload },
+      { method: "POST", body: payload, suppressErrorNotification: true },
     ),
-    sendOtp: (email: string) => fromApi("/auth/signup/otp/request", {
+    sendOtp: (email: string) => fromApi<{
+      message?: string;
+      existingUser?: boolean;
+      isExistingUser?: boolean;
+      userExists?: boolean;
+      returningUser?: boolean;
+      accountStatus?: string;
+    }>("/auth/signup/otp/request", {
       method: "POST",
       body: { email },
       suppressErrorNotification: true,
@@ -151,7 +158,7 @@ export const api = {
     verifyTwoFa: (twoFaChallengeToken: string, code: string) =>
       fromApi<AuthTokenResponse>(
         "/auth/2fa/verify",
-        { method: "POST", body: { twoFaChallengeToken, code } },
+        { method: "POST", body: { twoFaChallengeToken, code }, suppressErrorNotification: true },
       ),
     me: () => fromApi<CurrentUserResponse>("/auth/me"),
     logout: async () => {
@@ -279,12 +286,20 @@ export const api = {
     inviteEventParticipant: (orgId: string, eventId: string, userId: string) =>
       fromApi<{ eventId: string; userId: string; message: string }>(
         `/organizations/${orgId}/events/${eventId}/participants`,
-        { method: "POST", body: { user_id: userId, is_invite: true } },
+        {
+          method: "POST",
+          body: { user_id: userId, is_invite: true },
+          errorMessage: "We couldn't invite this participant. Try again.",
+        },
       ),
     joinEvent: (orgId: string, eventId: string, userId: string) =>
       fromApi<{ eventId: string; userId: string; message: string }>(
         `/organizations/${orgId}/events/${eventId}/participants`,
-        { method: "POST", body: { user_id: userId, is_invite: false } },
+        {
+          method: "POST",
+          body: { user_id: userId, is_invite: false },
+          errorMessage: "We couldn't join the event. Try again.",
+        },
       ),
     getChallenges: (
       orgId: string,
@@ -447,10 +462,17 @@ export const api = {
       { method: "PUT", body: { permissionNames } },
     ),
     assignToMember: (orgId: string, userId: string, role: RoleItem) => fromApi<void>(
-      `/organizations/${orgId}/members/${userId}/${role.isDefault ? "system-role" : "custom-role"}`, { method: "PUT", body: { roleId: role.id } },
+      `/organizations/${orgId}/members/${userId}/${role.isDefault ? "system-role" : "custom-role"}`, {
+        method: "PUT",
+        body: { roleId: role.id },
+        errorMessage: "We couldn't assign the role. Try again.",
+      },
     ),
     revokeFromMember: (orgId: string, userId: string, branchId?: string) => fromApi<void>(
-      `/organizations/${orgId}/members/${userId}/role${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`, { method: "DELETE" },
+      `/organizations/${orgId}/members/${userId}/role${branchId ? `?branch_id=${encodeURIComponent(branchId)}` : ""}`, {
+        method: "DELETE",
+        errorMessage: "We couldn't remove the role. Try again.",
+      },
     ),
   },
   teamMembers: {
@@ -988,7 +1010,7 @@ story: {
     list: <T>(resource: string, query = "") =>
       fromApi<T>(`/v1/${resource}${query ? `?${query}` : ""}`),
     mutate: <T = { success: true }>({ resource, action, id, payload }: ResourceMutation) =>
-      fromApi(`/v1/${resource}${id === undefined ? "" : `/${encodeURIComponent(String(id))}`}/${action}`, {
+      fromApi<T>(`/v1/${resource}${id === undefined ? "" : `/${encodeURIComponent(String(id))}`}/${action}`, {
         method: "POST",
         body: payload,
       }),

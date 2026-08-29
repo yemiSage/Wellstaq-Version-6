@@ -34,8 +34,10 @@ import type { OrganizationMemberInfo, OrganizationSubscriptionInfo, PermissionCa
 import { hasPermission, readablePermission } from "@/lib/permissions";
 import { clearAuthTokens } from "@/services/auth-token";
 import { humanizeIdentifier } from "@/lib/format";
+import { getUserErrorMessage } from "@/lib/errors";
 import { useDashboardScope } from "@/lib/scope";
 import { FilterDropdown, type FilterDropdownOption } from "@/components/ui/filter-dropdown";
+import { SelectablePill } from "@/components/ui/selectable-pill";
 
 const TWO_FACTOR_METHOD_OPTIONS: FilterDropdownOption<"email" | "totp">[] = [
   { label: "Email code", value: "email" },
@@ -51,6 +53,17 @@ const NAV_ITEMS = [
   { id: "roles", label: "Roles & Permissions", sublabel: "Manage access levels", icon: <Lock className="w-5 h-5" /> },
   { id: "billing", label: "Billing", sublabel: "Plan & payments", icon: <CreditCard className="w-5 h-5" /> },
 ];
+
+function isCurrentPlanUnexpired(subscription: OrganizationSubscriptionInfo): boolean {
+  const planEnd = subscription.status === "trialing"
+    ? subscription.trialEndsAt ?? subscription.currentPeriodEnd
+    : subscription.currentPeriodEnd;
+  const planEndTime = Date.parse(planEnd);
+
+  return subscription.status === "active"
+    || subscription.status === "trialing"
+    || (Number.isFinite(planEndTime) && planEndTime > Date.now());
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -162,7 +175,7 @@ export default function SettingsPage() {
     void api.profile.get().then((profile) => {
       setFormData({ firstName: profile.firstName, lastName: profile.lastName, email: profile.email, country: profile.country ?? "", state: profile.state ?? "" });
       if (profile.avatarUrl) setProfileImage(profile.avatarUrl);
-    }).catch((error) => toast.error(error instanceof Error ? error.message : "Unable to load profile."));
+    }).catch((error) => toast.error(getUserErrorMessage(error, "We couldn't load your profile. Try again.")));
   }, [activeTab]);
 
   useEffect(() => {
@@ -255,7 +268,7 @@ export default function SettingsPage() {
   const handleProfileUpload = async (file: File) => {
     const upload = await api.storage.requestUploadUrl({ domain: "avatars", contentType: file.type });
     const response = await fetch(upload.uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
-    if (!response.ok) throw new Error("Unable to upload profile photo.");
+    if (!response.ok) throw new Error("We couldn't upload the profile photo. Try again.");
     const result = await api.profile.updateAvatar(upload.mediaUrl);
     setProfileImage(result.avatarUrl);
     updateUser({ profileImage: result.avatarUrl });
@@ -324,7 +337,7 @@ export default function SettingsPage() {
       setSubscription(currentSubscription);
       setAutoRenew(currentSubscription.autoRenew);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to load billing information.");
+      toast.error(getUserErrorMessage(error, "We couldn't load billing information. Try again."));
     } finally {
       setBillingLoading(false);
     }
@@ -347,7 +360,7 @@ export default function SettingsPage() {
       else toast.info(`Payment status: ${result.providerStatus}.`);
       void loadBilling();
     }).catch((error) => {
-      toast.error(error instanceof Error ? error.message : "Unable to verify payment.");
+      toast.error(getUserErrorMessage(error, "We couldn't verify the payment. Try again."));
     }).finally(() => {
       setVerifyingReference(null);
       window.history.replaceState({}, "", "/dashboard/settings?tab=billing");
@@ -362,7 +375,7 @@ export default function SettingsPage() {
       const checkout = await api.billing.checkout(organizationId, { planId, callbackUrl, autoRenew });
       window.location.assign(checkout.authorizationUrl);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to start checkout.");
+      toast.error(getUserErrorMessage(error, "We couldn't start checkout. Try again."));
       setCheckoutPlanId(null);
     }
   };
@@ -376,7 +389,7 @@ export default function SettingsPage() {
       setAutoRenew(updated.autoRenew);
       toast.success(`Automatic renewal ${updated.autoRenew ? "enabled" : "disabled"}.`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to update automatic renewal.");
+      toast.error(getUserErrorMessage(error, "We couldn't update renewal. Try again."));
     } finally { setRenewalSaving(false); }
   };
 
@@ -394,7 +407,7 @@ export default function SettingsPage() {
     setSessions(sessionList.items);
   }, []);
 
-  useEffect(() => { if (activeTab === "account") void loadSecurity().catch(() => toast.error("Unable to load security settings.")); }, [activeTab, loadSecurity]);
+  useEffect(() => { if (activeTab === "account") void loadSecurity().catch(() => toast.error("We couldn't load security settings. Try again.")); }, [activeTab, loadSecurity]);
 
   const changePassword = async () => {
     if (passwordForm.next.length < 8) return toast.error("New password must contain at least 8 characters.");
@@ -452,12 +465,12 @@ export default function SettingsPage() {
               onClick={() => setActiveTab(item.id)}
               className={`flex items-center gap-3 rounded-[12px] p-2 text-left transition-all border-[1.5px] ${
                 activeTab === item.id
-                  ? "bg-white border-[#EA6A05] shadow-sm"
+                  ? "bg-white border-[#272625] shadow-sm"
                   : "bg-white border-[#E6E6E6] hover:bg-grey-5"
               }`}
             >
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center border-[1.5px] ${
-                activeTab === item.id ? "bg-white border-[#EA6A05] text-[#EA6A05]" : "bg-grey-5 border-transparent text-grey-2"
+                activeTab === item.id ? "bg-white border-[#272625] text-[#272625]" : "bg-grey-5 border-transparent text-grey-2"
               }`}>
                 {item.icon}
               </div>
@@ -764,13 +777,20 @@ export default function SettingsPage() {
               <p className="text-[14px] text-grey-2 pb-[12px]">Manage your subscription plan and billing details.</p>
               {canManageBilling && billingLoading && <div className="flex items-center justify-center gap-2 py-16 text-sm text-grey-3"><LoaderCircle className="h-5 w-5 animate-spin" /> Loading billing information...</div>}
               {canManageBilling && !billingLoading && subscription && <>
-                <div className="mb-8 rounded-xl border border-grey-4 bg-grey-5 p-6">
+                <div className="mb-8 rounded-[12px] border border-grey-4 bg-grey-5 p-6">
                   <div className="mb-4">
                     <div><div className="text-xs font-bold uppercase tracking-wider text-[#EA6A05]">Current Plan</div><div className="pt-1 text-[20px] font-semibold text-grey-1">{subscription.status === "trialing" ? "Free Trial" : plans.find((plan) => plan.id === subscription.planId)?.name ?? "Subscription plan"}</div></div>
                   </div>
                   <div className="mb-6 text-sm text-grey-2">{subscription.status === "trialing" ? `Your free trial ends on ${formatDate(subscription.trialEndsAt ?? subscription.currentPeriodEnd)}.` : `Your current billing period ends on ${formatDate(subscription.currentPeriodEnd)}.`}</div>
                   <div className="flex flex-wrap items-center gap-4">
-                    <Button disabled={checkoutPlanId !== null} onClick={() => setPlanPickerOpen(true)} className="bg-[#EA6A05] hover:bg-[#EA6A05]/90">Upgrade Plan</Button>
+                    <Button
+                      disabled={checkoutPlanId !== null || isCurrentPlanUnexpired(subscription)}
+                      onClick={() => setPlanPickerOpen(true)}
+                      title={isCurrentPlanUnexpired(subscription) ? "Available after the current plan expires" : undefined}
+                      className="bg-[#EA6A05] hover:bg-[#EA6A05]/90 disabled:cursor-not-allowed"
+                    >
+                      Upgrade Plan
+                    </Button>
                     <div className="ml-auto flex items-center gap-3"><span className="text-sm font-medium text-grey-1">Auto renew</span><button disabled={renewalSaving} type="button" onClick={() => void updateRenewal(!autoRenew)} className={`relative h-6 w-11 rounded-full transition-colors disabled:opacity-50 ${autoRenew ? "bg-grey-2" : "bg-grey-4"}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${autoRenew ? "left-6" : "left-1"}`} /></button></div>
                   </div>
                 </div>
@@ -838,7 +858,7 @@ export default function SettingsPage() {
                 <div className="flex flex-wrap gap-2">
                   {permissionCatalogue.filter((permission) => selectedRoleForEdit.branchId ? permission.scope !== "org" : permission.scope !== "branch").map((permission) => {
                     const isSelected = (selectedRoleForEdit.permissions ?? []).includes(permission.name);
-                    return <button key={permission.id} disabled={selectedRoleForEdit.name === "super_admin"} onClick={() => toggleRolePermission(permission.name)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${isSelected ? "bg-white border-primary-1 text-primary-1 shadow-sm" : "bg-white border-grey-4 text-grey-2 hover:border-grey-3"} disabled:cursor-default`}>{readablePermission(permission.name)}</button>;
+                    return <SelectablePill key={permission.id} disabled={selectedRoleForEdit.name === "super_admin"} selected={isSelected} onClick={() => toggleRolePermission(permission.name)} className="px-3 text-xs disabled:cursor-default">{readablePermission(permission.name)}</SelectablePill>;
                   })}
                 </div>
               </div>

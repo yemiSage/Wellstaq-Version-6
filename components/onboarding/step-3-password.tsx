@@ -67,7 +67,7 @@ export function Step3Password({ data, updateData, onNext, isLoading, fieldErrors
         })}
       </ul>
 
-      <Button onClick={onNext} disabled={!isValid || isLoading} className="w-full">
+      <Button onClick={onNext} disabled={!isValid || isLoading} size="lg" className="w-full">
         {isLoading ? "Saving..." : "Continue"}
       </Button>
     </div>

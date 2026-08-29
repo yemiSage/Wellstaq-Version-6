@@ -33,6 +33,15 @@ import {
   X
 } from "lucide-react";
 
+function ActivePageStroke() {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute right-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-secondary-1"
+    />
+  );
+}
+
 export function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -55,6 +64,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const canCreateChallenge = currentUser ? hasPermission(currentUser.permissions, "challenge.create", scope.type === "branch" ? scope.branchId : undefined) : false;
   const canManageInvites = currentUser ? hasPermission(currentUser.permissions, "member.invite", scope.type === "branch" ? scope.branchId : undefined) : false;
   const isChallengesActive = pathname.startsWith("/dashboard/challenges");
+  const isIntegrationsActive = pathname.startsWith("/dashboard/integrations");
 
   useEffect(() => {
     if (!organizationId) return;
@@ -119,10 +129,12 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 key={item.name}
                 href={scopedHref(item.href)} 
                 onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${isActive ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
+                aria-current={isActive ? "page" : undefined}
+                className={`relative flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${isActive ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
               >
                 <item.icon size={18} strokeWidth={2} className="flex-shrink-0" />
                 {!isCollapsed && <span className="text-sm whitespace-nowrap">{item.name}</span>}
+                {isActive && <ActivePageStroke />}
               </Link>
             );
           })}
@@ -130,7 +142,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
         {/* Challenges Section */}
         <div className="border-t border-grey-4 pt-4">
-          <div className={`flex items-center px-3 mb-2 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+          <div className={`relative flex items-center px-3 mb-2 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
             <Link
               href={scopedHref("/dashboard/challenges")}
               onClick={onClose}
@@ -162,6 +174,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 <Plus size={14} strokeWidth={2} />
               </button>
             )}
+            {isChallengesActive && <ActivePageStroke />}
           </div>
           {!isCollapsed && branchChallenges.length > 0 ? (
             <div className="space-y-0.5">
@@ -195,9 +208,14 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           </div>
           {!isCollapsed && (
             <div className="space-y-0.5">
-              <Link href={scopedHref("/dashboard/integrations")} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+              <Link
+                href={scopedHref("/dashboard/integrations")}
+                aria-current={isIntegrationsActive ? "page" : undefined}
+                className={`relative flex items-center gap-3 px-3 py-1.5 font-medium rounded-md cursor-pointer transition-colors text-sm ${isIntegrationsActive ? "bg-primary-5 text-primary-1 font-bold" : "text-grey-2 hover:bg-grey-5"}`}
+              >
                 <Plus size={14} strokeWidth={2} className="flex-shrink-0" />
                 <span className="whitespace-nowrap">Add Integration</span>
+                {isIntegrationsActive && <ActivePageStroke />}
               </Link>
             </div>
           )}
@@ -271,31 +289,39 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           <div className="border-t border-grey-4 pt-3 space-y-1">
           <Link 
             href={scopedHref("/dashboard/teams")} 
-            className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/teams' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
+            aria-current={pathname === '/dashboard/teams' ? "page" : undefined}
+            className={`relative flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/teams' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
             <Users size={18} strokeWidth={2} className="flex-shrink-0" />
             {!isCollapsed && <span className="text-sm whitespace-nowrap">Team</span>}
+            {pathname === '/dashboard/teams' && <ActivePageStroke />}
           </Link>
           {canManageInvites && <Link
             href={scopedHref("/dashboard/invites")}
-            className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/invites' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
+            aria-current={pathname === '/dashboard/invites' ? "page" : undefined}
+            className={`relative flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/invites' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
             <MailPlus size={18} strokeWidth={2} className="flex-shrink-0" />
             {!isCollapsed && <span className="text-sm whitespace-nowrap">Pending Invites</span>}
+            {pathname === '/dashboard/invites' && <ActivePageStroke />}
           </Link>}
           <Link 
             href={scopedHref("/dashboard/settings")} 
-            className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/settings' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
+            aria-current={pathname === '/dashboard/settings' ? "page" : undefined}
+            className={`relative flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/settings' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
             <Settings size={18} strokeWidth={2} className="flex-shrink-0" />
             {!isCollapsed && <span className="text-sm whitespace-nowrap">Settings</span>}
+            {pathname === '/dashboard/settings' && <ActivePageStroke />}
           </Link>
           <Link 
             href={scopedHref("/dashboard/contact")} 
-            className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/contact' ? 'bg-[#F7F7F7] text-[#6B6B6B] font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
+            aria-current={pathname === '/dashboard/contact' ? "page" : undefined}
+            className={`relative flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/contact' ? 'bg-[#F7F7F7] text-[#6B6B6B] font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
             <MessageSquare size={18} strokeWidth={2} className="flex-shrink-0" />
             {!isCollapsed && <span className="text-sm whitespace-nowrap">Contact Support</span>}
+            {pathname === '/dashboard/contact' && <ActivePageStroke />}
           </Link>
           </div>
         </div>

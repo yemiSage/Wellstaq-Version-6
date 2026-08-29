@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export function OnboardingPane({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex-1 flex flex-col relative overflow-hidden">
+    <div className="flex-1 flex flex-col relative overflow-x-hidden">
       {/* Subtle Background Shape */}
       <svg 
         className="absolute top-1/3 -right-32 w-[800px] h-[800px] text-grey-4/5 -z-10 pointer-events-none" 
@@ -16,7 +16,7 @@ export function OnboardingPane({ children }: { children: React.ReactNode }) {
       </svg>
       
       {/* Header with Logo */}
-      <header className="w-full flex justify-center pt-12 pb-[52px]">
+      <header className="w-full flex justify-center pt-8 pb-8 sm:pt-10 sm:pb-10 xl:pt-12 xl:pb-[52px]">
         <Image
           src="https://res.cloudinary.com/dv7yvatu2/image/upload/f_auto,q_auto,w_320/v1772170704/wellstaq_logo_raxmmg.png"
           alt="Wellstaq Logo"
@@ -28,15 +28,14 @@ export function OnboardingPane({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col px-8 w-full justify-start">
+      <main className="flex-1 flex flex-col w-full max-w-[640px] mx-auto px-5 sm:px-8 md:px-10 xl:max-w-none xl:px-8 2xl:px-10 justify-start">
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="w-full py-8 px-8 text-center mt-auto">
-        <p className="text-[12px] text-grey-3">
-          By continuing you are confirming to have read and agree <br />
-          to Wellstaq <a href="#" className="text-primary-1 font-medium hover:underline">terms and condition</a> and <a href="#" className="text-primary-1 font-medium hover:underline">Privacy Policy</a>
+      <footer className="w-full py-6 px-5 sm:py-8 sm:px-8 text-center mt-auto">
+        <p className="max-w-[560px] mx-auto text-[12px] leading-5 text-grey-3">
+          By continuing you are confirming to have read and agree to Wellstaq <a href="#" className="text-primary-1 font-medium hover:underline">terms and condition</a> and <a href="#" className="text-primary-1 font-medium hover:underline">Privacy Policy</a>
         </p>
       </footer>
     </div>

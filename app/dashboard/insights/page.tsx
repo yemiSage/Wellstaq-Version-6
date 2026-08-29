@@ -48,7 +48,7 @@ export default function InsightsPage() {
     void api.kpiSnapshots
       .getOverview(organizationId, period, selectedBranchId)
       .then((result) => { if (!cancelled) setInsights(result); })
-      .catch(() => { if (!cancelled) setError("Unable to load insights from the backend."); })
+      .catch(() => { if (!cancelled) setError("We couldn't load insights. Try again."); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
   }, [organizationId, period, selectedBranchId]);
@@ -120,7 +120,7 @@ export default function InsightsPage() {
             <span className="rounded-full bg-grey-5 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-grey-2">Latest pulse</span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Weekly Check-ins</p>
-          <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{wellbeingLoading ? "—" : canViewWellbeing ? pulse?.respondentCount ?? 0 : "—"}</h3>
+          <h3 className="text-xl font-bold text-[#1A1A1A] mb-1">{wellbeingLoading ? "—" : canViewWellbeing ? pulse?.respondentCount ?? 0 : "—"}</h3>
           <p className="text-xs text-grey-3">{canViewWellbeing ? "employee wellbeing responses" : "wellbeing insights unavailable"}</p>
         </div>
 
@@ -134,7 +134,7 @@ export default function InsightsPage() {
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Wellbeing Score</p>
-          <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{insights.summary.healthScore}</h3>
+          <h3 className="text-xl font-bold text-[#1A1A1A] mb-1">{insights.summary.healthScore}</h3>
           <p className="text-xs text-grey-3">overall average</p>
         </div>
 
@@ -148,7 +148,7 @@ export default function InsightsPage() {
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Employee Engagement</p>
-          <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{insights.summary.activeEmployees}</h3>
+          <h3 className="text-xl font-bold text-[#1A1A1A] mb-1">{insights.summary.activeEmployees}</h3>
           <p className="text-xs text-grey-3">participation rate</p>
         </div>
 
@@ -162,7 +162,7 @@ export default function InsightsPage() {
             </span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Wellness Challenges Won</p>
-          <h3 className="text-2xl font-bold text-[#1A1A1A] mb-1">{insights.summary.challengesWon}</h3>
+          <h3 className="text-xl font-bold text-[#1A1A1A] mb-1">{insights.summary.challengesWon}</h3>
           <p className="text-xs text-grey-3">{selectedPeriodLabel[period]}</p>
         </div>
       </div>

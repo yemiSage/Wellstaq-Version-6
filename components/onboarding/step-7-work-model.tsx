@@ -37,6 +37,7 @@ export function Step7WorkModel({ data, updateData, onNext, isLoading }: Step7Pro
       <Button 
         onClick={onNext} 
         disabled={!isValid || isLoading}
+        size="lg"
         className="w-full"
       >
         {isLoading ? "Saving..." : "Continue"}

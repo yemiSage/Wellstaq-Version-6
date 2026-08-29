@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import { ChevronDown, ArrowUpRight, ArrowDownRight, Smile, Heart, MousePointerClick, Trophy } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { SelectablePill } from "@/components/ui/selectable-pill";
 import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -140,20 +141,18 @@ export function EngagementChart({
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
+      <div className="flex gap-0 overflow-x-auto pb-2 mb-6 no-scrollbar">
         {TREND_METRICS.map((metric) => (
-          <button
+          <SelectablePill
             key={metric.name}
             onClick={() => setEngagementMetric(metric.name)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm whitespace-nowrap ${
-              engagementMetric === metric.name
-                ? "bg-primary-5 text-primary-1 font-medium"
-                : "text-grey-2 hover:bg-grey-5"
-            }`}
+            selected={engagementMetric === metric.name}
+            appearance="plain"
+            className="gap-1.5 whitespace-nowrap"
           >
             {metric.icon}
             {metric.name}
-          </button>
+          </SelectablePill>
         ))}
       </div>
 

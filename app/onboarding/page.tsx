@@ -62,12 +62,39 @@ function earliestStepForErrors(fieldErrors: Record<string, string[]>): Step {
 }
 
 function isExistingUserError(error: ApiError): boolean {
-  const errorText = `${error.code ?? ""} ${error.message}`.toLowerCase();
+  const errorText = `${error.code ?? ""} ${error.rawMessage ?? ""} ${error.message}`.toLowerCase();
   return (
     error.status === 409 ||
     /already[_\s-]?(exists?|registered)/.test(errorText) ||
     /(user|email|account).*(exists?|registered)/.test(errorText)
   );
+}
+
+type SignupOtpResult = Awaited<ReturnType<typeof api.auth.sendOtp>>;
+
+function isExistingUserResponse(result: SignupOtpResult): boolean {
+  const explicitFlags = [
+    result?.existingUser,
+    result?.isExistingUser,
+    result?.userExists,
+    result?.returningUser,
+  ];
+  const accountStatus = result?.accountStatus?.trim().toLowerCase();
+
+  return (
+    explicitFlags.some((flag) => flag === true) ||
+    accountStatus === "existing" ||
+    accountStatus === "registered" ||
+    accountStatus === "returning"
+  );
+}
+
+function getExistingUserLoginUrl(email: string): string {
+  const params = new URLSearchParams({
+    email: email.trim(),
+    from: "signup",
+  });
+  return `/login?${params.toString()}`;
 }
 
 export default function OnboardingPage() {
@@ -95,21 +122,30 @@ export default function OnboardingPage() {
     if (step === 1) {
       setIsLoading(true);
       setEmailError(null);
+      let isNavigating = false;
       try {
-        await api.auth.sendOtp(data.email);
+        const result = await api.auth.sendOtp(data.email.trim());
+        if (isExistingUserResponse(result)) {
+          isNavigating = true;
+          router.replace(getExistingUserLoginUrl(data.email));
+          return;
+        }
         setStep(2);
       } catch (err) {
         if (err instanceof ApiError && isExistingUserError(err)) {
-          router.replace(`/login?email=${encodeURIComponent(data.email.trim())}`);
+          isNavigating = true;
+          router.replace(getExistingUserLoginUrl(data.email));
           return;
         }
         if (err instanceof ApiError) {
           setEmailError(err.fieldErrors?.email?.[0] ?? err.message);
         } else {
-          setEmailError("Something went wrong. Please try again.");
+          setEmailError("We couldn't send the code. Try again.");
         }
       } finally {
-        setIsLoading(false);
+        if (!isNavigating) {
+          setIsLoading(false);
+        }
       }
       return;
     }

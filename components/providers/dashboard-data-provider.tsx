@@ -3,6 +3,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "@/services/api";
+import { getUserErrorMessage } from "@/lib/errors";
 import type { Branch, CurrentUserResponse, DashboardBootstrap, UserProfile } from "@/types/api";
 
 const emptyData: DashboardBootstrap = {
@@ -52,7 +53,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       setCurrentUser(me);
     } catch (reason) {
       setCurrentUser(null);
-      setError(reason instanceof Error ? reason.message : "Unable to load your account.");
+      setError(getUserErrorMessage(reason, "We couldn't load your account. Try again."));
       setIsLoading(false);
       return;
     }
@@ -65,11 +66,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     if (bootstrapResult.status === "fulfilled") {
       setData(bootstrapResult.value);
     } else {
-      setError(
-        bootstrapResult.reason instanceof Error
-          ? bootstrapResult.reason.message
-          : "Unable to load dashboard data.",
-      );
+      setError(getUserErrorMessage(bootstrapResult.reason, "We couldn't load the dashboard. Try again."));
     }
 
     setIsLoading(false);
@@ -101,7 +98,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const addBranch = useCallback(async (name: string) => {
-    if (!currentUser?.organizationId) throw new Error("Organization is not loaded.");
+    if (!currentUser?.organizationId) throw new Error("Your organization is still loading. Try again shortly.");
     const organizationId = currentUser.organizationId;
     const created = await api.organization.createBranch(organizationId, name);
     setData((current) => ({

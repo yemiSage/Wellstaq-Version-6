@@ -11,6 +11,7 @@ import { useDashboardScope } from "@/lib/scope";
 import { hasPermission } from "@/lib/permissions";
 import { CreateChallengeModal } from "@/components/challenges/create-challenge-modal";
 import { FilterDropdown, type FilterDropdownOption } from "@/components/ui/filter-dropdown";
+import { SelectablePill } from "@/components/ui/selectable-pill";
 import type { ChallengeItem, ChallengeStatus, TrendData } from "@/types/api";
 
 const STATUS_TABS: { label: string; value: ChallengeStatus | "All" }[] = [
@@ -258,7 +259,7 @@ export default function ChallengesPage() {
             <TrendLabel trend={stats.activeChallengesTrend} />
           </div>
           <div className="text-sm font-medium text-grey-2 mb-1">Active Challenges</div>
-          <div className="text-2xl font-bold text-grey-1">{stats.activeChallenges}</div>
+          <div className="text-xl font-bold text-grey-1">{stats.activeChallenges}</div>
         </div>
         <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
           <div className="flex items-center justify-between mb-4">
@@ -268,7 +269,7 @@ export default function ChallengesPage() {
             <TrendLabel trend={stats.totalParticipantsTrend} />
           </div>
           <div className="text-sm font-medium text-grey-2 mb-1">Total Participants</div>
-          <div className="text-2xl font-bold text-grey-1">{stats.totalParticipants}</div>
+          <div className="text-xl font-bold text-grey-1">{stats.totalParticipants}</div>
         </div>
         <div className="bg-white p-[14px] rounded-[12px] border border-grey-4">
           <div className="flex items-center justify-between mb-4">
@@ -278,7 +279,7 @@ export default function ChallengesPage() {
             <TrendLabel trend={stats.completionRateTrend} />
           </div>
           <div className="text-sm font-medium text-grey-2 mb-1">Completion Rate</div>
-          <div className="text-2xl font-bold text-grey-1">{stats.completionRate}%</div>
+          <div className="text-xl font-bold text-grey-1">{stats.completionRate}%</div>
         </div>
       </div>
 
@@ -308,19 +309,17 @@ export default function ChallengesPage() {
                 menuClassName="w-56"
               />
 
-              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto no-scrollbar sm:flex-none">
+              <div className="flex min-w-0 flex-1 items-center gap-0 overflow-x-auto no-scrollbar sm:flex-none">
                 {STATUS_TABS.map((tab) => (
-                  <button
+                  <SelectablePill
                     key={tab.value}
                     onClick={() => setActiveTab(tab.value)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      activeTab === tab.value
-                        ? "bg-white border border-[#C45700] text-[#C45700]"
-                        : "bg-white border border-grey-4 text-grey-2 hover:bg-grey-5"
-                    }`}
+                    selected={activeTab === tab.value}
+                    appearance="plain"
+                    className="whitespace-nowrap"
                   >
                     {tab.label}
-                  </button>
+                  </SelectablePill>
                 ))}
               </div>
             </div>

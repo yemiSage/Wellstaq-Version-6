@@ -16,6 +16,7 @@ import { useDashboardScope } from "@/lib/scope";
 import { StatCard } from "@/components/dashboard/stat-card";
 import type { DepartmentItem, DepartmentMemberInfo, OrganizationMemberInfo, StatTrend } from "@/types/api";
 import { hasPermission } from "@/lib/permissions";
+import { getUserErrorMessage } from "@/lib/errors";
 
 export default function DepartmentsPage() {
   const { organizationId, branches, currentUser } = useDashboardData();
@@ -87,7 +88,7 @@ export default function DepartmentsPage() {
           departmentsTrend: overallStats?.departmentsTrend ?? null,
         });
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Unable to load departments");
+        toast.error(getUserErrorMessage(error, "We couldn't load departments. Try again."));
       }
     };
     void load();
@@ -417,15 +418,15 @@ export default function DepartmentsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="p-4 rounded-[12px] border border-[#E6E6E6] bg-white">
-                    <h3 className="text-2xl font-bold text-grey-1 mb-1">{selectedDepartment.members}</h3>
+                    <h3 className="text-xl font-bold text-grey-1 mb-1">{selectedDepartment.members}</h3>
                     <p className="text-xs text-grey-3">Members</p>
                   </div>
                   <div className="p-4 rounded-[12px] border border-[#E6E6E6] bg-white">
-                    <h3 className="text-2xl font-bold text-grey-1 mb-1">{selectedDepartment.avgDailySteps === null ? "Not available" : selectedDepartment.avgDailySteps.toLocaleString()}</h3>
+                    <h3 className="text-xl font-bold text-grey-1 mb-1">{selectedDepartment.avgDailySteps === null ? "Not available" : selectedDepartment.avgDailySteps.toLocaleString()}</h3>
                     <p className="text-xs text-grey-3">Avg Daily Steps</p>
                   </div>
                   <div className="p-4 rounded-[12px] border border-[#E6E6E6] bg-white">
-                    <h3 className="text-2xl font-bold text-grey-1 mb-1">{selectedDepartment.activities}</h3>
+                    <h3 className="text-xl font-bold text-grey-1 mb-1">{selectedDepartment.activities}</h3>
                     <p className="text-xs text-grey-3">Total Activities</p>
                   </div>
                 </div>
@@ -530,7 +531,6 @@ export default function DepartmentsPage() {
 
                 {activeTab === "Members" && (
                   <div>
-                    <h3 className="text-sm font-bold text-grey-1 mb-4">Wellbeing Score</h3>
                     <div className="space-y-4">
                       {departmentMembers.length === 0 ? <p className="py-8 text-center text-sm text-grey-3">No members have been assigned to this department.</p> : departmentMembers.map((member) => (
                         <div key={member.id} className="flex items-center justify-between p-3 rounded-xl border border-[#E6E6E6] bg-white">
