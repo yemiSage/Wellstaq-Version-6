@@ -174,9 +174,12 @@ export default function SettingsPage() {
     if (activeTab !== "profile") return;
     void api.profile.get().then((profile) => {
       setFormData({ firstName: profile.firstName, lastName: profile.lastName, email: profile.email, country: profile.country ?? "", state: profile.state ?? "" });
-      if (profile.avatarUrl) setProfileImage(profile.avatarUrl);
+      if (profile.avatarUrl) {
+        setProfileImage(profile.avatarUrl);
+        updateUser({ profileImage: profile.avatarUrl });
+      }
     }).catch((error) => toast.error(getUserErrorMessage(error, "We couldn't load your profile. Try again.")));
-  }, [activeTab]);
+  }, [activeTab, updateUser]);
 
   useEffect(() => {
     void api.preferences.get().then((value) => {

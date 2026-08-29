@@ -863,9 +863,14 @@ story: {
         branch: "",
         avatar: entry.avatarUrl ?? "",
       })) as unknown as DashboardBootstrap["leaderboard"];
+      const dashboardUser = payload.user as DashboardBootstrap["user"] & { avatarUrl?: string };
       return {
         ...payload,
-        user: { ...payload.user, businessName: payload.user.businessName ?? "" },
+        user: {
+          ...payload.user,
+          businessName: payload.user.businessName ?? "",
+          profileImage: payload.user.profileImage ?? dashboardUser.avatarUrl,
+        },
         activeBranch: payload.activeBranch ?? payload.branches[0]?.name ?? "",
         challenges: normalizedChallenges,
         leaderboard: normalizedLeaderboard,

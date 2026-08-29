@@ -53,8 +53,9 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const routeKey = `${pathname}?${searchParams.toString()}`;
-  const { user: userData, activeBranch, addBranch, organizationId } = useDashboardData();
+  const { user: userData, currentUser, activeBranch, addBranch, organizationId } = useDashboardData();
   const signedInUserName = `${userData.firstName} ${userData.lastName}`.trim();
+  const profileImage = userData.profileImage ?? currentUser?.avatarUrl;
 
   useEffect(() => {
     setIsChatOpen(false);
@@ -299,8 +300,8 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
               <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-primary-1 text-white flex items-center justify-center font-medium overflow-hidden relative border border-grey-4">
-                {userData.profileImage ? (
-                  <Image src={userData.profileImage} alt={userData.firstName} fill className="object-cover" referrerPolicy="no-referrer" />
+                {profileImage ? (
+                  <Image src={profileImage} alt={userData.firstName} fill className="object-cover" referrerPolicy="no-referrer" />
                 ) : (
                   <span className="text-xs lg:text-sm">
                     {(userData.firstName.charAt(0) + userData.lastName.charAt(0)).toUpperCase()}

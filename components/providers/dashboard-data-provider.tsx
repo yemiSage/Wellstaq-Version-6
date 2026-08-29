@@ -64,7 +64,13 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     );
 
     if (bootstrapResult.status === "fulfilled") {
-      setData(bootstrapResult.value);
+      setData({
+        ...bootstrapResult.value,
+        user: {
+          ...bootstrapResult.value.user,
+          profileImage: bootstrapResult.value.user.profileImage ?? me.avatarUrl,
+        },
+      });
     } else {
       setError(getUserErrorMessage(bootstrapResult.reason, "We couldn't load the dashboard. Try again."));
     }
@@ -126,6 +132,9 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
 
   const updateUser = useCallback((updates: Partial<UserProfile>) => {
     setData((current) => ({ ...current, user: { ...current.user, ...updates } }));
+    if (updates.profileImage !== undefined) {
+      setCurrentUser((current) => current ? { ...current, avatarUrl: updates.profileImage } : current);
+    }
   }, []);
 
   const value = useMemo(() => ({

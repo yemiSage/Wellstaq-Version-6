@@ -34,9 +34,7 @@ function LoginPageContent() {
   const errorParam = searchParams.get("error");
   const emailParam = searchParams.get("email")?.trim() ?? "";
   const isReturningFromSignup = searchParams.get("from") === "signup";
-  const [email, setEmail] = useState("");
-  const [hasEditedEmail, setHasEditedEmail] = useState(false);
-  const [isEmailLocked, setIsEmailLocked] = useState(isReturningFromSignup && Boolean(emailParam));
+  const [email, setEmail] = useState(emailParam);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,8 +43,12 @@ function LoginPageContent() {
   const [twoFaChallenge, setTwoFaChallenge] = useState<TwoFaChallengeResponse | null>(null);
   const [twoFaCode, setTwoFaCode] = useState("");
 
-  const displayedEmail = hasEditedEmail ? email : emailParam;
+  const displayedEmail = email;
   const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(displayedEmail.trim()) && password.length > 0;
+
+  useEffect(() => {
+    setEmail(emailParam);
+  }, [emailParam]);
 
   useEffect(() => {
     if (errorParam === "insufficient_permission") {
@@ -130,12 +132,6 @@ function LoginPageContent() {
           <div className="flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h2 className="mb-8 text-[24px] md:text-[30px] font-bold">{twoFaChallenge ? "Verify your login" : "Get back into your account"}</h2>
 
-            {isReturningFromSignup && !twoFaChallenge && (
-              <p role="status" className="mb-6 rounded-lg border border-secondary-3 bg-secondary-5 px-4 py-3 text-sm text-grey-2">
-                This email already has an account. Enter your password to log in.
-              </p>
-            )}
-
             {errorParam === "insufficient_permission" && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-2 mb-6">
                 You don&apos;t have permission to view this resource. Contact your administrator if you believe this is a mistake.
@@ -159,31 +155,14 @@ function LoginPageContent() {
                     autoComplete="email"
                     placeholder="Enter your email address"
                     value={displayedEmail}
-                    readOnly={isEmailLocked}
-                    onChange={(e) => {
-                      setHasEditedEmail(true);
-                      handleFieldChange(setEmail)(e.target.value);
-                    }}
-                    className={`pr-10 ${isEmailLocked ? "bg-grey-5" : ""} ${credentialsError ? "border-red-500" : ""}`}
+                    onChange={(e) => handleFieldChange(setEmail)(e.target.value)}
+                    className={`pr-10 ${credentialsError ? "border-red-500" : ""}`}
                     aria-invalid={credentialsError ? true : undefined}
                     aria-describedby={credentialsError ? "credentials-error" : undefined}
                   />
                   <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-grey-3" />
                 </div>
                 <FieldError errors={fieldErrors} field="email" />
-                {isEmailLocked && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail(displayedEmail);
-                      setHasEditedEmail(true);
-                      setIsEmailLocked(false);
-                    }}
-                    className="w-fit text-xs font-medium text-primary-1 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1/30"
-                  >
-                    Use a different email
-                  </button>
-                )}
               </div>
 
               <div className="flex flex-col gap-2">

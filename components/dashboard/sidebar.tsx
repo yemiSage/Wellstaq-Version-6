@@ -97,7 +97,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
       className={`h-screen flex-shrink-0 border-r border-grey-4 flex flex-col bg-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-[227px]'}`}
     >
       {/* Logo & Collapse Toggle */}
-      <div className={`px-3 pb-4 pt-8 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+      <div className={`px-3 pt-8 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
         {!isCollapsed && (
           <Image src={ASSETS.LOGO} alt="WellStaq" width={100} height={28} className="object-contain" referrerPolicy="no-referrer" />
         )}
@@ -118,7 +118,73 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col overflow-y-auto pl-3 pr-5 py-2 space-y-6 overflow-x-hidden no-scrollbar">
+      {/* Scope switcher sits with the product identity because it changes the
+          context for every navigation destination below it. */}
+      {!isCollapsed && switchable && (
+        <div ref={scopeMenuRef} className="relative mt-3 pl-3 pr-5">
+          <button
+            type="button"
+            onClick={() => setIsScopeMenuOpen((isOpen) => !isOpen)}
+            className="flex h-[42px] w-full items-center justify-between rounded-[8px] border border-grey-4 bg-grey-5 px-3 text-xs font-medium text-grey-2 hover:border-primary-1 hover:text-primary-1"
+          >
+            <span className="flex items-center gap-2 truncate">
+              {scope.type === "overview" ? (
+                <Globe size={14} strokeWidth={2} className="shrink-0" />
+              ) : (
+                <Building2 size={14} strokeWidth={2} className="shrink-0" />
+              )}
+              <span className="truncate">{currentScopeLabel}</span>
+            </span>
+            <ChevronDown size={18} strokeWidth={2} className="shrink-0" />
+          </button>
+          {isScopeMenuOpen && (
+            <div className="absolute left-3 right-5 top-full z-20 mt-2 overflow-hidden rounded-[8px] border border-grey-4 bg-white py-1 shadow-lg">
+              {isOrgWide && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScope({ type: "overview" });
+                    setIsScopeMenuOpen(false);
+                  }}
+                  className={`mx-1 flex w-[calc(100%-8px)] items-center gap-2 px-2 py-2 text-left text-sm ${scope.type === "overview" ? "rounded-[1px] border border-[#ABABAB] bg-grey-4 font-semibold text-grey-2" : "font-medium text-grey-2 hover:bg-grey-5"}`}
+                >
+                  <Globe size={14} strokeWidth={2} />
+                  Overview
+                </button>
+              )}
+              {visibleBranches.map((branch) => (
+                <button
+                  key={branch.id}
+                  type="button"
+                  onClick={() => {
+                    setScope({ type: "branch", branchId: branch.id });
+                    setIsScopeMenuOpen(false);
+                  }}
+                  className={`mx-1 flex w-[calc(100%-8px)] items-center gap-2 px-2 py-2 text-left text-sm ${scope.type === "branch" && scope.branchId === branch.id ? "rounded-[1px] border border-[#ABABAB] bg-grey-4 font-semibold text-grey-2" : "font-medium text-grey-2 hover:bg-grey-5"}`}
+                >
+                  <Building2 size={14} strokeWidth={2} />
+                  {branch.name}
+                </button>
+              ))}
+              {canCreateBranch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsScopeMenuOpen(false);
+                    window.dispatchEvent(new Event("wellstaq:open-add-branch"));
+                  }}
+                  className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 border-t border-grey-4 px-2 py-2 text-sm font-medium text-primary-1 hover:bg-primary-5"
+                >
+                  <Plus size={14} strokeWidth={2} />
+                  Add branch
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-1 flex-col overflow-y-auto pl-3 pr-5 pb-2 pt-3 space-y-6 overflow-x-hidden no-scrollbar">
         
         {/* Main Nav */}
         <div className="space-y-1">
@@ -221,71 +287,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           )}
         </div>
 
-        {/* Scope switcher (Overview / Branch) and persistent settings navigation */}
+        {/* Persistent account navigation */}
         <div className="mt-auto pb-[60px]">
-          {!isCollapsed && switchable && (
-            <div ref={scopeMenuRef} className="relative mb-5">
-              <button
-                type="button"
-                onClick={() => setIsScopeMenuOpen((isOpen) => !isOpen)}
-                className="flex h-[42px] w-full items-center justify-between rounded-[8px] border border-grey-4 bg-grey-5 px-3 text-xs font-medium text-grey-2 hover:border-primary-1 hover:text-primary-1"
-              >
-                <span className="flex items-center gap-2 truncate">
-                  {scope.type === "overview" ? (
-                    <Globe size={14} strokeWidth={2} className="shrink-0" />
-                  ) : (
-                    <Building2 size={14} strokeWidth={2} className="shrink-0" />
-                  )}
-                  <span className="truncate">{currentScopeLabel}</span>
-                </span>
-                <ChevronDown size={18} strokeWidth={2} className="shrink-0" />
-              </button>
-              {isScopeMenuOpen && (
-                <div className="absolute bottom-full z-20 mb-2 w-full overflow-hidden rounded-[8px] border border-grey-4 bg-white py-1 shadow-lg">
-                  {isOrgWide && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setScope({ type: "overview" });
-                        setIsScopeMenuOpen(false);
-                      }}
-                      className={`mx-1 flex w-[calc(100%-8px)] items-center gap-2 px-2 py-2 text-left text-sm ${scope.type === "overview" ? "rounded-[1px] border border-[#ABABAB] bg-grey-4 font-semibold text-grey-2" : "font-medium text-grey-2 hover:bg-grey-5"}`}
-                    >
-                      <Globe size={14} strokeWidth={2} />
-                      Overview
-                    </button>
-                  )}
-                  {visibleBranches.map((branch) => (
-                    <button
-                      key={branch.id}
-                      type="button"
-                      onClick={() => {
-                        setScope({ type: "branch", branchId: branch.id });
-                        setIsScopeMenuOpen(false);
-                      }}
-                      className={`mx-1 flex w-[calc(100%-8px)] items-center gap-2 px-2 py-2 text-left text-sm ${scope.type === "branch" && scope.branchId === branch.id ? "rounded-[1px] border border-[#ABABAB] bg-grey-4 font-semibold text-grey-2" : "font-medium text-grey-2 hover:bg-grey-5"}`}
-                    >
-                      <Building2 size={14} strokeWidth={2} />
-                      {branch.name}
-                    </button>
-                  ))}
-                  {canCreateBranch && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsScopeMenuOpen(false);
-                        window.dispatchEvent(new Event("wellstaq:open-add-branch"));
-                      }}
-                      className="mx-1 flex w-[calc(100%-8px)] items-center gap-2 border-t border-grey-4 px-2 py-2 text-sm font-medium text-primary-1 hover:bg-primary-5"
-                    >
-                      <Plus size={14} strokeWidth={2} />
-                      Add branch
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
           <div className="border-t border-grey-4 pt-3 space-y-1">
           <Link 
             href={scopedHref("/dashboard/teams")} 
