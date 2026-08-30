@@ -8,7 +8,6 @@ import { ChevronLeft, Users, Calendar, Trophy, Target, Edit2, Trash2, Ban, LogOu
 import { toast } from "sonner";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
-import { useDashboardScope } from "@/lib/scope";
 import { hasPermission } from "@/lib/permissions";
 import { EditChallengeModal } from "@/components/challenges/edit-challenge-modal";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -18,7 +17,6 @@ import { useRouter } from "next/navigation";
 export default function ChallengeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { organizationId, currentUser } = useDashboardData();
-  const { scope } = useDashboardScope();
 
   const [id, setId] = useState<string | null>(null);
   const [challenge, setChallenge] = useState<ChallengeItem | null>(null);
@@ -140,16 +138,16 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                 <Image src={challenge.imageUrl} alt={challenge.name} fill className="object-cover" referrerPolicy="no-referrer" />
               )}
               <div className="absolute top-4 right-4">
-                <span className="px-3 py-1 rounded-full text-xs font-bold shadow-lg bg-primary-1 text-white capitalize">
+                <span className="px-3 py-1 rounded-full text-xs font-medium shadow-lg bg-[#d4d4d4] text-black capitalize">
                   {challenge.status}
                 </span>
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-grey-1">{challenge.name}</h1>
+            <div className="p-3 space-y-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h1 className="text-[20px] font-semibold text-grey-1 break-words">{challenge.name}</h1>
                   <p className="text-sm text-grey-2 mt-2 leading-relaxed">{challenge.description}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -184,7 +182,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-grey-5 rounded-xl border border-grey-4">
+                <div className="p-4 bg-grey-5 rounded-[8px] border border-grey-4">
                   <div className="flex items-center gap-2 text-grey-3 mb-1">
                     <Calendar className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Duration</span>
@@ -193,7 +191,7 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                     {new Date(challenge.startDate).toLocaleDateString()} - {new Date(challenge.endDate).toLocaleDateString()}
                   </p>
                 </div>
-                <div className="p-4 bg-grey-5 rounded-xl border border-grey-4">
+                <div className="p-4 bg-grey-5 rounded-[8px] border border-grey-4">
                   <div className="flex items-center gap-2 text-grey-3 mb-1">
                     <Target className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Target</span>
@@ -202,14 +200,14 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
                     {challenge.targetValue} {challenge.metricType.replace(/_/g, " ")} ({challenge.targetType.replace(/_/g, " ")})
                   </p>
                 </div>
-                <div className="p-4 bg-grey-5 rounded-xl border border-grey-4">
+                <div className="p-4 bg-grey-5 rounded-[8px] border border-grey-4">
                   <div className="flex items-center gap-2 text-grey-3 mb-1">
                     <Users className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Participants</span>
                   </div>
                   <p className="text-xs font-bold text-grey-1">{participantsTotal}</p>
                 </div>
-                <div className="p-4 bg-grey-5 rounded-xl border border-grey-4">
+                <div className="p-4 bg-grey-5 rounded-[8px] border border-grey-4">
                   <div className="flex items-center gap-2 text-grey-3 mb-1">
                     <Trophy className="w-4 h-4" />
                     <span className="text-[10px] font-bold uppercase tracking-wider">Scope</span>
@@ -237,8 +235,8 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-[12px] border border-grey-4 p-6">
+        <div className="flex flex-col">
+          <div className="flex-1 bg-white rounded-[12px] border border-grey-4 p-3">
             <h2 className="font-bold text-grey-1 mb-6 flex items-center gap-2">
               <Trophy className="w-5 h-5 text-yellow-500" />
               Participants ({participantsTotal})

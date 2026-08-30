@@ -9,6 +9,8 @@ import { api } from "@/services/api";
 import { ApiError } from "@/services/http";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { useDashboardScope } from "@/lib/scope";
+import { hasPermission } from "@/lib/permissions";
+import { getUserErrorMessage } from "@/lib/errors";
 import type {
   Club, ClubCategory, Post, Comment, Story,
   OrganizationMemberInfo, ClubMemberInfo, MessageResponse,
@@ -239,10 +241,30 @@ export default function SpacePage() {
   );
   const [clubImagePreview, setClubImagePreview] = useState<string | null>(null);
   const [isUploadingClubImage, setIsUploadingClubImage] = useState(false);
+  const [isCreatingClub, setIsCreatingClub] = useState(false);
+  const [clubCreateError, setClubCreateError] = useState<string | null>(null);
+  const clubRequestPending = useRef(false);
+  const canCreateClub = !clubsLoading && !dashboardLoading && !!organizationId && scope.type === "branch" &&
+    hasPermission(currentUser?.permissions ?? [], "club.create", scope.branchId);
+
+  useEffect(() => {
+    return () => { if (clubImagePreview) URL.revokeObjectURL(clubImagePreview); };
+  }, [clubImagePreview]);
 
   const handleClubImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    e.target.value = "";
+    if (!file || clubRequestPending.current) return;
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      setClubCreateError("Choose a JPG, PNG, WebP or GIF image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setClubCreateError("Choose an image smaller than 5 MB.");
+      return;
+    }
+    clubRequestPending.current = true;
+    setClubCreateError(null);
     setClubImagePreview(URL.createObjectURL(file));
     setNewClubData((prev) => ({ ...prev, imageUrl: "" }));
     setIsUploadingClubImage(true);
@@ -251,48 +273,71 @@ export default function SpacePage() {
       const putResponse = await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
       if (!putResponse.ok) throw new Error(`Upload failed with ${putResponse.status}`);
       setNewClubData((prev) => ({ ...prev, imageUrl: mediaUrl }));
-    } catch (err) {
-      console.error("Club image upload error:", err);
-      toast.error("Image upload failed. You can retry or create the club without an image.");
+    } catch {
+      setClubCreateError("Image upload failed. Try again or continue without an image.");
       setClubImagePreview(null);
       setNewClubData((prev) => ({ ...prev, imageUrl: "" }));
     } finally {
+      clubRequestPending.current = false;
       setIsUploadingClubImage(false);
     }
   };
 
   const handleRemoveClubImage = () => {
+    if (clubRequestPending.current) return;
+    setClubCreateError(null);
     setClubImagePreview(null);
     setNewClubData((prev) => ({ ...prev, imageUrl: "" }));
   };
 
   const handleCreateClub = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organizationId) return;
+    if (clubRequestPending.current) return;
+    if (!organizationId) {
+      setClubCreateError("Your account is still loading. Try again shortly.");
+      return;
+    }
     if (scope.type !== "branch") {
-      toast.error("Switch to a branch to create a club.");
+      setClubCreateError("Switch to a branch to create a club.");
       return;
     }
-    if (isUploadingClubImage) {
-      toast.error("Please wait for the image to finish uploading.");
+    if (!canCreateClub) {
+      setClubCreateError("You don't have permission to create clubs in this branch.");
       return;
     }
+    const name = newClubData.name.trim();
+    const description = newClubData.description.trim();
+    if (!name || !description) {
+      setClubCreateError("Enter a club name and description.");
+      return;
+    }
+    clubRequestPending.current = true;
+    setIsCreatingClub(true);
+    setClubCreateError(null);
     try {
       const created = await api.club.createClub(organizationId, scope.branchId, {
-        name: newClubData.name,
-        description: newClubData.description,
+        name,
+        description,
         imageUrl: newClubData.imageUrl || undefined,
         privacy: "public",
         category: newClubData.category,
       });
       joinedClubIdsRef.current.add(created.id); // creator is automatically a member
-      setAllClubs((prev) => [...prev, { ...created, isMember: true }]);
+      setAllClubs((prev) => [{ ...created, isMember: true }, ...prev.filter((club) => club.id !== created.id)]);
+      setActiveTab("My Clubs");
       setIsCreateClubModalOpen(false);
       setNewClubData({ name: "", description: "", imageUrl: "", category: "fitness" });
       setClubImagePreview(null);
-      toast.success(`${created.name} created successfully!`);
-    } catch {
-      toast.error("We couldn't create the club. Try again.");
+      toast.success(`${created.name} created.`);
+    } catch (error) {
+      setClubCreateError(error instanceof ApiError && error.status === 409
+        ? "A club with this name already exists. Choose another name."
+        : error instanceof ApiError && error.status === 422
+          ? "Check the club details and try again."
+          : getUserErrorMessage(error, "We couldn't create the club. Try again."));
+    } finally {
+      clubRequestPending.current = false;
+      setIsCreatingClub(false);
     }
   };
 
@@ -649,14 +694,14 @@ export default function SpacePage() {
 
   return (
     <>
-      <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] -m-[20px] bg-white overflow-hidden relative">
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white md:flex-row">
         <div className="md:hidden flex border-b border-grey-4 bg-white sticky top-0 z-10 shrink-0">
           <button onClick={() => setActiveMobileTab("explore")} className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeMobileTab === "explore" ? "border-primary-1 text-primary-1" : "border-transparent text-grey-2"}`}>Explore</button>
           <button onClick={() => setActiveMobileTab("feed")} className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeMobileTab === "feed" ? "border-primary-1 text-primary-1" : "border-transparent text-grey-2"}`}>Feed</button>
           <button onClick={() => setActiveMobileTab("clubs")} className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeMobileTab === "clubs" ? "border-primary-1 text-primary-1" : "border-transparent text-grey-2"}`}>Clubs</button>
         </div>
 
-        <div className={`w-full md:w-[320px] shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${!isLeftColumnOpen ? "hidden" : activeMobileTab === "clubs" ? "block" : "hidden md:block"}`}>
+        <div className={`min-h-0 flex-1 w-full md:w-[320px] md:flex-none shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${!isLeftColumnOpen ? "hidden" : activeMobileTab === "clubs" ? "block" : "hidden md:block"}`}>
           {restrictedResources.has("clubs") ? <RestrictedResource label="clubs" /> : <ClubSidebar
             isOpen={isLeftColumnOpen}
             onClose={() => setIsLeftColumnOpen(false)}
@@ -667,8 +712,9 @@ export default function SpacePage() {
             filteredMyClubs={filteredMyClubs}
             onSelectClub={setSelectedClub}
             onRequestJoin={setClubToJoin}
-            canCreate={scope.type === "branch"}
-            onOpenCreate={() => setIsCreateClubModalOpen(true)}
+            canCreate={canCreateClub}
+            createUnavailableReason={scope.type === "overview" ? "Switch to a branch to create a club." : clubsLoading || dashboardLoading ? "Loading your clubs..." : "You don't have permission to create clubs in this branch."}
+            onOpenCreate={() => { setClubCreateError(null); setIsCreateClubModalOpen(true); }}
           />}
         </div>
 
@@ -749,7 +795,7 @@ export default function SpacePage() {
           )}
         </div>
 
-       <div className={`w-full md:w-[320px] shrink-0 border-l border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "explore" ? "block" : "hidden md:block"}`}>
+       <div className={`min-h-0 flex-1 w-full md:w-[320px] md:flex-none shrink-0 border-l border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "explore" ? "block" : "hidden md:block"}`}>
   <div className="w-full border-l border-grey-4 bg-[#ffffff] p-6 overflow-y-auto no-scrollbar h-full">
     <ActivitySection
       organizationId={organizationId ?? undefined}
@@ -766,11 +812,13 @@ export default function SpacePage() {
 
       <CreateClubModal
         isOpen={isCreateClubModalOpen}
-        onClose={() => setIsCreateClubModalOpen(false)}
+        onClose={() => { if (!clubRequestPending.current) setIsCreateClubModalOpen(false); }}
         formData={newClubData}
-        onFormChange={(patch) => setNewClubData((prev) => ({ ...prev, ...patch }))}
+        onFormChange={(patch) => { setClubCreateError(null); setNewClubData((prev) => ({ ...prev, ...patch })); }}
         imagePreview={clubImagePreview}
         isUploadingImage={isUploadingClubImage}
+        isCreating={isCreatingClub}
+        error={clubCreateError}
         onImageSelect={handleClubImageSelect}
         onRemoveImage={handleRemoveClubImage}
         onSubmit={handleCreateClub}

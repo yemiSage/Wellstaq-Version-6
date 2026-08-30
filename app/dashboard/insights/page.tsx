@@ -117,7 +117,6 @@ export default function InsightsPage() {
             <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-500 flex items-center justify-center">
               <MessageSquareHeart className="w-5 h-5" />
             </div>
-            <span className="rounded-full bg-grey-5 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-grey-2">Latest pulse</span>
           </div>
           <p className="text-sm text-[#4D4D4D] mb-1 font-medium">Weekly Check-ins</p>
           <h3 className="text-xl font-bold text-[#1A1A1A] mb-1">{wellbeingLoading ? "—" : canViewWellbeing ? pulse?.respondentCount ?? 0 : "—"}</h3>

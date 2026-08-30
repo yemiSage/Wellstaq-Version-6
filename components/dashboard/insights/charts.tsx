@@ -44,7 +44,7 @@ export function MonthlyWellbeingTrendChart({
           <h3 className="text-[16px] font-bold text-grey-1">Monthly Wellbeing Trend</h3>
           <p className="mt-1 text-xs text-grey-3">Employee wellbeing scores from weekly check-ins</p>
         </div>
-        <div className="flex gap-0 overflow-x-auto">
+        <div className="thin-scrollbar flex min-w-0 gap-0 overflow-x-auto">
           {WELLBEING_TREND_METRICS.map((item) => (
             <SelectablePill
               key={item.key}

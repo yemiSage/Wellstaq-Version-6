@@ -1,36 +1,23 @@
 // path: components/dashboard/scope-switcher.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Globe, Building2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronDown, Globe, Building2, LoaderCircle } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useDashboardScope } from "@/lib/scope";
 import { getSwitchableScopes } from "@/lib/permissions";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
-import { api } from "@/services/api";
-import type { Branch } from "@/types/api";
 
 export function ScopeSwitcher() {
-  const { currentUser, organizationId } = useDashboardData();
-  const { scope, setScope } = useDashboardScope();
+  const { currentUser, branches } = useDashboardData();
+  const { scope, setScope, isScopeChanging } = useDashboardScope();
   const [isOpen, setIsOpen] = useState(false);
-  const [branches, setBranches] = useState<Branch[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
   useClickOutside(ref, () => setIsOpen(false));
 
   const switchable = currentUser ? getSwitchableScopes(currentUser.permissions) : null;
-  const isOrgWide = switchable?.isOrgWide ?? false;
-  const scopedBranchIdsKey = switchable?.scopedBranchIds.join(",") ?? "";
-
-  useEffect(() => {
-    if (!organizationId) return;
-    if (!isOrgWide && scopedBranchIdsKey.length === 0) return;
-    void api.organization.getBranches(organizationId).then(setBranches);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [organizationId, isOrgWide, scopedBranchIdsKey]);
-
   if (!currentUser || !switchable) return null;
 
   const visibleBranches = switchable.isOrgWide
@@ -57,15 +44,19 @@ export function ScopeSwitcher() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setIsOpen((v) => !v)}
-        className="flex items-center gap-2 px-3 py-2 rounded-[12px] border border-grey-4 text-sm font-medium text-grey-1 hover:bg-grey-5"
+        disabled={isScopeChanging}
+        aria-busy={isScopeChanging}
+        className="flex items-center gap-2 px-3 py-2 rounded-[12px] border border-grey-4 text-sm font-medium text-grey-1 hover:bg-grey-5 disabled:cursor-wait disabled:opacity-70"
       >
-        {scope.type === "overview" ? (
+        {isScopeChanging ? (
+          <LoaderCircle className="w-4 h-4 animate-spin motion-reduce:animate-none" />
+        ) : scope.type === "overview" ? (
           <Globe className="w-4 h-4 text-grey-2" />
         ) : (
           <Building2 className="w-4 h-4 text-grey-2" />
         )}
-        {currentLabel}
-        <ChevronDown className="w-4 h-4 text-grey-3" />
+        <span aria-live="polite">{isScopeChanging ? "Switching branch..." : currentLabel}</span>
+        {!isScopeChanging && <ChevronDown className="w-4 h-4 text-grey-3" />}
       </button>
 
       <AnimatePresence>
@@ -80,7 +71,7 @@ export function ScopeSwitcher() {
             {switchable.isOrgWide && (
               <button
                 onClick={() => {
-                  setScope({ type: "overview" });
+                  setScope({ type: "overview" }, "Overview");
                   setIsOpen(false);
                 }}
                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-grey-5 ${
@@ -98,7 +89,7 @@ export function ScopeSwitcher() {
               <button
                 key={branch.id}
                 onClick={() => {
-                  setScope({ type: "branch", branchId: branch.id });
+                  setScope({ type: "branch", branchId: branch.id }, branch.name);
                   setIsOpen(false);
                 }}
                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-grey-5 ${

@@ -1,7 +1,7 @@
 // path: components/dashboard/sidebar.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -10,8 +10,6 @@ import { useDashboardData } from "@/components/providers/dashboard-data-provider
 import { useDashboardScope } from "@/lib/scope";
 import { getSwitchableScopes, hasPermission } from "@/lib/permissions";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import { api } from "@/services/api";
-import type { Branch } from "@/types/api";
 import { 
   Home, 
   Lightbulb, 
@@ -30,6 +28,7 @@ import {
   Trophy,
   PanelLeftClose,
   PanelLeftOpen,
+  LoaderCircle,
   X
 } from "lucide-react";
 
@@ -48,9 +47,8 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isScopeMenuOpen, setIsScopeMenuOpen] = useState(false);
   const scopeMenuRef = useRef<HTMLDivElement>(null);
-  const { challenges: CHALLENGES, activeBranch, currentUser, organizationId } = useDashboardData();
-  const { scope, setScope } = useDashboardScope();
-  const [orgBranches, setOrgBranches] = useState<Branch[]>([]);
+  const { challenges: CHALLENGES, activeBranch, currentUser, branches: orgBranches } = useDashboardData();
+  const { scope, setScope, isScopeChanging } = useDashboardScope();
 
   useClickOutside(scopeMenuRef, () => setIsScopeMenuOpen(false));
 
@@ -66,12 +64,6 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const isChallengesActive = pathname.startsWith("/dashboard/challenges");
   const isIntegrationsActive = pathname.startsWith("/dashboard/integrations");
 
-  useEffect(() => {
-    if (!organizationId) return;
-    if (!isOrgWide && scopedBranchIdsKey.length === 0) return;
-    void api.organization.getBranches(organizationId).then(setOrgBranches);
-  }, [organizationId, isOrgWide, scopedBranchIdsKey]);
-
   const visibleBranches = isOrgWide
     ? orgBranches
     : orgBranches.filter((b) => scopedBranchIdsKey.split(",").includes(b.id));
@@ -83,6 +75,11 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const scopedHref = (href: string) => scope.type === "branch"
     ? `${href}${href.includes("?") ? "&" : "?"}branchId=${encodeURIComponent(scope.branchId)}`
     : href;
+
+  const changeScope = (nextScope: typeof scope, label: string) => {
+    setIsScopeMenuOpen(false);
+    setScope(nextScope, label);
+  };
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -125,27 +122,30 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           <button
             type="button"
             onClick={() => setIsScopeMenuOpen((isOpen) => !isOpen)}
-            className="flex h-[42px] w-full items-center justify-between rounded-[8px] border border-grey-4 bg-grey-5 px-3 text-xs font-medium text-grey-2 hover:border-primary-1 hover:text-primary-1"
+            disabled={isScopeChanging}
+            aria-busy={isScopeChanging}
+            className="flex h-[42px] w-full items-center justify-between rounded-[8px] border border-grey-4 bg-grey-5 px-3 text-xs font-medium text-grey-2 transition-colors hover:border-primary-1 hover:text-primary-1 disabled:cursor-wait disabled:opacity-70"
           >
             <span className="flex items-center gap-2 truncate">
-              {scope.type === "overview" ? (
+              {isScopeChanging ? (
+                <LoaderCircle size={14} strokeWidth={2} className="shrink-0 animate-spin motion-reduce:animate-none" />
+              ) : scope.type === "overview" ? (
                 <Globe size={14} strokeWidth={2} className="shrink-0" />
               ) : (
                 <Building2 size={14} strokeWidth={2} className="shrink-0" />
               )}
-              <span className="truncate">{currentScopeLabel}</span>
+              <span className="truncate" aria-live="polite">
+                {isScopeChanging ? "Switching branch..." : currentScopeLabel}
+              </span>
             </span>
-            <ChevronDown size={18} strokeWidth={2} className="shrink-0" />
+            {!isScopeChanging && <ChevronDown size={18} strokeWidth={2} className="shrink-0" />}
           </button>
           {isScopeMenuOpen && (
             <div className="absolute left-3 right-5 top-full z-20 mt-2 overflow-hidden rounded-[8px] border border-grey-4 bg-white py-1 shadow-lg">
               {isOrgWide && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setScope({ type: "overview" });
-                    setIsScopeMenuOpen(false);
-                  }}
+                  onClick={() => changeScope({ type: "overview" }, "Overview")}
                   className={`mx-1 flex w-[calc(100%-8px)] items-center gap-2 px-2 py-2 text-left text-sm ${scope.type === "overview" ? "rounded-[1px] border border-[#ABABAB] bg-grey-4 font-semibold text-grey-2" : "font-medium text-grey-2 hover:bg-grey-5"}`}
                 >
                   <Globe size={14} strokeWidth={2} />
@@ -156,10 +156,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
                 <button
                   key={branch.id}
                   type="button"
-                  onClick={() => {
-                    setScope({ type: "branch", branchId: branch.id });
-                    setIsScopeMenuOpen(false);
-                  }}
+                  onClick={() => changeScope({ type: "branch", branchId: branch.id }, branch.name)}
                   className={`mx-1 flex w-[calc(100%-8px)] items-center gap-2 px-2 py-2 text-left text-sm ${scope.type === "branch" && scope.branchId === branch.id ? "rounded-[1px] border border-[#ABABAB] bg-grey-4 font-semibold text-grey-2" : "font-medium text-grey-2 hover:bg-grey-5"}`}
                 >
                   <Building2 size={14} strokeWidth={2} />

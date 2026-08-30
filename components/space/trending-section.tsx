@@ -72,7 +72,7 @@ export function TrendingSection({
   return (
     <div className="bg-white rounded-[12px] border border-grey-4 p-5">
       <div className="flex items-center gap-2 mb-6">
-        <TrendingUp className="w-5 h-5 text-primary-1" />
+        <TrendingUp className={`w-5 h-5 ${topics.length === 0 ? "text-grey-2" : "text-primary-1"}`} />
         <h3 className="text-[16px] font-bold text-grey-1">Trending across spaces</h3>
       </div>
 

@@ -587,6 +587,7 @@ club: {
   createClub: (orgId: string, branchId: string, payload: CreateClubPayload) =>
     fromApi<Club>(`/organizations/${orgId}/branches/${branchId}/clubs`, {
       method: "POST",
+      suppressErrorNotification: true,
       body: {
         name: payload.name,
         description: payload.description,

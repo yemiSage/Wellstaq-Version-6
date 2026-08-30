@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -27,6 +27,7 @@ function ClubSidebar({
   onSelectClub,
   onRequestJoin,
   canCreate,
+  createUnavailableReason,
   onOpenCreate,
 }: {
   isOpen: boolean;
@@ -39,6 +40,7 @@ function ClubSidebar({
   onSelectClub: (id: string) => void;
   onRequestJoin: (id: string) => void;
   canCreate: boolean;
+  createUnavailableReason?: string;
   onOpenCreate: () => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -80,12 +82,31 @@ function ClubSidebar({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
+        {activeTab === "My Clubs" && (
+          <div className="mb-4 space-y-2">
+            <button
+              type="button"
+              disabled={!canCreate}
+              onClick={() => { setSearchQuery(""); onOpenCreate(); }}
+              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-primary-1 px-3 py-2 text-sm font-medium text-primary-1 hover:bg-primary-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1 disabled:cursor-not-allowed disabled:border-grey-4 disabled:text-grey-3"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" /> Create club
+            </button>
+            {!canCreate && <p className="text-xs text-grey-2">{createUnavailableReason ?? "Switch to a branch to create a club."}</p>}
+          </div>
+        )}
         {clubsLoading ? (
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-24 bg-grey-5 rounded-xl animate-pulse" />)}
           </div>
         ) : activeTab === "Other Clubs" ? (
           <div className="space-y-4">
+            {visibleOtherClubs.length === 0 && (
+              <div className="py-10 text-center">
+                <Users className="empty-state-icon mx-auto mb-4 h-8 w-8" aria-hidden="true" />
+                <p className="text-sm text-grey-2">{normalizedSearch ? "No clubs match your search." : "No other clubs to explore yet."}</p>
+              </div>
+            )}
             {visibleOtherClubs.map((club) => (
               <div key={club.id} className="p-4 border border-grey-4 rounded-[12px] hover:border-primary-1 cursor-pointer transition-colors" onClick={() => onSelectClub(club.id)}>
                 <div className="flex items-start justify-between mb-2">
@@ -110,7 +131,7 @@ function ClubSidebar({
               </div>
             ))}
           </div>
-        ) : filteredMyClubs.length > 0 ? (
+        ) : visibleMyClubs.length > 0 ? (
           <div className="space-y-4">
             {visibleMyClubs.map((club) => (
               <div key={club.id} className="p-4 border border-grey-4 rounded-[12px] hover:border-primary-1 cursor-pointer transition-colors" onClick={() => onSelectClub(club.id)}>
@@ -134,18 +155,11 @@ function ClubSidebar({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4 mt-10">
+          <div className="flex flex-col items-center justify-center text-center px-4 py-10">
             <div className="w-20 h-20 bg-grey-5 rounded-full flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-grey-3" />
+              <Users className="empty-state-icon w-8 h-8" aria-hidden="true" />
             </div>
-            <p className="text-sm text-grey-2 mb-6">No user club has been created so far, when someone or your organization creates a club, they&apos;ll appear here</p>
-            {canCreate ? (
-              <button onClick={onOpenCreate} className="w-full py-2 border border-primary-1 text-primary-1 rounded-lg text-sm font-medium hover:bg-primary-5 transition-colors flex items-center justify-center gap-2">
-                <Plus className="w-4 h-4" /> Create a club
-              </button>
-            ) : (
-              <p className="text-xs text-grey-3 italic">Switch to a branch to create a club.</p>
-            )}
+            <p className="text-sm text-grey-2">{normalizedSearch ? "No clubs match your search." : "Join or create a club to see it here."}</p>
           </div>
         )}
       </div>
@@ -353,6 +367,8 @@ function CreateClubModal({
   onFormChange,
   imagePreview,
   isUploadingImage,
+  isCreating,
+  error,
   onImageSelect,
   onRemoveImage,
   onSubmit,
@@ -363,24 +379,50 @@ function CreateClubModal({
   onFormChange: (patch: Partial<{ name: string; description: string; category: ClubCategory }>) => void;
   imagePreview: string | null;
   isUploadingImage: boolean;
+  isCreating: boolean;
+  error: string | null;
   onImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const isBusy = isCreating || isUploadingImage;
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (isOpen && !dialog.open) {
+      dialog.showModal();
+      nameInputRef.current?.focus();
+    }
+    if (!isOpen && dialog.open) dialog.close();
+  }, [isOpen]);
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="create-club-title"
+      aria-busy={isBusy}
+      onCancel={(event) => { event.preventDefault(); if (!isBusy) onClose(); }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!isBusy) onClose();
+        }
+      }}
+      className="thin-scrollbar m-auto max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-md overflow-y-auto rounded-xl border border-grey-4 bg-white p-0 text-grey-1 shadow-xl backdrop:bg-black/40"
+    >
             <div className="p-6 border-b border-grey-4 flex items-center justify-between bg-grey-5/30">
-              <h3 className="text-lg font-bold text-grey-1">Create New Club</h3>
-              <button onClick={onClose} className="p-2 hover:bg-grey-4 rounded-xl transition-colors"><X className="w-5 h-5 text-grey-2" /></button>
+              <h3 id="create-club-title" className="text-lg font-bold text-grey-1">Create club</h3>
+              <button type="button" onClick={onClose} disabled={isBusy} aria-label="Close create club" className="p-2 hover:bg-grey-4 rounded-xl disabled:opacity-50"><X className="w-5 h-5 text-grey-2" /></button>
             </div>
-            <form onSubmit={onSubmit} className="p-6 space-y-6">
+            <form onSubmit={onSubmit} className="p-6">
+              <fieldset disabled={isBusy} className="space-y-5">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-grey-1">Club Name</label>
-                <input type="text" required value={formData.name} onChange={(e) => onFormChange({ name: e.target.value })} placeholder="e.g. Morning Runners" className="w-full h-12 px-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1" />
+                <label htmlFor="club-name" className="text-sm font-bold text-grey-1">Club name</label>
+                <input ref={nameInputRef} id="club-name" type="text" required value={formData.name} onChange={(e) => onFormChange({ name: e.target.value })} placeholder="e.g. Morning Runners" className="w-full h-12 px-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-grey-1">Club Image (optional)</label>
@@ -388,36 +430,38 @@ function CreateClubModal({
                   <div className="relative h-[120px] w-full rounded-xl overflow-hidden border border-grey-4 bg-grey-5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imagePreview} alt="Club preview" className="h-full w-full object-cover" />
-                    {isUploadingImage && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-6 h-6 text-white animate-spin" /></div>}
-                    <button type="button" onClick={onRemoveImage} className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-grey-1 hover:bg-white"><X className="w-4 h-4" /></button>
+                    {isUploadingImage && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-6 h-6 text-white animate-spin motion-reduce:animate-none" aria-label="Uploading image" /></div>}
+                    <button type="button" onClick={onRemoveImage} aria-label="Remove club image" className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center text-grey-1 hover:bg-white"><X className="w-4 h-4" /></button>
                   </div>
                 ) : (
                   <label htmlFor="clubImage" className="flex h-[90px] w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-grey-4 bg-grey-5 text-grey-3 hover:border-primary-1 hover:text-primary-1">
                     <ImageIcon className="w-5 h-5" />
                     <span className="text-xs">Click to upload an image</span>
-                    <input id="clubImage" type="file" accept="image/*" className="hidden" onChange={onImageSelect} />
+                    <input id="clubImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={onImageSelect} />
                   </label>
                 )}
+                <p className="text-xs text-grey-2">JPG, PNG, WebP or GIF. Up to 5 MB.</p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-grey-1">Category</label>
-                <select required value={formData.category} onChange={(e) => onFormChange({ category: e.target.value as ClubCategory })} className="w-full h-12 px-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1 bg-white">
+                <label htmlFor="club-category" className="text-sm font-bold text-grey-1">Category</label>
+                <select id="club-category" required value={formData.category} onChange={(e) => onFormChange({ category: e.target.value as ClubCategory })} className="w-full h-12 px-4 rounded-[8px] border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1 bg-white">
                   {CLUB_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-grey-1">Description</label>
-                <textarea required value={formData.description} onChange={(e) => onFormChange({ description: e.target.value })} placeholder="What is this club about?" className="w-full p-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1 min-h-[100px] resize-none" />
+                <label htmlFor="club-description" className="text-sm font-bold text-grey-1">Description</label>
+                <textarea id="club-description" required value={formData.description} onChange={(e) => onFormChange({ description: e.target.value })} placeholder="What is this club about?" className="w-full p-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1 min-h-[100px] resize-none" />
               </div>
+              </fieldset>
+              {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={onClose} className="flex-1 h-12 rounded-xl text-sm font-bold text-grey-2 hover:bg-grey-5 transition-colors">Cancel</button>
-                <button type="submit" disabled={isUploadingImage} className="flex-1 h-12 bg-primary-1 text-white rounded-xl text-sm font-bold hover:bg-primary-2 transition-all shadow-lg shadow-primary-1/20 disabled:opacity-50">Create Club</button>
+                <button type="button" onClick={onClose} disabled={isBusy} className="flex-1 h-12 rounded-xl text-sm font-bold text-grey-2 hover:bg-grey-5 disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={isBusy || !formData.name.trim() || !formData.description.trim()} className="flex-1 h-12 bg-primary-1 text-white rounded-xl text-sm font-bold hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">
+                  {isCreating ? "Creating..." : isUploadingImage ? "Uploading image..." : "Create club"}
+                </button>
               </div>
             </form>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+    </dialog>
   );
 }
 

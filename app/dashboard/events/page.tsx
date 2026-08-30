@@ -264,8 +264,8 @@ export default function EventsPage() {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-6">
-              <Calendar className="w-8 h-8 text-[#C45700]" />
+            <div className="empty-state-icon w-16 h-16 bg-grey-5 rounded-full flex items-center justify-center mb-6" aria-hidden="true">
+              <Calendar className="w-8 h-8" />
             </div>
             <h3 className="text-xl font-bold text-grey-1 mb-2">No event found</h3>
             <p className="text-sm text-grey-2 mb-8 max-w-md text-center">

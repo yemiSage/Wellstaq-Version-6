@@ -142,14 +142,14 @@ export function ActivitySection({
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-[#EA6A05] to-[#FFB780] rounded-[12px] p-5 mb-6 text-white shadow-sm">
+      <div className="bg-grey-5 border border-grey-4 rounded-[12px] p-5 mb-6 text-grey-1">
         <div className="space-y-1 mb-6">
           <h3 className="text-[16px] font-bold">Your Activity This Week</h3>
-          <p className="text-xs text-white/80">Keep the momentum going!</p>
+          <p className="text-xs text-grey-2">Keep the momentum going!</p>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-white/20 rounded-lg p-3 h-[72px] animate-pulse" />
+            <div key={i} className="bg-grey-4 rounded-lg p-3 h-[72px] animate-pulse" />
           ))}
         </div>
       </div>
@@ -157,35 +157,35 @@ export function ActivitySection({
   }
 
   return (
-    <div className="bg-gradient-to-br from-[#EA6A05] to-[#FFB780] rounded-[12px] p-5 mb-6 text-white shadow-sm">
+    <div className="bg-grey-5 border border-grey-4 rounded-[12px] p-5 mb-6 text-grey-1">
       <div className="space-y-1 mb-6">
         <h3 className="text-[16px] font-bold">Your Activity This Week</h3>
-        <p className="text-xs text-white/80">Keep the momentum going!</p>
+        <p className="text-xs text-grey-2">Keep the momentum going!</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white/20 rounded-lg p-3">
+        <div className="bg-white border border-grey-4 rounded-lg p-3">
           <div className="text-lg mb-1">🏃</div>
           <div className="text-lg font-bold">{restricted.has("steps") ? <Lock className="h-4 w-4" /> : stats.steps.toLocaleString()}</div>
-          <div className="text-[10px] text-white/80">Steps</div>
-          {restricted.has("steps") && <div className="mt-1 text-[9px] text-white/90">No permission to view</div>}
+          <div className="text-[10px] text-grey-2">Steps</div>
+          {restricted.has("steps") && <div className="mt-1 text-[9px] text-grey-2">No permission to view</div>}
         </div>
-        <div className="bg-white/20 rounded-lg p-3">
+        <div className="bg-white border border-grey-4 rounded-lg p-3">
           <div className="text-lg mb-1">✍️</div>
           <div className="text-lg font-bold">{restricted.has("posts") ? <Lock className="h-4 w-4" /> : stats.posts}</div>
-          <div className="text-[10px] text-white/80">Posts</div>
-          {restricted.has("posts") && <div className="mt-1 text-[9px] text-white/90">No permission to view</div>}
+          <div className="text-[10px] text-grey-2">Posts</div>
+          {restricted.has("posts") && <div className="mt-1 text-[9px] text-grey-2">No permission to view</div>}
         </div>
-        <div className="bg-white/20 rounded-lg p-3">
+        <div className="bg-white border border-grey-4 rounded-lg p-3">
           <div className="text-lg mb-1">🤍</div>
           <div className="text-lg font-bold">{restricted.has("likes") ? <Lock className="h-4 w-4" /> : stats.likes}</div>
-          <div className="text-[10px] text-white/80">Likes Given</div>
-          {restricted.has("likes") && <div className="mt-1 text-[9px] text-white/90">No permission to view</div>}
+          <div className="text-[10px] text-grey-2">Likes Given</div>
+          {restricted.has("likes") && <div className="mt-1 text-[9px] text-grey-2">No permission to view</div>}
         </div>
-        <div className="bg-white/20 rounded-lg p-3">
+        <div className="bg-white border border-grey-4 rounded-lg p-3">
           <div className="text-lg mb-1">👥</div>
           <div className="text-lg font-bold">{restricted.has("groups") ? <Lock className="h-4 w-4" /> : `${stats.groups} joined`}</div>
-          <div className="text-[10px] text-white/80">Groups</div>
-          {restricted.has("groups") && <div className="mt-1 text-[9px] text-white/90">No permission to view</div>}
+          <div className="text-[10px] text-grey-2">Groups</div>
+          {restricted.has("groups") && <div className="mt-1 text-[9px] text-grey-2">No permission to view</div>}
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ import { ApiError } from "@/services/http";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { useDashboardScope } from "@/lib/scope";
 import { getCreatableBranches } from "@/lib/permissions";
-import type { Branch, WellbeingChallenge } from "@/types/api";
+import type { WellbeingChallenge } from "@/types/api";
 
 const TARGET_TYPES = ["cumulative", "daily_minimum"];
 const METRIC_TYPES = ["steps", "calories", "distance_km", "minutes_active", "workouts"];
@@ -28,7 +28,7 @@ export function CreateChallengeModal({
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const { organizationId, currentUser } = useDashboardData();
+  const { organizationId, currentUser, branches: orgBranches } = useDashboardData();
   const { scope } = useDashboardScope();
 
   const [name, setName] = useState("");
@@ -40,7 +40,6 @@ export function CreateChallengeModal({
   const [targetValue, setTargetValue] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState<string>("");
   const [selectedWellbeingChallengeId, setSelectedWellbeingChallengeId] = useState<string>("");
-  const [orgBranches, setOrgBranches] = useState<Branch[]>([]);
   const [wellbeingChallenges, setWellbeingChallenges] = useState<WellbeingChallenge[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -57,7 +56,6 @@ export function CreateChallengeModal({
 
   useEffect(() => {
     if (!isOpen || !organizationId) return;
-    void api.organization.getBranches(organizationId).then(setOrgBranches);
     void api.wellbeing.getChallenges().then((res) => setWellbeingChallenges(res.items));
   }, [isOpen, organizationId]);
 

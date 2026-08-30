@@ -96,7 +96,8 @@
     line-height: calc(1em + 8px);
   }
 
-  /* Keep native selects accessible while aligning their visual spacing. */
+  /* All native form selectors share the branch switcher's 18px chevron.
+     Keep native selection/validation, including the mobile OS picker. */
   select:not([multiple]) {
     appearance: none;
     cursor: pointer;
@@ -105,7 +106,18 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234D4D4D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-position: right 0.75rem center;
     background-repeat: no-repeat;
-    background-size: 1rem;
+    background-size: 18px;
+    min-width: 0;
+    max-width: 100%;
+    border-radius: 8px;
+    color: var(--color-grey-1);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  select:not([multiple]):focus-visible {
+    outline: 2px solid var(--color-primary-1);
+    outline-offset: 2px;
   }
 
   select:not([multiple]):disabled {
@@ -120,23 +132,19 @@
       appearance: base-select;
     }
 
-    select:not([multiple]) {
-      background-image: none;
-      padding-right: 0.75rem !important;
-    }
-
     select:not([multiple])::picker-icon {
-      margin-left: 0.75rem;
-      color: #4D4D4D;
+      display: none;
     }
 
     select:not([multiple])::picker(select) {
-      margin-top: 0.25rem;
+      margin-top: 0.5rem;
       padding: 0.25rem 0;
-      border: 0;
-      border-radius: 4px;
+      border: 1px solid var(--color-grey-4);
+      border-radius: 8px;
       background: #FFFFFF;
       box-shadow: 0 8px 24px rgb(26 26 26 / 12%);
+      max-height: 240px;
+      overflow-y: auto;
     }
 
     select:not([multiple]) option {
@@ -144,6 +152,8 @@
       padding: 0.5rem 0.75rem;
       border-radius: 2px;
       color: #4D4D4D;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     select:not([multiple]) option:hover,
@@ -161,6 +171,37 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-grey-3) transparent;
+  }
+
+  /* Use an exact 3px track where supported; Firefox keeps its thin fallback. */
+  @supports selector(::-webkit-scrollbar) {
+    .thin-scrollbar {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+    .thin-scrollbar::-webkit-scrollbar {
+      width: 3px;
+      height: 3px;
+    }
+    .thin-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .thin-scrollbar::-webkit-scrollbar-thumb {
+      background: var(--color-grey-3);
+      border-radius: 3px;
+    }
+    .thin-scrollbar::-webkit-scrollbar-button {
+      display: none;
+    }
+  }
+
+  .empty-state-icon {
+    color: var(--color-grey-2);
   }
 
   .page-title {

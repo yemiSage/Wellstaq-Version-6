@@ -55,6 +55,7 @@ function AccessGate({ children }: { children: React.ReactNode }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isSpacePage = usePathname() === "/dashboard/space";
 
   return (
     <DashboardDataProvider>
@@ -74,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <div className="flex-1 flex flex-col overflow-hidden w-full">
               <TopNav onMenuClick={() => setIsSidebarOpen(true)} />
-              <main className="flex-1 min-w-0 overflow-y-auto px-3 py-3 sm:px-6 no-scrollbar [&>div]:!mx-0 [&>div]:!w-full [&>div]:!max-w-none">
+              <main className={`flex-1 min-h-0 min-w-0 no-scrollbar [&>div]:!mx-0 [&>div]:!w-full [&>div]:!max-w-none ${isSpacePage ? "overflow-hidden p-0" : "overflow-y-auto px-3 py-3 sm:px-6"}`}>
                 {children}
               </main>
             </div>

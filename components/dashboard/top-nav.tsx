@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -532,10 +533,19 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
         {createdBranch ? (
           <div className="space-y-2">
             <Label htmlFor="branchManager">Organization member</Label>
-            <select id="branchManager" value={selectedManagerId} onChange={(event) => setSelectedManagerId(event.target.value)} className="h-11 w-full rounded-[8px] border border-grey-4 bg-white px-3 text-sm text-grey-1 focus:border-primary-1 focus:outline-none">
-              <option value="">Select a manager</option>
-              {managerCandidates.map((member) => <option key={member.id} value={member.id}>{member.firstName} {member.lastName} ({member.email})</option>)}
-            </select>
+            <FilterDropdown
+              id="branchManager"
+              ariaLabel="Organization member"
+              value={selectedManagerId}
+              onValueChange={setSelectedManagerId}
+              options={[
+                { value: "", label: "Select a manager" },
+                ...managerCandidates.map((member) => ({ value: member.id, label: `${member.firstName} ${member.lastName} (${member.email})` })),
+              ]}
+              disabled={isAssigningManager}
+              buttonClassName="h-11 w-full font-normal"
+              menuClassName="w-full break-words"
+            />
             {managerCandidates.length === 0 && <p className="text-sm text-grey-3">There are no eligible organization members to assign yet.</p>}
           </div>
         ) : (

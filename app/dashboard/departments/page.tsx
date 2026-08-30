@@ -364,7 +364,7 @@ export default function DepartmentsPage() {
         <div className={`flex-1 bg-white rounded-[12px] overflow-hidden flex flex-col ${!selectedDepartment ? 'hidden lg:flex' : 'flex'}`}>
           {!selectedDepartment ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4 text-orange-500">
+              <div className="empty-state-icon w-16 h-16 bg-grey-5 rounded-full flex items-center justify-center mb-4" aria-hidden="true">
                 <Users className="w-8 h-8" />
               </div>
               <h3 className="text-lg font-bold text-grey-1 mb-2">Please choose a department.</h3>

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Activity, Building2, Mail, Network, Plus, Search, UserCheck, UserRound, Users, X } from "lucide-react";
@@ -13,9 +13,13 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Button } from "@/components/ui/button";
 import { FilterDropdown, type FilterDropdownOption } from "@/components/ui/filter-dropdown";
 import { Input } from "@/components/ui/input";
+import { SelectablePill } from "@/components/ui/selectable-pill";
 import type { DepartmentItem, OrganizationMemberInfo, RoleItem } from "@/types/api";
 import { hasPermission } from "@/lib/permissions";
 import { humanizeIdentifier } from "@/lib/format";
+
+type ManagementTab = "role" | "department" | "branch";
+const REVOKE_ROLE_OPTION = "__revoke_role__";
 
 export default function TeamsPage() {
   const { organizationId, branches, currentUser } = useDashboardData();
@@ -32,6 +36,8 @@ export default function TeamsPage() {
   const [inviteRolesLoading, setInviteRolesLoading] = useState(false);
   const [invite, setInvite] = useState({ email: "", branchId: "", departmentId: "", roleId: "" });
   const [selectedMember, setSelectedMember] = useState<OrganizationMemberInfo | null>(null);
+  const [managementTab, setManagementTab] = useState<ManagementTab>("role");
+  const managementDialogRef = useRef<HTMLDivElement>(null);
   const [manageRoles, setManageRoles] = useState<RoleItem[]>([]);
   const [manageDepartments, setManageDepartments] = useState<DepartmentItem[]>([]);
   const [memberChanges, setMemberChanges] = useState({ roleId: "", departmentId: "", branchId: "", branchDepartmentId: "" });
@@ -43,6 +49,20 @@ export default function TeamsPage() {
   const canRevokeRole = currentUser ? hasPermission(currentUser.permissions, "member.role.revoke", permissionBranchId) : false;
   const canAssignDepartment = currentUser ? hasPermission(currentUser.permissions, "member.department.assign", permissionBranchId) : false;
   const canAssignBranch = currentUser ? hasPermission(currentUser.permissions, "member.branch.assign", permissionBranchId) : false;
+  const managementTabs: { value: ManagementTab; label: string }[] = [
+    ...(canAssignRole || canRevokeRole ? [{ value: "role" as const, label: "Change role" }] : []),
+    ...(canAssignDepartment ? [{ value: "department" as const, label: "Move department" }] : []),
+    ...(canAssignBranch ? [{ value: "branch" as const, label: "Move branch" }] : []),
+  ];
+  const activeManagementTab = managementTabs.find((tab) => tab.value === managementTab)?.value ?? managementTabs[0]?.value;
+  const isRevokingRole = memberChanges.roleId === REVOKE_ROLE_OPTION;
+
+  useEffect(() => {
+    if (!selectedMember?.id) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    managementDialogRef.current?.querySelector<HTMLButtonElement>('[role="tab"][aria-selected="true"]')?.focus();
+    return () => { previousFocus?.focus(); };
+  }, [selectedMember?.id]);
 
   useEffect(() => {
     setSelectedMember(null);
@@ -127,6 +147,7 @@ export default function TeamsPage() {
       return;
     }
     setSelectedMember(member);
+    setManagementTab(canAssignRole || canRevokeRole ? "role" : canAssignDepartment ? "department" : "branch");
     setMemberChanges({ roleId: member.roleId ?? "", departmentId: member.departmentId ?? "", branchId: member.branchId ?? "", branchDepartmentId: member.departmentId ?? "" });
     const [roleResponse, departmentResponse] = await Promise.all([
       api.roles.listOrganization(organizationId, permissionBranchId),
@@ -228,13 +249,149 @@ export default function TeamsPage() {
         )}
       </section>
 
-      {selectedMember && <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onMouseDown={() => setSelectedMember(null)}>
-        <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
-          <div className="mb-5 flex items-start justify-between"><div><h2 className="text-lg font-bold text-grey-1">Manage {selectedMember.firstName} {selectedMember.lastName}</h2><p className="mt-1 text-sm text-grey-2">Changes replace the user&apos;s current assignment and require confirmation.</p></div><button type="button" onClick={() => setSelectedMember(null)}><X className="h-5 w-5" /></button></div>
-          <div className="space-y-5">
-            {(canAssignRole || canRevokeRole) && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Change role</h3><p className="mb-3 text-xs text-grey-3">Changing replaces the current role. Revoking returns the user to Member.</p><div className="flex flex-wrap gap-2"><select disabled={!canAssignRole} value={memberChanges.roleId} onChange={(event) => setMemberChanges({ ...memberChanges, roleId: event.target.value })} className="h-10 min-w-0 flex-1 rounded-lg border border-grey-4 px-3 text-sm disabled:bg-grey-5"><option value="">Select role</option>{manageRoles.map((role) => <option key={role.id} value={role.id}>{humanizeIdentifier(role.name)}</option>)}</select>{canAssignRole && <button disabled={!memberChanges.roleId || memberChanges.roleId === selectedMember.roleId} onClick={() => setPendingChange("role")} className="rounded-lg bg-primary-1 px-4 text-sm font-medium text-white disabled:opacity-40">Change</button>}{canRevokeRole && selectedMember.roleName !== "member" && <button onClick={() => setPendingChange("revoke_role")} className="rounded-lg border border-red-200 px-4 text-sm font-medium text-red-600 hover:bg-red-50">Revoke</button>}</div></section>}
-            {canAssignDepartment && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Move department</h3><p className="mb-3 text-xs text-grey-3">Choose another department in the user&apos;s current branch.</p><div className="flex gap-2"><select value={memberChanges.departmentId} onChange={(event) => setMemberChanges({ ...memberChanges, departmentId: event.target.value })} className="h-10 flex-1 rounded-lg border border-grey-4 px-3 text-sm"><option value="">Select department</option>{manageDepartments.filter((department) => department.branchId === selectedMember.branchId).map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select><button disabled={!memberChanges.departmentId || memberChanges.departmentId === selectedMember.departmentId} onClick={() => setPendingChange("department")} className="rounded-lg bg-primary-1 px-4 text-sm font-medium text-white disabled:opacity-40">Move</button></div></section>}
-            {canAssignBranch && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Move branch</h3><p className="mb-3 text-xs text-grey-3">A destination department is required because branch and department change together.</p><div className="grid gap-2 sm:grid-cols-2"><select value={memberChanges.branchId} onChange={(event) => setMemberChanges({ ...memberChanges, branchId: event.target.value, branchDepartmentId: "" })} className="h-10 rounded-lg border border-grey-4 px-3 text-sm"><option value="">Select branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><select value={memberChanges.branchDepartmentId} onChange={(event) => setMemberChanges({ ...memberChanges, branchDepartmentId: event.target.value })} className="h-10 rounded-lg border border-grey-4 px-3 text-sm"><option value="">Select destination department</option>{manageDepartments.filter((department) => department.branchId === memberChanges.branchId).map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></div><button disabled={!memberChanges.branchId || !memberChanges.branchDepartmentId || memberChanges.branchId === selectedMember.branchId} onClick={() => setPendingChange("branch")} className="mt-3 h-10 w-full rounded-lg bg-primary-1 text-sm font-medium text-white disabled:opacity-40">Move to branch</button></section>}
+      {selectedMember && <div
+        className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+        inert={pendingChange !== null || undefined}
+        onMouseDown={() => { if (!isUpdatingMember && !pendingChange) setSelectedMember(null); }}
+      >
+        <div
+          ref={managementDialogRef}
+          role="dialog"
+          tabIndex={-1}
+          aria-modal="true"
+          aria-labelledby="manage-team-title"
+          aria-describedby="manage-team-description"
+          aria-busy={isUpdatingMember}
+          className="max-h-[calc(100dvh-32px)] w-full max-w-xl overflow-y-auto rounded-[12px] bg-white p-5 shadow-xl sm:p-6"
+          onMouseDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (pendingChange) return;
+            if (event.key === "Escape" && !isUpdatingMember) {
+              event.stopPropagation();
+              setSelectedMember(null);
+            } else if (event.key === "Tab") {
+              const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled):not([tabindex="-1"]), [tabindex="0"]:not(:disabled)'));
+              const first = focusable[0];
+              const last = focusable[focusable.length - 1];
+              if (!first) {
+                event.preventDefault();
+                event.currentTarget.focus();
+              } else if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last?.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first?.focus();
+              }
+            }
+          }}
+        >
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 id="manage-team-title" className="text-xl font-semibold text-grey-1">Manage {selectedMember.firstName} {selectedMember.lastName}</h2>
+              <p id="manage-team-description" className="mt-1 text-sm text-grey-2">Update one assignment at a time. You&apos;ll confirm before saving.</p>
+            </div>
+            <button type="button" aria-label="Close team management" disabled={isUpdatingMember} onClick={() => setSelectedMember(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-grey-2 hover:bg-grey-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1 disabled:opacity-40">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div
+            role="tablist"
+            aria-label="Team management options"
+            className="mb-6 flex gap-0 border-b border-grey-4 pb-3"
+            onKeyDown={(event) => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key) || isUpdatingMember) return;
+              event.preventDefault();
+              const currentIndex = managementTabs.findIndex((tab) => tab.value === activeManagementTab);
+              const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? managementTabs.length - 1
+                : (currentIndex + (event.key === "ArrowRight" ? 1 : -1) + managementTabs.length) % managementTabs.length;
+              setManagementTab(managementTabs[nextIndex].value);
+              event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[nextIndex]?.focus();
+            }}
+          >
+            {managementTabs.map((tab) => (
+              <SelectablePill key={tab.value} role="tab" id={`manage-team-tab-${tab.value}`} aria-controls="manage-team-panel" aria-selected={activeManagementTab === tab.value} aria-pressed={undefined} tabIndex={activeManagementTab === tab.value ? 0 : -1} selected={activeManagementTab === tab.value} appearance="plain" disabled={isUpdatingMember} onClick={() => setManagementTab(tab.value)} className="min-h-10 flex-1 px-2 sm:px-4 sm:text-sm">
+                {tab.label}
+              </SelectablePill>
+            ))}
+          </div>
+          <div id="manage-team-panel" role="tabpanel" aria-labelledby={`manage-team-tab-${activeManagementTab}`}>
+            {activeManagementTab === "role" && (
+              <>
+                <p className="mb-4 text-sm text-grey-2">Choose a new role for this team member.</p>
+                <div>
+                  <label htmlFor="manage-staff-role" className="mb-2 block text-sm font-medium text-grey-1">Role</label>
+                  <FilterDropdown
+                    id="manage-staff-role" ariaLabel="Staff role" disabled={isUpdatingMember}
+                    value={memberChanges.roleId}
+                    onValueChange={(roleId) => setMemberChanges({ ...memberChanges, roleId })}
+                    options={[
+                      { value: "", label: "Select role" },
+                      ...manageRoles.filter((role) => canAssignRole || role.id === selectedMember.roleId).map((role) => ({ value: role.id, label: humanizeIdentifier(role.name) })),
+                      ...(canRevokeRole && selectedMember.roleName !== "member" ? [{ value: REVOKE_ROLE_OPTION, label: "Revoke role (return to Member)" }] : []),
+                    ]}
+                    buttonClassName="h-12 w-full font-normal" menuClassName="max-h-36 w-full"
+                  />
+                </div>
+                <div className="mt-[80px]">
+                  <Button type="button" disabled={isUpdatingMember || (isRevokingRole ? !canRevokeRole || selectedMember.roleName === "member" : !canAssignRole || !memberChanges.roleId || memberChanges.roleId === selectedMember.roleId)} onClick={() => setPendingChange(isRevokingRole ? "revoke_role" : "role")} className={`h-12 w-full ${isRevokingRole ? "bg-red-600 hover:bg-red-700" : ""}`}>
+                    {isUpdatingMember ? "Updating role..." : isRevokingRole ? "Revoke role" : "Change role"}
+                  </Button>
+                </div>
+              </>
+            )}
+            {activeManagementTab === "department" && (
+              <>
+                <p className="mb-4 text-sm text-grey-2">Choose another department in this member&apos;s current branch.</p>
+                <div>
+                  <label htmlFor="manage-staff-department" className="mb-2 block text-sm font-medium text-grey-1">Department</label>
+                  <FilterDropdown
+                    id="manage-staff-department" ariaLabel="Staff department" disabled={isUpdatingMember}
+                    value={memberChanges.departmentId}
+                    onValueChange={(departmentId) => setMemberChanges({ ...memberChanges, departmentId })}
+                    options={[{ value: "", label: "Select department" }, ...manageDepartments.filter((department) => department.branchId === selectedMember.branchId).map((department) => ({ value: department.id, label: department.name }))]}
+                    buttonClassName="h-12 w-full font-normal" menuClassName="max-h-36 w-full"
+                  />
+                </div>
+                <div className="mt-[80px]">
+                  <Button type="button" disabled={isUpdatingMember || !memberChanges.departmentId || memberChanges.departmentId === selectedMember.departmentId} onClick={() => setPendingChange("department")} className="h-12 w-full">
+                    {isUpdatingMember ? "Moving department..." : "Move department"}
+                  </Button>
+                </div>
+              </>
+            )}
+            {activeManagementTab === "branch" && (
+              <>
+                <p className="mb-4 text-sm text-grey-2">Choose a branch and a department to move this member to.</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <label htmlFor="manage-destination-branch" className="mb-2 block text-sm font-medium text-grey-1">Branch</label>
+                    <FilterDropdown
+                      id="manage-destination-branch" ariaLabel="Destination branch" disabled={isUpdatingMember}
+                      value={memberChanges.branchId}
+                      onValueChange={(branchId) => setMemberChanges({ ...memberChanges, branchId, branchDepartmentId: "" })}
+                      options={[{ value: "", label: "Select branch" }, ...branches.map((branch) => ({ value: branch.id, label: branch.name }))]}
+                      buttonClassName="h-12 w-full font-normal" menuClassName="max-h-36 w-full"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <label htmlFor="manage-destination-department" className="mb-2 block text-sm font-medium text-grey-1">Department</label>
+                    <FilterDropdown
+                      id="manage-destination-department" ariaLabel="Destination department" disabled={!memberChanges.branchId || isUpdatingMember}
+                      value={memberChanges.branchDepartmentId}
+                      onValueChange={(branchDepartmentId) => setMemberChanges({ ...memberChanges, branchDepartmentId })}
+                      options={[{ value: "", label: "Select destination department" }, ...manageDepartments.filter((department) => department.branchId === memberChanges.branchId).map((department) => ({ value: department.id, label: department.name }))]}
+                      buttonClassName="h-12 w-full font-normal" menuClassName="max-h-36 w-full"
+                    />
+                  </div>
+                </div>
+                <div className="mt-[80px]">
+                  <Button type="button" disabled={isUpdatingMember || !memberChanges.branchId || !memberChanges.branchDepartmentId || memberChanges.branchId === selectedMember.branchId} onClick={() => setPendingChange("branch")} className="h-12 w-full">
+                    {isUpdatingMember ? "Moving branch..." : "Move branch"}
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>}

@@ -250,12 +250,12 @@ export default function ClubsPage() {
               </label>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-grey-1">Category
-                  <select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value as ClubCategory }))} className="mt-2 h-11 w-full rounded-lg border border-grey-4 px-3 font-normal">
+                  <select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value as ClubCategory }))} className="mt-2 h-11 w-full rounded-[8px] border border-grey-4 px-3 font-normal">
                     {CLUB_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
                   </select>
                 </label>
                 <label className="block text-sm font-medium text-grey-1">Privacy
-                  <select value={form.privacy} onChange={(event) => setForm((current) => ({ ...current, privacy: event.target.value as "public" | "private" }))} className="mt-2 h-11 w-full rounded-lg border border-grey-4 px-3 font-normal">
+                  <select value={form.privacy} onChange={(event) => setForm((current) => ({ ...current, privacy: event.target.value as "public" | "private" }))} className="mt-2 h-11 w-full rounded-[8px] border border-grey-4 px-3 font-normal">
                     <option value="public">Public</option>
                     <option value="private">Private</option>
                   </select>

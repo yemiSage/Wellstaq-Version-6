@@ -62,8 +62,9 @@ export function Step4Personal({ data, updateData, onNext, isLoading, fieldErrors
         <div className="flex gap-3">
           <div className="relative flex h-12 w-24 shrink-0 items-center rounded-[8px] border border-grey-4 bg-white px-3 sm:w-28">
             <span className="text-sm font-medium">{data.phoneCode || '+1'}</span>
-            <ChevronDown className="absolute right-3 w-4 h-4 text-grey-3 pointer-events-none" />
+            <ChevronDown size={18} strokeWidth={2} aria-hidden="true" className="absolute right-3 text-grey-2 pointer-events-none" />
             <select
+              aria-label="Phone country code"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               value={data.phoneCode || '+1'}
               onChange={(e) => updateData({ phoneCode: e.target.value })}
