@@ -1,4 +1,6 @@
 // path: services/auth-token.ts
+import type { CurrentUserResponse } from "@/types/api";
+
 const STORAGE_KEY = "wellstaq_auth";
 const COOKIE_NAME = "wellstaq_access_token";
 
@@ -9,6 +11,15 @@ export interface AuthTokens {
 }
 
 let cachedTokens: AuthTokens | null = null;
+let cachedCurrentUser: CurrentUserResponse | null = null;
+
+export function cacheCurrentUser(user: CurrentUserResponse) {
+  cachedCurrentUser = user;
+}
+
+export function getCachedCurrentUser() {
+  return cachedCurrentUser;
+}
 
 function setCookie(accessToken: string) {
   if (typeof document === "undefined") return;
@@ -55,6 +66,7 @@ export function getAuthTokens(): AuthTokens | null {
 
 export function clearAuthTokens() {
   cachedTokens = null;
+  cachedCurrentUser = null;
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(STORAGE_KEY);
   }

@@ -18,6 +18,9 @@ import type { DepartmentItem, OrganizationMemberInfo, RoleItem } from "@/types/a
 import { hasPermission } from "@/lib/permissions";
 import { humanizeIdentifier } from "@/lib/format";
 
+import { AnimatePresence } from "motion/react";
+import { DrawerLayer } from "@/components/ui/drawer";
+
 type ManagementTab = "role" | "department" | "branch";
 const REVOKE_ROLE_OPTION = "__revoke_role__";
 
@@ -210,8 +213,8 @@ export default function TeamsPage() {
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-5 pb-12">
       <div className="flex items-start justify-between gap-4">
-        <div><h1 className="text-[20px] font-bold text-grey-1">My Teams</h1>
-        <p className="text-sm text-grey-2">{scope.type === "branch" ? "Everyone assigned to this branch, including its manager." : "Everyone in the organization, including the super admin."}</p></div>
+        <div><h1 className="page-title">My Teams</h1>
+        <p className="page-description">{scope.type === "branch" ? "Everyone assigned to this branch, including its manager." : "Everyone in the organization, including the super admin."}</p></div>
         {canInvite && <button type="button" onClick={openInvite} className="flex items-center gap-2 rounded-lg bg-[#C45700] px-4 py-2 text-sm font-medium text-white"><Plus className="h-4 w-4" /> Add Team Member</button>}
       </div>
 
@@ -249,20 +252,14 @@ export default function TeamsPage() {
         )}
       </section>
 
-      {selectedMember && <div
-        className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
-        inert={pendingChange !== null || undefined}
-        onMouseDown={() => { if (!isUpdatingMember && !pendingChange) setSelectedMember(null); }}
-      >
+      <AnimatePresence>{selectedMember && <DrawerLayer onClose={() => { if (!isUpdatingMember && !pendingChange) setSelectedMember(null); }} label="Manage team" inert={pendingChange !== null || undefined}>
         <div
           ref={managementDialogRef}
-          role="dialog"
           tabIndex={-1}
-          aria-modal="true"
           aria-labelledby="manage-team-title"
           aria-describedby="manage-team-description"
           aria-busy={isUpdatingMember}
-          className="max-h-[calc(100dvh-32px)] w-full max-w-xl overflow-y-auto rounded-[12px] bg-white p-5 shadow-xl sm:p-6"
+          className="flex h-full w-full flex-col overflow-hidden bg-white"
           onMouseDown={(event) => event.stopPropagation()}
           onKeyDown={(event) => {
             if (pendingChange) return;
@@ -286,7 +283,7 @@ export default function TeamsPage() {
             }
           }}
         >
-          <div className="mb-6 flex items-start justify-between gap-4">
+          <div className="shrink-0 border-b border-grey-4 p-6 flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h2 id="manage-team-title" className="text-xl font-semibold text-grey-1">Manage {selectedMember.firstName} {selectedMember.lastName}</h2>
               <p id="manage-team-description" className="mt-1 text-sm text-grey-2">Update one assignment at a time. You&apos;ll confirm before saving.</p>
@@ -298,7 +295,7 @@ export default function TeamsPage() {
           <div
             role="tablist"
             aria-label="Team management options"
-            className="mb-6 flex gap-0 border-b border-grey-4 pb-3"
+            className="mx-6 my-6 shrink-0 flex gap-0 border-b border-grey-4 pb-3"
             onKeyDown={(event) => {
               if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key) || isUpdatingMember) return;
               event.preventDefault();
@@ -315,7 +312,7 @@ export default function TeamsPage() {
               </SelectablePill>
             ))}
           </div>
-          <div id="manage-team-panel" role="tabpanel" aria-labelledby={`manage-team-tab-${activeManagementTab}`}>
+          <div id="manage-team-panel" className="min-h-0 flex-1 overflow-y-auto px-6 pb-6" role="tabpanel" aria-labelledby={`manage-team-tab-${activeManagementTab}`}>
             {activeManagementTab === "role" && (
               <>
                 <p className="mb-4 text-sm text-grey-2">Choose a new role for this team member.</p>
@@ -394,13 +391,14 @@ export default function TeamsPage() {
             )}
           </div>
         </div>
-      </div>}
+      </DrawerLayer>}</AnimatePresence>
 
       <ConfirmModal isOpen={pendingChange !== null} onClose={() => setPendingChange(null)} onConfirm={() => void confirmMemberChange()} title={pendingChange === "role" ? "Change user role?" : pendingChange === "revoke_role" ? "Revoke user role?" : pendingChange === "department" ? "Move user to another department?" : "Move user to another branch?"} description={pendingChange === "role" ? "This will replace the user's current role and its role-based access." : pendingChange === "revoke_role" ? "The current role will be removed and the user will return to the zero-permission Member role." : pendingChange === "department" ? "This will replace the user's current department assignment." : "This will change both the user's home branch and department."} confirmText={isUpdatingMember ? "Updating..." : "Confirm change"} isDestructive={pendingChange === "revoke_role"} />
 
-      {isInviteOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-        <form onSubmit={sendInvite} className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl">
-          <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-grey-1">Invite Team Member</h2><button type="button" onClick={() => setIsInviteOpen(false)}><X className="h-5 w-5" /></button></div>
+      <AnimatePresence>{isInviteOpen && <DrawerLayer onClose={() => { if (!isInviting) setIsInviteOpen(false); }} label="Invite Team Member" >
+        <form onSubmit={sendInvite} className="flex h-full w-full flex-col overflow-hidden bg-white">
+          <div className="shrink-0 border-b border-grey-4 p-6 flex items-center justify-between"><h2 className="text-lg font-bold text-grey-1">Invite Team Member</h2><button type="button" aria-label="Close drawer" disabled={isInviting} onClick={() => setIsInviteOpen(false)}><X className="h-5 w-5" /></button></div>
+          <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
           <label className="block text-sm font-medium text-grey-1">Email
             <div className="relative mt-1">
               <Input required type="email" value={invite.email} onChange={(event) => setInvite({ ...invite, email: event.target.value })} className="pr-11" />
@@ -420,8 +418,9 @@ export default function TeamsPage() {
             <FilterDropdown value={invite.roleId} options={inviteRoleOptions} onValueChange={(roleId) => setInvite({ ...invite, roleId })} ariaLabel="Role" disabled={!invite.branchId || inviteRolesLoading} leadingIcon={<UserRound className="h-4 w-4" />} buttonClassName="mt-1 h-12 w-full rounded-[8px] font-normal" menuClassName="w-full" />
           </div>
           <Button type="submit" disabled={!canSendInvite} className="w-full">{isInviting ? "Sending..." : "Send Invitation"}</Button>
+          </div>
         </form>
-      </div>}
+      </DrawerLayer>}</AnimatePresence>
     </div>
   );
 }

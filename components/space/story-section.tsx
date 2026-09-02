@@ -1,5 +1,7 @@
 "use client";
 
+import { ModalLayer } from "@/components/ui/modal-layer";
+
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
@@ -234,7 +236,7 @@ export function StoriesSection({
 
       <AnimatePresence>
         {currentGroup && currentStory && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <ModalLayer className="flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={close} className="absolute inset-0 bg-black/80" />
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-sm aspect-[9/16] rounded-2xl overflow-hidden bg-black">
               <div className="absolute top-2 left-2 right-2 flex gap-1 z-20">
@@ -302,7 +304,7 @@ export function StoriesSection({
                 <ChevronRight className="w-5 h-5" />
               </button>
             </motion.div>
-          </div>
+          </ModalLayer>
         )}
       </AnimatePresence>
     </>

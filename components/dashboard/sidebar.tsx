@@ -47,12 +47,14 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isScopeMenuOpen, setIsScopeMenuOpen] = useState(false);
   const scopeMenuRef = useRef<HTMLDivElement>(null);
-  const { challenges: CHALLENGES, activeBranch, currentUser, branches: orgBranches } = useDashboardData();
+  const { challenges: CHALLENGES, currentUser, branches: orgBranches } = useDashboardData();
   const { scope, setScope, isScopeChanging } = useDashboardScope();
 
   useClickOutside(scopeMenuRef, () => setIsScopeMenuOpen(false));
 
-  const branchChallenges = CHALLENGES.filter(c => c.branch === activeBranch);
+  const branchChallenges = scope.type === "branch"
+    ? CHALLENGES.filter((challenge) => challenge.branchId === scope.branchId)
+    : CHALLENGES;
   const lastChallenges = branchChallenges.slice(-4).reverse();
 
   const switchable = currentUser ? getSwitchableScopes(currentUser.permissions) : null;
@@ -91,7 +93,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
   return (
     <div 
-      className={`h-screen flex-shrink-0 border-r border-grey-4 flex flex-col bg-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-[227px]'}`}
+      className={`h-dvh flex-shrink-0 border-r border-grey-4 flex flex-col bg-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-[227px]'}`}
     >
       {/* Logo & Collapse Toggle */}
       <div className={`px-3 pt-8 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
@@ -242,12 +244,12 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           {!isCollapsed && branchChallenges.length > 0 ? (
             <div className="space-y-0.5">
               {lastChallenges.map(challenge => (
-                <Link href={scopedHref("/dashboard/challenges")} key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+                <Link href={scopedHref("/dashboard/challenges")} onClick={onClose} key={challenge.id} className="flex items-center gap-3 px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
                   <div className="w-3 h-3 rounded-full border border-grey-3 flex-shrink-0" />
                   <span className="truncate">{challenge.title || "Untitled challenge"}</span>
                 </Link>
               ))}
-              <Link href={scopedHref("/dashboard/challenges")} className="flex items-center justify-between px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
+              <Link href={scopedHref("/dashboard/challenges")} onClick={onClose} className="flex items-center justify-between px-3 py-1.5 text-grey-2 font-medium hover:bg-grey-5 rounded-md cursor-pointer transition-colors text-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 flex items-center justify-center text-grey-3 flex-shrink-0">
                     <Layers size={14} strokeWidth={2} />
@@ -273,6 +275,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
             <div className="space-y-0.5">
               <Link
                 href={scopedHref("/dashboard/integrations")}
+                onClick={onClose}
                 aria-current={isIntegrationsActive ? "page" : undefined}
                 className={`relative flex items-center gap-3 px-3 py-1.5 font-medium rounded-md cursor-pointer transition-colors text-sm ${isIntegrationsActive ? "bg-primary-5 text-primary-1 font-bold" : "text-grey-2 hover:bg-grey-5"}`}
               >
@@ -289,6 +292,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           <div className="border-t border-grey-4 pt-3 space-y-1">
           <Link 
             href={scopedHref("/dashboard/teams")} 
+            onClick={onClose}
             aria-current={pathname === '/dashboard/teams' ? "page" : undefined}
             className={`relative flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/teams' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
@@ -298,6 +302,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           </Link>
           {canManageInvites && <Link
             href={scopedHref("/dashboard/invites")}
+            onClick={onClose}
             aria-current={pathname === '/dashboard/invites' ? "page" : undefined}
             className={`relative flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/invites' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
@@ -307,6 +312,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           </Link>}
           <Link 
             href={scopedHref("/dashboard/settings")} 
+            onClick={onClose}
             aria-current={pathname === '/dashboard/settings' ? "page" : undefined}
             className={`relative flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/settings' ? 'bg-primary-5 text-primary-1 font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >
@@ -316,6 +322,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
           </Link>
           <Link 
             href={scopedHref("/dashboard/contact")} 
+            onClick={onClose}
             aria-current={pathname === '/dashboard/contact' ? "page" : undefined}
             className={`relative flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${isCollapsed ? 'justify-center' : ''} ${pathname === '/dashboard/contact' ? 'bg-[#F7F7F7] text-[#6B6B6B] font-bold' : 'text-grey-2 font-medium hover:bg-grey-5'}`}
           >

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { api } from "@/services/api";
 import { ApiError } from "@/services/http";
 import { Lock } from "lucide-react";
+import { Activity, Heart, Note, Profile2User, type IconProps } from "iconsax-react";
 
 interface WeeklyStats {
   steps: number;
@@ -31,6 +32,12 @@ function currentWeekBounds(): { periodStart: string; periodEnd: string } {
 }
 
 const STEPS_POLL_MS = 60_000;
+const activityIconProps: IconProps = {
+  variant: "Bulk",
+  size: 22,
+  color: "#EA6A05",
+  "aria-hidden": true,
+};
 
 export function ActivitySection({
   organizationId,
@@ -142,7 +149,7 @@ export function ActivitySection({
 
   if (loading) {
     return (
-      <div className="bg-grey-5 border border-grey-4 rounded-[12px] p-5 mb-6 text-grey-1">
+      <div className="bg-grey-5 border border-grey-4 rounded-[12px] p-3 mb-6 text-grey-1">
         <div className="space-y-1 mb-6">
           <h3 className="text-[16px] font-bold">Your Activity This Week</h3>
           <p className="text-xs text-grey-2">Keep the momentum going!</p>
@@ -157,32 +164,32 @@ export function ActivitySection({
   }
 
   return (
-    <div className="bg-grey-5 border border-grey-4 rounded-[12px] p-5 mb-6 text-grey-1">
+    <div className="bg-grey-5 border border-grey-4 rounded-[12px] p-3 mb-6 text-grey-1">
       <div className="space-y-1 mb-6">
         <h3 className="text-[16px] font-bold">Your Activity This Week</h3>
         <p className="text-xs text-grey-2">Keep the momentum going!</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-white border border-grey-4 rounded-lg p-3">
-          <div className="text-lg mb-1">🏃</div>
+          <Activity {...activityIconProps} className="mb-1" />
           <div className="text-lg font-bold">{restricted.has("steps") ? <Lock className="h-4 w-4" /> : stats.steps.toLocaleString()}</div>
           <div className="text-[10px] text-grey-2">Steps</div>
           {restricted.has("steps") && <div className="mt-1 text-[9px] text-grey-2">No permission to view</div>}
         </div>
         <div className="bg-white border border-grey-4 rounded-lg p-3">
-          <div className="text-lg mb-1">✍️</div>
+          <Note {...activityIconProps} className="mb-1" />
           <div className="text-lg font-bold">{restricted.has("posts") ? <Lock className="h-4 w-4" /> : stats.posts}</div>
           <div className="text-[10px] text-grey-2">Posts</div>
           {restricted.has("posts") && <div className="mt-1 text-[9px] text-grey-2">No permission to view</div>}
         </div>
         <div className="bg-white border border-grey-4 rounded-lg p-3">
-          <div className="text-lg mb-1">🤍</div>
+          <Heart {...activityIconProps} className="mb-1" />
           <div className="text-lg font-bold">{restricted.has("likes") ? <Lock className="h-4 w-4" /> : stats.likes}</div>
           <div className="text-[10px] text-grey-2">Likes Given</div>
           {restricted.has("likes") && <div className="mt-1 text-[9px] text-grey-2">No permission to view</div>}
         </div>
         <div className="bg-white border border-grey-4 rounded-lg p-3">
-          <div className="text-lg mb-1">👥</div>
+          <Profile2User {...activityIconProps} className="mb-1" />
           <div className="text-lg font-bold">{restricted.has("groups") ? <Lock className="h-4 w-4" /> : `${stats.groups} joined`}</div>
           <div className="text-[10px] text-grey-2">Groups</div>
           {restricted.has("groups") && <div className="mt-1 text-[9px] text-grey-2">No permission to view</div>}

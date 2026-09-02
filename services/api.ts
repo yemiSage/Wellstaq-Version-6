@@ -847,6 +847,7 @@ story: {
           participants: challenge.participantCount ?? 0,
           daysLeft: Math.max(0, Math.ceil((endTime - Date.now()) / 86_400_000)),
           progress: challenge.completionRate ?? 0,
+          branchId: challenge.branchId,
           branch: challenge.branchId ? branchNames.get(challenge.branchId) ?? "Unknown branch" : "Organization",
           image: challenge.imageUrl ?? "",
           description: challenge.description ?? "",

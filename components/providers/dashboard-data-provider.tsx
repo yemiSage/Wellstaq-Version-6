@@ -4,6 +4,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "@/services/api";
 import { getUserErrorMessage } from "@/lib/errors";
+import { cacheCurrentUser, getCachedCurrentUser } from "@/services/auth-token";
 import type { Branch, CurrentUserResponse, DashboardBootstrap, UserProfile } from "@/types/api";
 
 const emptyData: DashboardBootstrap = {
@@ -47,16 +48,19 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     setIsLoading(true);
     setError(null);
 
-    let me: CurrentUserResponse;
-    try {
-      me = await api.auth.me();
-      setCurrentUser(me);
-    } catch (reason) {
-      setCurrentUser(null);
-      setError(getUserErrorMessage(reason, "We couldn't load your account. Try again."));
-      setIsLoading(false);
-      return;
+    let me = getCachedCurrentUser();
+    if (!me) {
+      try {
+        me = await api.auth.me();
+        cacheCurrentUser(me);
+      } catch (reason) {
+        setCurrentUser(null);
+        setError(getUserErrorMessage(reason, "We couldn't load your account. Try again."));
+        setIsLoading(false);
+        return;
+      }
     }
+    setCurrentUser(me);
 
     const bootstrapResult = await Promise.resolve(api.dashboard.bootstrap(me.organizationId)).then(
       (value) => ({ status: "fulfilled" as const, value }),

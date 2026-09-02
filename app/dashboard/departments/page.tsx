@@ -1,5 +1,8 @@
 "use client";
 
+import { AnimatePresence } from "motion/react";
+import { DrawerLayer } from "@/components/ui/drawer";
+
 import React, { useState, useRef, useEffect } from "react";
 import { Search, Plus, X, Users, Activity, Calendar, ChevronDown, Check, UserPlus, Edit2, Trash2 } from "lucide-react";
 import Image from "next/image";
@@ -110,7 +113,6 @@ export default function DepartmentsPage() {
     {
       title: "Total Staff",
       value: stats.totalStaff.toString(),
-      subtitle: `${stats.activeStaff} currently active`,
       icon: Users,
       color: "text-red-500",
       bg: "bg-red-100",
@@ -119,7 +121,6 @@ export default function DepartmentsPage() {
     {
       title: "Total Activity",
       value: stats.totalActivity.toLocaleString(),
-      subtitle: "From last week",
       icon: Activity,
       color: "text-purple-500",
       bg: "bg-purple-100",
@@ -128,7 +129,6 @@ export default function DepartmentsPage() {
     {
       title: "Events Created",
       value: stats.eventsCreated.toString(),
-      subtitle: "Scheduled events",
       icon: Calendar,
       color: "text-blue-500",
       bg: "bg-blue-100",
@@ -137,7 +137,6 @@ export default function DepartmentsPage() {
     {
       title: "Total Departments",
       value: stats.totalDepartments.toString(),
-      subtitle: "Wellness departments",
       icon: Users,
       color: "text-lime-600",
       bg: "bg-lime-100",
@@ -255,8 +254,8 @@ export default function DepartmentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-[12px]">
         <div>
-          <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Departments</h1>
-          <p className="text-grey-2">Manage and track your organization&apos;s departments.</p>
+          <h1 className="page-title">Departments</h1>
+          <p className="page-description">Manage and track your organization&apos;s departments.</p>
         </div>
         {canCreateDepartment && scope.type === "branch" && <button
           onClick={() => setIsCreateModalOpen(true)}
@@ -274,7 +273,6 @@ export default function DepartmentsPage() {
             key={stat.title}
             title={stat.title}
             value={stat.value}
-            subtitle={stat.subtitle}
             icon={<stat.icon className="w-5 h-5" />}
             iconClassName={`${stat.bg} ${stat.color}`}
             trend={stat.trend}
@@ -296,7 +294,7 @@ export default function DepartmentsPage() {
             />
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-3 pr-2 no-scrollbar min-h-[400px] lg:min-h-0">
+          <div className="flex-1 overflow-y-auto space-y-3 pr-0 no-scrollbar min-h-[400px] lg:min-h-0">
             {filteredDepartments.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 bg-white rounded-[12px]">
                 <h3 className="text-lg font-bold text-grey-1 mb-2">No department available</h3>
@@ -389,7 +387,7 @@ export default function DepartmentsPage() {
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h2 className="text-lg font-bold text-grey-1">{selectedDepartment.name}</h2>
+                        <h2 className="text-base font-semibold text-grey-1">{selectedDepartment.name}</h2>
                         <span className="text-xs font-bold text-green-600">{selectedDepartment.rank ? `Rank #${selectedDepartment.rank}` : "Not ranked yet"}</span>
                       </div>
                     </div>
@@ -422,7 +420,7 @@ export default function DepartmentsPage() {
                     <p className="text-xs text-grey-3">Members</p>
                   </div>
                   <div className="p-4 rounded-[12px] border border-[#E6E6E6] bg-white">
-                    <h3 className="text-xl font-bold text-grey-1 mb-1">{selectedDepartment.avgDailySteps === null ? "Not available" : selectedDepartment.avgDailySteps.toLocaleString()}</h3>
+                    <h3 className={`${selectedDepartment.avgDailySteps === null ? "text-base" : "text-xl"} font-bold text-grey-1 mb-1`}>{selectedDepartment.avgDailySteps === null ? "N/A" : selectedDepartment.avgDailySteps.toLocaleString()}</h3>
                     <p className="text-xs text-grey-3">Avg Daily Steps</p>
                   </div>
                   <div className="p-4 rounded-[12px] border border-[#E6E6E6] bg-white">
@@ -593,15 +591,15 @@ export default function DepartmentsPage() {
       />
 
       {/* Create Department Modal */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="h-[75dvh] w-full max-w-[840px] rounded-[12px] bg-white flex flex-col overflow-hidden shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)]">
+      <AnimatePresence>{isCreateModalOpen && (
+        <DrawerLayer onClose={() => setIsCreateModalOpen(false)} label="Create New Department" >
+          <div className="flex h-full w-full flex-col overflow-hidden bg-white">
             <div className="h-[75px] shrink-0 px-6 border-b border-grey-4 flex justify-between items-center">
               <div>
                 <h2 className="text-base font-bold text-grey-1">Create New Department</h2>
                 <p className="text-xs text-grey-2">Fill in the details to start a new department</p>
               </div>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-grey-3 hover:text-grey-1">
+              <button type="button" aria-label="Close drawer" onClick={() => setIsCreateModalOpen(false)} className="text-grey-3 hover:text-grey-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -687,19 +685,19 @@ export default function DepartmentsPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </DrawerLayer>
+      )}</AnimatePresence>
 
       {/* Add Member Modal */}
-      {isAddMemberModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="h-[75dvh] w-full max-w-[840px] rounded-[12px] bg-white flex flex-col overflow-hidden shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)]">
+      <AnimatePresence>{isAddMemberModalOpen && (
+        <DrawerLayer onClose={() => setIsAddMemberModalOpen(false)} label="Add a team member" >
+          <div className="flex h-full w-full flex-col overflow-hidden bg-white">
             <div className="h-[75px] shrink-0 px-6 border-b border-grey-4 flex justify-between items-center">
               <div>
                 <h2 className="text-base font-bold text-grey-1">Add a team member</h2>
                 <p className="text-sm text-grey-2">Adding to {selectedDepartment?.name} Â· {selectedDepartment?.members} current members</p>
               </div>
-              <button onClick={() => setIsAddMemberModalOpen(false)} className="text-grey-3 hover:text-grey-1">
+              <button type="button" aria-label="Close drawer" onClick={() => setIsAddMemberModalOpen(false)} className="text-grey-3 hover:text-grey-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -777,19 +775,19 @@ export default function DepartmentsPage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </DrawerLayer>
+      )}</AnimatePresence>
 
       {/* Edit Department Modal */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="h-[75dvh] w-full max-w-[840px] rounded-[12px] bg-white flex flex-col overflow-hidden shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)]">
+      <AnimatePresence>{isEditModalOpen && (
+        <DrawerLayer onClose={() => setIsEditModalOpen(false)} label="Edit Department" >
+          <div className="flex h-full w-full flex-col overflow-hidden bg-white">
             <div className="h-[75px] shrink-0 px-6 border-b border-grey-4 flex justify-between items-center">
               <div>
                 <h2 className="text-base font-bold text-grey-1">Edit Department</h2>
                 <p className="text-xs text-grey-2">Update the department details</p>
               </div>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-grey-3 hover:text-grey-1">
+              <button type="button" aria-label="Close drawer" onClick={() => setIsEditModalOpen(false)} className="text-grey-3 hover:text-grey-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -822,8 +820,8 @@ export default function DepartmentsPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </DrawerLayer>
+      )}</AnimatePresence>
 
     </div>
   );

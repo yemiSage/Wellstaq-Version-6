@@ -205,7 +205,11 @@
   }
 
   .page-title {
-    @apply text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px];
+    @apply m-0 text-xl font-bold leading-7 text-grey-1;
+  }
+
+  .page-description {
+    @apply m-0 text-sm leading-5 text-grey-2;
   }
 
   .dashboard-card {

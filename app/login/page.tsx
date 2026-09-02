@@ -13,7 +13,7 @@ import { FieldError } from "@/components/onboarding/field-error";
 import { Eye, EyeOff, Mail } from "lucide-react";
 import { api } from "@/services/api";
 import { ApiError } from "@/services/http";
-import { clearAuthTokens, getAuthTokens, setAuthTokens, type AuthTokens } from "@/services/auth-token";
+import { cacheCurrentUser, clearAuthTokens, getAuthTokens, setAuthTokens, type AuthTokens } from "@/services/auth-token";
 import { getSwitchableScopes } from "@/lib/permissions";
 import { getUserErrorMessage } from "@/lib/errors";
 import type { TwoFaChallengeResponse } from "@/types/api";
@@ -51,6 +51,7 @@ function LoginPageContent() {
   }, [emailParam]);
 
   useEffect(() => {
+    router.prefetch("/dashboard");
     if (errorParam === "insufficient_permission") {
       clearAuthTokens();
       return;
@@ -69,8 +70,10 @@ function LoginPageContent() {
         setCredentialsError("You don't have permission to view this resource.");
         return;
       }
+      cacheCurrentUser(me);
       const returnTo = searchParams.get("returnTo");
       router.replace(returnTo && returnTo.startsWith("/") ? returnTo : "/dashboard");
+      router.refresh();
     } catch (error) {
       clearAuthTokens();
       throw error;

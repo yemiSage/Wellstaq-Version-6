@@ -200,6 +200,7 @@ export function CreateChallengeModal({
 
   return (
     <Modal
+      presentation="drawer"
       isOpen={isOpen}
       onClose={onClose}
       title="Create New Challenge"

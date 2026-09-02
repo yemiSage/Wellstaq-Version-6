@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
+import { loadFeedThroughPost } from "@/lib/post-sharing";
 import { PanelLeftOpen, X, Loader2, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { SelectablePill } from "@/components/ui/selectable-pill";
+import { ModalLayer } from "@/components/ui/modal-layer";
 import { api } from "@/services/api";
 import { ApiError } from "@/services/http";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
@@ -342,6 +346,7 @@ export default function SpacePage() {
   };
 
   // ── Posts ──────────────────────────────────────────────────────────────
+  const sharedPostId = useSearchParams().get("postId");
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [postContent, setPostContent] = useState("");
@@ -357,11 +362,15 @@ export default function SpacePage() {
     async function loadPosts(orgId: string) {
       setPostsLoading(true);
       try {
-        const response = effectiveFeedScope === "org_only"
-          ? await api.post.getPosts(orgId, { scope: "org_only" })
-          : await api.post.getPosts(orgId, { branchId: scope.type === "branch" ? scope.branchId : undefined, scope: "branch_and_org" });
+        const items = await loadFeedThroughPost(
+          (offset) => effectiveFeedScope === "org_only"
+            ? api.post.getPosts(orgId, { scope: "org_only", offset })
+            : api.post.getPosts(orgId, { branchId: scope.type === "branch" ? scope.branchId : undefined, scope: "branch_and_org", offset }),
+          sharedPostId,
+          () => cancelled,
+        );
         if (!cancelled) {
-          setPosts(response.items);
+          setPosts(items);
           setResourceForbidden("posts");
         }
       } catch (error) {
@@ -375,7 +384,7 @@ export default function SpacePage() {
     }
     void loadPosts(organizationId);
     return () => { cancelled = true; };
-  }, [organizationId, scope, effectiveFeedScope, setResourceForbidden]);
+  }, [organizationId, scope, effectiveFeedScope, setResourceForbidden, sharedPostId]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -694,14 +703,14 @@ export default function SpacePage() {
 
   return (
     <>
-      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white md:flex-row">
-        <div className="md:hidden flex border-b border-grey-4 bg-white sticky top-0 z-10 shrink-0">
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-white xl:flex-row">
+        <div className="flex shrink-0 border-b border-grey-4 bg-white xl:hidden">
           <button onClick={() => setActiveMobileTab("explore")} className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeMobileTab === "explore" ? "border-primary-1 text-primary-1" : "border-transparent text-grey-2"}`}>Explore</button>
           <button onClick={() => setActiveMobileTab("feed")} className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeMobileTab === "feed" ? "border-primary-1 text-primary-1" : "border-transparent text-grey-2"}`}>Feed</button>
           <button onClick={() => setActiveMobileTab("clubs")} className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeMobileTab === "clubs" ? "border-primary-1 text-primary-1" : "border-transparent text-grey-2"}`}>Clubs</button>
         </div>
 
-        <div className={`min-h-0 flex-1 w-full md:w-[320px] md:flex-none shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${!isLeftColumnOpen ? "hidden" : activeMobileTab === "clubs" ? "block" : "hidden md:block"}`}>
+        <div className={`min-h-0 flex-1 w-full xl:w-[320px] xl:flex-none shrink-0 border-r border-grey-4 bg-white overflow-y-auto ${!isLeftColumnOpen ? "hidden" : activeMobileTab === "clubs" ? "block" : "hidden xl:block"}`}>
           {restrictedResources.has("clubs") ? <RestrictedResource label="clubs" /> : <ClubSidebar
             isOpen={isLeftColumnOpen}
             onClose={() => setIsLeftColumnOpen(false)}
@@ -718,7 +727,7 @@ export default function SpacePage() {
           />}
         </div>
 
-        <div className={`flex-1 min-w-0 bg-[#FAFAFA] overflow-y-auto ${activeMobileTab === "feed" ? "block" : "hidden md:block"}`}>
+        <div className={`flex-1 min-w-0 bg-[#FAFAFA] overflow-y-auto ${activeMobileTab === "feed" ? "block" : "hidden xl:block"}`}>
           {selectedClub ? (
             <ClubChatView
               club={activeClubData}
@@ -744,11 +753,11 @@ export default function SpacePage() {
                     <PanelLeftOpen size={14} strokeWidth={1.5} />
                   </button>
                 )}
-                <h2 className="text-[16px] font-bold text-grey-1">Feed</h2>
+                <h2 className="page-title">Feed</h2>
                 {scope.type === "branch" && (
                   <div className="ml-auto flex bg-grey-5 rounded-lg p-0.5">
-                    <button onClick={() => setFeedView("branch")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${feedView === "branch" ? "bg-white text-primary-1 shadow-sm" : "text-grey-2"}`}>My Branch</button>
-                    <button onClick={() => setFeedView("org")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${feedView === "org" ? "bg-white text-primary-1 shadow-sm" : "text-grey-2"}`}>General</button>
+                    <SelectablePill onClick={() => setFeedView("branch")} selected={feedView === "branch"} appearance="plain" className="px-3">My Branch</SelectablePill>
+                    <SelectablePill onClick={() => setFeedView("org")} selected={feedView === "org"} appearance="plain" className="px-3">General</SelectablePill>
                   </div>
                 )}
               </div>
@@ -767,6 +776,7 @@ export default function SpacePage() {
                   user={spaceUser}
                   posts={posts}
                   postsLoading={postsLoading}
+                  sharedPostId={sharedPostId}
                   getMember={getMember}
                   badgeMap={badgeMap}
                   likedPostIds={likedPostIds}
@@ -795,7 +805,7 @@ export default function SpacePage() {
           )}
         </div>
 
-       <div className={`min-h-0 flex-1 w-full md:w-[320px] md:flex-none shrink-0 border-l border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "explore" ? "block" : "hidden md:block"}`}>
+       <div className={`min-h-0 flex-1 w-full xl:w-[320px] xl:flex-none shrink-0 border-l border-grey-4 bg-white overflow-y-auto ${activeMobileTab === "explore" ? "block" : "hidden xl:block"}`}>
   <div className="w-full border-l border-grey-4 bg-[#ffffff] p-6 overflow-y-auto no-scrollbar h-full">
     <ActivitySection
       organizationId={organizationId ?? undefined}
@@ -831,7 +841,7 @@ export default function SpacePage() {
 
       <AnimatePresence>
         {hashtagModalTag && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <ModalLayer className="flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setHashtagModalTag(null)}
@@ -875,7 +885,7 @@ export default function SpacePage() {
                 )}
               </div>
             </motion.div>
-          </div>
+          </ModalLayer>
         )}
       </AnimatePresence>
     </>

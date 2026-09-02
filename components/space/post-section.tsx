@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
-  ImageIcon, Video, MapPin, Send, Heart, MessageCircle, Share2, Bookmark, Trash2, X, Loader2,
+  ImageIcon, Video, MapPin, Send, Heart, MessageCircle, Share2, Trash2, X, Loader2,
 } from "lucide-react";
 import type { Post, Comment, OrganizationMemberInfo } from "@/types/api";
 import { Avatar } from "@/components/space/story-section";
 import { formatRelativeTime } from "@/lib/time";
+import { buildPostLink } from "@/lib/post-sharing";
+import { PostShareModal } from "@/components/space/post-share-modal";
 
 interface Badge { emoji: string; label: string; rank: number; }
 
@@ -73,7 +75,7 @@ function CreatePostBox({
   canSubmit: boolean;
 }) {
   return (
-    <div className="bg-white p-4 rounded-[12px] border border-grey-4">
+    <div className="bg-white p-4 rounded-[8px] border border-grey-4">
       <div className="flex gap-3 mb-4">
         <Avatar url={user.avatarUrl} seed={user.id} firstName={user.firstName} lastName={user.lastName} size={40} showPlaceholderBadge />
         <div className="flex-1">
@@ -140,6 +142,7 @@ function PostCard({
   onDeletePost,
   onDeleteComment,
   onHashtagClick,
+  onShare,
 }: {
   post: Post;
   user: { id: string; avatarUrl?: string; firstName?: string; lastName?: string };
@@ -155,10 +158,11 @@ function PostCard({
   onDeletePost: () => void;
   onDeleteComment: (commentId: string) => void;
   onHashtagClick: (tag: string) => void;
+  onShare: () => void;
 }) {
   const isMine = post.userId === user.id;
   return (
-    <div className="bg-white rounded-[12px] border border-grey-4 overflow-hidden">
+    <div id={`post-${post.id}`} className="scroll-mt-4 bg-white rounded-[12px] border border-grey-4 overflow-hidden target:ring-2 target:ring-grey-3">
       <div className="p-4">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -218,11 +222,8 @@ function PostCard({
           <button onClick={onToggleComments} className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors">
             <MessageCircle className="w-5 h-5" /> Comment
           </button>
-          <button className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors">
+          <button type="button" onClick={onShare} aria-haspopup="dialog" className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1">
             <Share2 className="w-5 h-5" /> Share
-          </button>
-          <button className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium text-grey-2 hover:bg-grey-5 rounded-lg transition-colors">
-            <Bookmark className="w-5 h-5" /> Save
           </button>
         </div>
 
@@ -289,6 +290,7 @@ export function PostsSection({
   user,
   posts,
   postsLoading,
+  sharedPostId = null,
   getMember,
   badgeMap,
   likedPostIds,
@@ -315,6 +317,7 @@ export function PostsSection({
   user: { id: string; avatarUrl?: string; firstName?: string; lastName?: string };
   posts: Post[];
   postsLoading: boolean;
+  sharedPostId?: string | null;
   getMember: (userId: string) => OrganizationMemberInfo | undefined;
   badgeMap: Map<string, Badge>;
   likedPostIds: Set<string>;
@@ -338,8 +341,23 @@ export function PostsSection({
   onRequestDeleteComment: (postId: string, commentId: string) => void;
   onHashtagClick: (tag: string) => void;
 }) {
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const scrolledPost = useRef<string | null>(null);
+  useEffect(() => {
+    if (postsLoading) { scrolledPost.current = null; return; }
+    if (!sharedPostId || scrolledPost.current === sharedPostId) return;
+    const card = document.getElementById(`post-${sharedPostId}`);
+    if (card) {
+      card.scrollIntoView({ block: "start", behavior: "instant" });
+      scrolledPost.current = sharedPostId;
+    }
+  }, [posts, postsLoading, sharedPostId]);
   return (
+    <>
     <div className="max-w-[600px] mx-auto space-y-6">
+      {!postsLoading && sharedPostId && !posts.some((post) => post.id === sharedPostId) && (
+        <p role="status" className="rounded-lg border border-grey-4 bg-white p-4 text-sm text-grey-2">This shared post isn’t available in this feed. It may have been removed, or you may need access to its organization or branch.</p>
+      )}
       <CreatePostBox
         user={user}
         placeholder={placeholder}
@@ -379,8 +397,11 @@ export function PostsSection({
           onDeletePost={() => onRequestDeletePost(post.id)}
           onDeleteComment={(commentId) => onRequestDeleteComment(post.id, commentId)}
           onHashtagClick={onHashtagClick}
+          onShare={() => setShareLink(buildPostLink(window.location.origin, post))}
         />
       ))}
     </div>
+    {shareLink && <PostShareModal link={shareLink} onClose={() => setShareLink(null)} />}
+    </>
   );
 }

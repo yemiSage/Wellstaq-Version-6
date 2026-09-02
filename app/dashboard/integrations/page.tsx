@@ -144,8 +144,8 @@ export default function IntegrationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-0">
         <div>
-          <h1 className="text-[20px] font-bold text-grey-1 pb-[6px] leading-[30px]">Integrations</h1>
-          <p className="text-sm text-grey-2">Connect your favorite tools to streamline your wellness journey.</p>
+          <h1 className="page-title">Integrations</h1>
+          <p className="page-description">Connect your favorite tools to streamline your wellness journey.</p>
         </div>
         <button className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg hover:bg-[#C45700]/90 transition-colors flex items-center gap-2">
           <Plus className="w-4 h-4" />

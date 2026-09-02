@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -8,6 +8,9 @@ import {
   PanelLeftClose, Sticker, Paperclip, Trash2, X, Loader2, Pin, PinOff,
 } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
+import { Modal } from "@/components/ui/modal";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { ModalLayer } from "@/components/ui/modal-layer";
 import type {
   Club, ClubCategory, ClubMemberInfo, MessageResponse, OrganizationMemberInfo,
 } from "@/types/api";
@@ -52,11 +55,11 @@ function ClubSidebar({
   return (
     <div className="w-full border-r border-grey-4 bg-white flex flex-col h-full shrink-0">
       <div className="pt-4 px-4 pb-0 border-b border-grey-4">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-row-reverse items-center gap-2 mb-2">
           <button onClick={onClose} className="text-grey-2 hover:text-grey-1 p-1 border border-grey-4 rounded-md bg-white flex-shrink-0">
             <PanelLeftClose size={14} strokeWidth={1.5} />
           </button>
-          <div className="relative flex-1">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
             <input type="text" placeholder="Search clubs" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="w-full pl-9 pr-12 py-2 bg-white border border-grey-4 rounded-lg text-sm focus:outline-none focus:border-primary-1 focus:ring-1 focus:ring-primary-1" />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -67,8 +70,8 @@ function ClubSidebar({
         </div>
 
         <div className="space-y-0">
-          <h2 className="text-[16px] font-bold leading-6 text-grey-1">Clubs</h2>
-          <p className="text-[12px] text-grey-3">Join communities that match your goals</p>
+          <h2 className="page-title">Clubs</h2>
+          <p className="page-description">Join communities that match your goals</p>
         </div>
 
         <div className="mt-3 flex border-b border-grey-4">
@@ -81,20 +84,7 @@ function ClubSidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
-        {activeTab === "My Clubs" && (
-          <div className="mb-4 space-y-2">
-            <button
-              type="button"
-              disabled={!canCreate}
-              onClick={() => { setSearchQuery(""); onOpenCreate(); }}
-              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-primary-1 px-3 py-2 text-sm font-medium text-primary-1 hover:bg-primary-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1 disabled:cursor-not-allowed disabled:border-grey-4 disabled:text-grey-3"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" /> Create club
-            </button>
-            {!canCreate && <p className="text-xs text-grey-2">{createUnavailableReason ?? "Switch to a branch to create a club."}</p>}
-          </div>
-        )}
+      <div className="flex-1 overflow-y-auto px-4 pb-4 pt-8 no-scrollbar">
         {clubsLoading ? (
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-24 bg-grey-5 rounded-xl animate-pulse" />)}
@@ -155,11 +145,24 @@ function ClubSidebar({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-center px-4 py-10">
+          <div className="flex flex-col items-center justify-center text-center px-4 pt-10 pb-0">
             <div className="w-20 h-20 bg-grey-5 rounded-full flex items-center justify-center mb-4">
               <Users className="empty-state-icon w-8 h-8" aria-hidden="true" />
             </div>
-            <p className="text-sm text-grey-2">{normalizedSearch ? "No clubs match your search." : "Join or create a club to see it here."}</p>
+            <p className="text-sm text-grey-2">{normalizedSearch ? "No clubs match your search." : "Create or Join a club to see it here."}</p>
+          </div>
+        )}
+        {activeTab === "My Clubs" && (
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              disabled={!canCreate}
+              onClick={() => { setSearchQuery(""); onOpenCreate(); }}
+              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-primary-1 px-3 py-2 text-sm font-medium text-primary-1 hover:bg-primary-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1 disabled:cursor-not-allowed disabled:border-grey-4 disabled:text-grey-3"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" /> Create club
+            </button>
+            {!canCreate && <p className="text-xs text-grey-2">{createUnavailableReason ?? "Switch to a branch to create a club."}</p>}
           </div>
         )}
       </div>
@@ -222,12 +225,12 @@ function ClubChatView({
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative">
         <div className="sticky top-0 z-10 w-full self-start bg-white border-b border-grey-4 pb-[12px] pt-[20px] px-[20px]">
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-[20px] font-bold text-grey-1 leading-[30px]">{club?.name}</h1>
+            <h1 className="page-title">{club?.name}</h1>
             <div className="flex items-center gap-1 text-xs text-grey-3">
               <Users className="w-3 h-3" /> {club?.memberCount ?? 0} members
             </div>
           </div>
-          <p className="text-sm text-grey-2 leading-relaxed">{club?.description}</p>
+          <p className="page-description">{club?.description}</p>
         </div>
 
         {club?.isMember ? (
@@ -385,44 +388,21 @@ function CreateClubModal({
   onRemoveImage: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
   const isBusy = isCreating || isUploadingImage;
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (isOpen && !dialog.open) {
-      dialog.showModal();
-      nameInputRef.current?.focus();
-    }
-    if (!isOpen && dialog.open) dialog.close();
-  }, [isOpen]);
-
   return (
-    <dialog
-      ref={dialogRef}
-      aria-labelledby="create-club-title"
-      aria-busy={isBusy}
-      onCancel={(event) => { event.preventDefault(); if (!isBusy) onClose(); }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          event.stopPropagation();
-          if (!isBusy) onClose();
-        }
-      }}
-      className="thin-scrollbar m-auto max-h-[calc(100dvh-32px)] w-[calc(100%-32px)] max-w-md overflow-y-auto rounded-xl border border-grey-4 bg-white p-0 text-grey-1 shadow-xl backdrop:bg-black/40"
+    <Modal presentation="drawer" isOpen={isOpen} onClose={() => { if (!isBusy) onClose(); }} title="Create club"
+      footer={<>
+        <button type="button" onClick={onClose} disabled={isBusy} className="h-12 rounded-lg px-4 text-sm font-medium text-grey-2 hover:bg-grey-5 disabled:opacity-50">Cancel</button>
+        <button type="submit" form="create-club-form" disabled={isBusy || !formData.name.trim() || !formData.description.trim()} className="h-12 rounded-lg bg-primary-1 px-4 text-sm font-medium text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">
+          {isCreating ? "Creating..." : isUploadingImage ? "Uploading image..." : "Create club"}
+        </button>
+      </>}
     >
-            <div className="p-6 border-b border-grey-4 flex items-center justify-between bg-grey-5/30">
-              <h3 id="create-club-title" className="text-lg font-bold text-grey-1">Create club</h3>
-              <button type="button" onClick={onClose} disabled={isBusy} aria-label="Close create club" className="p-2 hover:bg-grey-4 rounded-xl disabled:opacity-50"><X className="w-5 h-5 text-grey-2" /></button>
-            </div>
-            <form onSubmit={onSubmit} className="p-6">
+            <form id="create-club-form" onSubmit={onSubmit} aria-busy={isBusy}>
               <fieldset disabled={isBusy} className="space-y-5">
               <div className="space-y-2">
                 <label htmlFor="club-name" className="text-sm font-bold text-grey-1">Club name</label>
-                <input ref={nameInputRef} id="club-name" type="text" required value={formData.name} onChange={(e) => onFormChange({ name: e.target.value })} placeholder="e.g. Morning Runners" className="w-full h-12 px-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1" />
+                <input id="club-name" type="text" required value={formData.name} onChange={(e) => onFormChange({ name: e.target.value })} placeholder="e.g. Morning Runners" className="w-full h-12 px-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-grey-1">Club Image (optional)</label>
@@ -444,9 +424,7 @@ function CreateClubModal({
               </div>
               <div className="space-y-2">
                 <label htmlFor="club-category" className="text-sm font-bold text-grey-1">Category</label>
-                <select id="club-category" required value={formData.category} onChange={(e) => onFormChange({ category: e.target.value as ClubCategory })} className="w-full h-12 px-4 rounded-[8px] border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1 bg-white">
-                  {CLUB_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
+                <FilterDropdown id="club-category" ariaLabel="Category" value={formData.category} options={CLUB_CATEGORIES} onValueChange={(category) => onFormChange({ category })} disabled={isBusy} buttonClassName="h-12 w-full font-normal" menuClassName="w-full" />
               </div>
               <div className="space-y-2">
                 <label htmlFor="club-description" className="text-sm font-bold text-grey-1">Description</label>
@@ -454,14 +432,8 @@ function CreateClubModal({
               </div>
               </fieldset>
               {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
-              <div className="pt-4 flex gap-3">
-                <button type="button" onClick={onClose} disabled={isBusy} className="flex-1 h-12 rounded-xl text-sm font-bold text-grey-2 hover:bg-grey-5 disabled:opacity-50">Cancel</button>
-                <button type="submit" disabled={isBusy || !formData.name.trim() || !formData.description.trim()} className="flex-1 h-12 bg-primary-1 text-white rounded-xl text-sm font-bold hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">
-                  {isCreating ? "Creating..." : isUploadingImage ? "Uploading image..." : "Create club"}
-                </button>
-              </div>
             </form>
-    </dialog>
+    </Modal>
   );
 }
 
@@ -469,7 +441,7 @@ function CreateClubModal({
 function JoinClubModal({ clubId, onCancel, onConfirm }: { clubId: string | null; onCancel: () => void; onConfirm: (id: string) => void }) {
   if (!clubId) return null;
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+    <ModalLayer className="bg-black/50 flex items-center justify-center">
       <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4">
         <h3 className="text-lg font-bold text-grey-1 mb-2">Join Club</h3>
         <p className="text-sm text-grey-2 mb-6">Are you sure you want to join this club?</p>
@@ -478,7 +450,7 @@ function JoinClubModal({ clubId, onCancel, onConfirm }: { clubId: string | null;
           <button onClick={() => onConfirm(clubId)} className="px-4 py-2 text-sm font-medium bg-primary-1 text-white hover:bg-primary-1/90 rounded-lg">Join</button>
         </div>
       </div>
-    </div>
+    </ModalLayer>
   );
 }
 

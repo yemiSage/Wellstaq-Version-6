@@ -147,8 +147,8 @@ export default function ChallengeDetailPage({ params }: { params: Promise<{ id: 
             <div className="p-3 space-y-6">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h1 className="text-[20px] font-semibold text-grey-1 break-words">{challenge.name}</h1>
-                  <p className="text-sm text-grey-2 mt-2 leading-relaxed">{challenge.description}</p>
+                  <h1 className="page-title">{challenge.name}</h1>
+                  <p className="page-description">{challenge.description}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {canUpdate && !isCompleted && !isCancelled && (

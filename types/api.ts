@@ -103,6 +103,7 @@ export interface WellnessEvent {
 
 export interface Challenge {
   id: string | number;
+  branchId?: string | null;
   title: string;
   category: string;
   status: string;

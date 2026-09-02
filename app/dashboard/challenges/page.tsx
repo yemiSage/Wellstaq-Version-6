@@ -207,8 +207,8 @@ export default function ChallengesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-0 flex-wrap gap-3">
         <div>
-          <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Wellness Challenges</h1>
-          <p className="text-sm text-grey-2">Join community challenges, track your progress, and earn rewards.</p>
+          <h1 className="page-title">Wellness Challenges</h1>
+          <p className="page-description">Join community challenges, track your progress, and earn rewards.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <FilterDropdown

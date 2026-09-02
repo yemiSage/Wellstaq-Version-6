@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export function OnboardingPane({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex-1 flex flex-col relative overflow-x-hidden">
+    <div className="relative flex min-h-full flex-col overflow-x-hidden">
       {/* Subtle Background Shape */}
       <svg 
         className="absolute top-1/3 -right-32 w-[800px] h-[800px] text-grey-4/5 -z-10 pointer-events-none" 

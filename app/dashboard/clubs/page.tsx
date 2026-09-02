@@ -1,5 +1,10 @@
 "use client";
 
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
+import { ModalLayer } from "@/components/ui/modal-layer";
+import { AnimatePresence } from "motion/react";
+import { DrawerLayer } from "@/components/ui/drawer";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { Globe2, Lock, Plus, Search, Users, X } from "lucide-react";
@@ -111,7 +116,7 @@ export default function ClubsPage() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="page-title">Clubs</h1>
-          <p className="text-sm text-grey-2">Join communities that match your goals.</p>
+          <p className="page-description">Join communities that match your goals.</p>
         </div>
         {canCreateClub && (
           <button
@@ -203,7 +208,7 @@ export default function ClubsPage() {
       )}
 
       {selectedClub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={`${selectedClub.name} details`}>
+        <ModalLayer className="flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={`${selectedClub.name} details`}>
           <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -231,17 +236,17 @@ export default function ClubsPage() {
               ))}
             </div>
           </div>
-        </div>
+        </ModalLayer>
       )}
 
-      {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Create club">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between">
+      <AnimatePresence>{isCreateOpen && (
+        <DrawerLayer onClose={() => { if (!isCreating) setIsCreateOpen(false); }} label="Create Club" >
+          <div className="flex h-full w-full flex-col overflow-hidden bg-white">
+            <div className="shrink-0 border-b border-grey-4 p-6 flex items-center justify-between">
               <h2 className="text-xl font-bold text-grey-1">Create Club</h2>
               <button onClick={() => setIsCreateOpen(false)} className="rounded-lg p-2 text-grey-3 hover:bg-grey-5" aria-label="Close create club form"><X className="h-5 w-5" /></button>
             </div>
-            <div className="mt-5 space-y-4">
+            <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
               <label className="block text-sm font-medium text-grey-1">Club name
                 <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="mt-2 h-11 w-full rounded-lg border border-grey-4 px-3 font-normal focus:outline-none focus:ring-2 focus:ring-primary-1" />
               </label>
@@ -249,26 +254,23 @@ export default function ClubsPage() {
                 <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={4} className="mt-2 w-full rounded-lg border border-grey-4 px-3 py-2 font-normal focus:outline-none focus:ring-2 focus:ring-primary-1" />
               </label>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="block text-sm font-medium text-grey-1">Category
-                  <select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value as ClubCategory }))} className="mt-2 h-11 w-full rounded-[8px] border border-grey-4 px-3 font-normal">
-                    {CLUB_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
-                  </select>
-                </label>
-                <label className="block text-sm font-medium text-grey-1">Privacy
-                  <select value={form.privacy} onChange={(event) => setForm((current) => ({ ...current, privacy: event.target.value as "public" | "private" }))} className="mt-2 h-11 w-full rounded-[8px] border border-grey-4 px-3 font-normal">
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
-                  </select>
-                </label>
+                <div className="text-sm font-medium text-grey-1">
+                  <label htmlFor="directory-club-category">Category</label>
+                  <FilterDropdown id="directory-club-category" ariaLabel="Category" value={form.category} options={CLUB_CATEGORIES} onValueChange={(category) => setForm((current) => ({ ...current, category }))} buttonClassName="mt-2 h-11 w-full font-normal" menuClassName="w-full" />
+                </div>
+                <div className="text-sm font-medium text-grey-1">
+                  <label htmlFor="directory-club-privacy">Privacy</label>
+                  <FilterDropdown id="directory-club-privacy" ariaLabel="Privacy" value={form.privacy} options={[{ value: "public", label: "Public" }, { value: "private", label: "Private" }]} onValueChange={(privacy) => setForm((current) => ({ ...current, privacy }))} buttonClassName="mt-2 h-11 w-full font-normal" menuClassName="w-full" />
+                </div>
               </div>
             </div>
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="shrink-0 border-t border-grey-4 p-6 flex justify-end gap-3">
               <button onClick={() => setIsCreateOpen(false)} className="rounded-lg border border-grey-4 px-4 py-2 text-sm font-medium text-grey-2">Cancel</button>
               <button onClick={() => void createClub()} disabled={!form.name.trim() || isCreating || !branchId} className="rounded-lg bg-primary-1 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{isCreating ? "Creating..." : "Create Club"}</button>
             </div>
           </div>
-        </div>
-      )}
+        </DrawerLayer>
+      )}</AnimatePresence>
     </div>
   );
 }

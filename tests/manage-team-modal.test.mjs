@@ -70,6 +70,9 @@ async function setup(permissions = null) {
     "@/lib/format": { humanizeIdentifier: (value) => value ?? "" },
     "@/components/dashboard/stat-card": { StatCard: "StatCard" },
     "@/components/ui/confirm-modal": { ConfirmModal: "ConfirmModal" },
+    "@/components/ui/modal-layer": { ModalLayer: "ModalLayer" },
+    "@/components/ui/drawer": { DrawerLayer: "DrawerLayer" },
+    "motion/react": { AnimatePresence: "AnimatePresence" },
     "@/components/ui/button": { Button: "Button" },
     "@/components/ui/filter-dropdown": { FilterDropdown: "FilterDropdown" },
     "@/components/ui/input": { Input: "Input" },
@@ -114,9 +117,10 @@ async function setup(permissions = null) {
 test("each tab renders only its fields and one dedicated bottom action", async () => {
   const ui = await setup();
   assert.equal(ui.tabs().length, 3);
-  const dialog = ui.find((node) => node.props.role === "dialog")[0];
-  assert.match(dialog.props.className, /max-h-\[calc\(100dvh-32px\)\]/);
-  assert.doesNotMatch(dialog.props.className, /(?:^|\s)h-/);
+  const drawer = ui.find((node) => node.type === "DrawerLayer")[0];
+  assert.equal(drawer.props.label, "Manage team");
+  assert.match(drawer.props.children.props.className, /h-full/);
+  assert.match(ui.panel().props.className, /overflow-y-auto/);
   for (const [tab, label, fields] of [["role", "Change role", 1], ["department", "Move department", 1], ["branch", "Move branch", 2]]) {
     ui.select(tab);
     assert.equal(ui.tabs().filter((item) => item.props["aria-selected"]).length, 1);

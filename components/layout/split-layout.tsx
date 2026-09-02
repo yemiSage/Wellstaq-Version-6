@@ -28,7 +28,7 @@ export function SplitLayout({ children }: { children: React.ReactNode }) {
   }, [currentIndex]);
 
   return (
-    <div className="flex min-h-screen min-h-dvh w-full bg-white">
+    <div className="flex h-dvh w-full overflow-hidden bg-white">
       {/* Left Pane - Animated Carousel */}
       <div className="hidden xl:flex xl:w-[60%] relative overflow-hidden items-center justify-center" suppressHydrationWarning>
         <AnimatePresence initial={false}>
@@ -55,7 +55,7 @@ export function SplitLayout({ children }: { children: React.ReactNode }) {
         <div className="absolute inset-0 bg-black/30 z-10" suppressHydrationWarning />
       </div>
       {/* Right Pane - Content */}
-      <div className="w-full xl:w-[40%] relative flex flex-col z-20">
+      <div className="relative z-20 flex min-h-0 w-full flex-col overflow-y-auto overscroll-contain xl:w-[40%]">
         {children}
       </div>
     </div>

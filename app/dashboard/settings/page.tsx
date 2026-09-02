@@ -39,6 +39,9 @@ import { useDashboardScope } from "@/lib/scope";
 import { FilterDropdown, type FilterDropdownOption } from "@/components/ui/filter-dropdown";
 import { SelectablePill } from "@/components/ui/selectable-pill";
 
+import { ModalLayer } from "@/components/ui/modal-layer";
+import { DrawerLayer } from "@/components/ui/drawer";
+
 const TWO_FACTOR_METHOD_OPTIONS: FilterDropdownOption<"email" | "totp">[] = [
   { label: "Email code", value: "email" },
   { label: "Authenticator app", value: "totp" },
@@ -455,8 +458,8 @@ export default function SettingsPage() {
   return (
     <div className="max-w-7xl mx-auto pb-12">
       <div className="mb-[24px]">
-        <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Settings</h1>
-        <p className="text-sm text-grey-2">Manage your account and preferences.</p>
+        <h1 className="page-title">Settings</h1>
+        <p className="page-description">Manage your account and preferences.</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-[12px] p-5 bg-white rounded-[12px]">
@@ -808,14 +811,14 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {planPickerOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+      {planPickerOpen && <ModalLayer className="flex items-center justify-center bg-black/40 p-4">
         <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl">
           <div className="mb-5 flex items-start justify-between"><div><h2 className="text-xl font-bold text-grey-1">Choose a subscription plan</h2><p className="text-sm text-grey-2">Select a plan before continuing securely to Paystack.</p></div><button type="button" onClick={() => setPlanPickerOpen(false)}><X className="h-5 w-5" /></button></div>
           <div className="grid gap-4 md:grid-cols-2">{plans.filter((plan) => plan.amount > 0).map((plan) => <div key={plan.id} className="rounded-xl border border-grey-4 p-5"><div className="mb-3 flex items-start justify-between"><div><h3 className="font-bold text-grey-1">{plan.name}</h3><p className="text-xs capitalize text-grey-3">Billed {plan.billingInterval}</p></div><p className="text-lg font-bold text-grey-1">{formatMoney(plan.amount, plan.currency)}</p></div>{Object.entries(plan.features).slice(0, 5).map(([name, value]) => <p key={name} className="mb-1 text-xs text-grey-2">• {name.replaceAll("_", " ")}: {String(value)}</p>)}<Button disabled={checkoutPlanId !== null} onClick={() => void beginCheckout(plan.id)} className="mt-4 w-full bg-[#EA6A05] hover:bg-[#EA6A05]/90">{checkoutPlanId === plan.id ? "Redirecting..." : "Choose plan"}</Button></div>)}</div>
           {plans.filter((plan) => plan.amount > 0).length === 0 && <p className="py-10 text-center text-sm text-grey-3">No paid subscription plans are currently available.</p>}
           <p className="mt-5 text-xs text-grey-3">Card details are entered only on Paystack. Wellstaq does not collect card numbers or CVVs.</p>
         </div>
-      </div>}
+      </ModalLayer>}
 
       <ConfirmModal
         isOpen={isLogoutModalOpen}
@@ -830,26 +833,15 @@ export default function SettingsPage() {
       {/* Edit Permissions Modal */}
       <AnimatePresence>
         {isEditPermissionsModalOpen && selectedRoleForEdit && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsEditPermissionsModalOpen(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
-            >
+          <DrawerLayer onClose={() => setIsEditPermissionsModalOpen(false)} label="Manage permissions">
+            <div className="flex h-full w-full flex-col overflow-hidden bg-white">
               <div className="flex shrink-0 items-center justify-between border-b border-grey-4 p-6">
                 <div>
                   <h3 className="text-lg font-bold text-grey-1">Manage Permissions: {humanizeIdentifier(selectedRoleForEdit.name)}</h3>
                   <p className="text-xs text-grey-2">{selectedRoleForEdit.branchId ? "Only permissions for this branch are shown and changes apply only to this branch." : "General permissions are shown and changes apply across the organization."}</p>
                 </div>
                 <button
+                  aria-label="Close drawer"
                   onClick={() => setIsEditPermissionsModalOpen(false)}
                   className="p-2 hover:bg-grey-5 rounded-lg transition-colors"
                 >
@@ -870,31 +862,20 @@ export default function SettingsPage() {
                 <Button variant="outline" onClick={() => setIsEditPermissionsModalOpen(false)}>Cancel</Button>
                 {!selectedRoleForEdit.isSystem && <Button onClick={() => void saveRolePermissions()}>Update Permissions</Button>}
               </div>
-            </motion.div>
-          </div>
+            </div>
+          </DrawerLayer>
         )}
       </AnimatePresence>
 
       {/* Add Role Modal */}
       <AnimatePresence>
         {isAddRoleModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAddRoleModalOpen(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden"
-            >
-              <div className="p-6 border-b border-grey-4 flex items-center justify-between">
+          <DrawerLayer onClose={() => setIsAddRoleModalOpen(false)} label="Add New Role">
+            <div className="flex h-full w-full flex-col overflow-hidden bg-white">
+              <div className="shrink-0 p-6 border-b border-grey-4 flex items-center justify-between">
                 <h3 className="text-lg font-bold text-grey-1">Add New Role</h3>
                 <button
+                  aria-label="Close drawer"
                   onClick={() => setIsAddRoleModalOpen(false)}
                   className="p-2 hover:bg-grey-5 rounded-lg transition-colors"
                 >
@@ -902,7 +883,7 @@ export default function SettingsPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleAddRole} className="p-6 space-y-4">
+              <form onSubmit={handleAddRole} className="min-h-0 flex-1 overflow-y-auto p-6 space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-grey-1">Role Name</label>
                   <input
@@ -932,8 +913,8 @@ export default function SettingsPage() {
                   <Button className="flex-1" type="submit">Create Role</Button>
                 </div>
               </form>
-            </motion.div>
-          </div>
+            </div>
+          </DrawerLayer>
         )}
       </AnimatePresence>
     </div>

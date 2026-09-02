@@ -52,8 +52,8 @@ export default function ContactPage() {
     return (
       <div className="max-w-7xl mx-auto pb-12">
         <div className="mb-[24px]">
-          <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Contact Support</h1>
-          <p className="text-sm text-grey-2">Have questions about WellStaq? Our team is here to help you build a healthier workplace.</p>
+          <h1 className="page-title">Contact Support</h1>
+          <p className="page-description">Have questions about WellStaq? Our team is here to help you build a healthier workplace.</p>
         </div>
         <div className="bg-white p-12 rounded-[12px] shadow-sm border border-grey-4 text-center">
           <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -77,8 +77,8 @@ export default function ContactPage() {
   return (
     <div className="max-w-7xl mx-auto pb-12">
       <div className="mb-[24px]">
-        <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">Contact Support</h1>
-        <p className="text-sm text-grey-2">Have questions about WellStaq? Our team is here to help you build a healthier workplace.</p>
+        <h1 className="page-title">Contact Support</h1>
+        <p className="page-description">Have questions about WellStaq? Our team is here to help you build a healthier workplace.</p>
       </div>
 
       <div className="flex flex-col gap-[12px] p-5 bg-white rounded-[12px]">

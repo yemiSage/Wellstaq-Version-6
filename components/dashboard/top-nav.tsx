@@ -7,6 +7,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Modal } from "@/components/ui/modal";
+import { ModalLayer } from "@/components/ui/modal-layer";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -365,7 +366,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
       {/* AI Chatbot Drawer */}
       <AnimatePresence>
         {isChatOpen && (
-          <>
+          <ModalLayer>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -499,7 +500,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                 </div>
               </div>
             </motion.div>
-          </>
+          </ModalLayer>
         )}
       </AnimatePresence>
 
@@ -515,6 +516,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
       />
 
       <Modal
+      presentation="drawer"
         isOpen={isAddBranchModalOpen}
         onClose={closeBranchModal}
         title={createdBranch ? "Assign Branch Manager" : "Create New Branch"}

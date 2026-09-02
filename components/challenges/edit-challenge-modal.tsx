@@ -84,6 +84,7 @@ export function EditChallengeModal({
 
   return (
     <Modal
+      presentation="drawer"
       isOpen={isOpen}
       onClose={onClose}
       title="Edit Challenge"

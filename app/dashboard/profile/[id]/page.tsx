@@ -37,8 +37,8 @@ export default function UserProfilePage() {
           {profile.profileImage ? <Image src={profile.profileImage} alt={profile.name} fill className="object-cover" /> : initials}
         </div>
         <div className="text-center sm:text-left">
-          <h1 className="text-2xl font-semibold text-grey-1">{profile.name}</h1>
-          <p className="mt-1 capitalize text-grey-3">{profile.role?.replaceAll("_", " ") || "Member"}</p>
+          <h1 className="page-title">{profile.name}</h1>
+          <p className="page-description">{profile.role?.replaceAll("_", " ") || "Member"}</p>
           <span className="mt-3 inline-flex rounded-full bg-green-50 px-3 py-1 text-xs font-medium capitalize text-green-700">{profile.status || "active"}</span>
         </div>
       </div>

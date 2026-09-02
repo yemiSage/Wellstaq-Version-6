@@ -103,7 +103,7 @@ export default function MessagesPage() {
           <Lock className="h-5 w-5" />
         </div>
         <h1 className="page-title">Messaging</h1>
-        <p className="text-sm text-grey-2">Messaging is only available to admins.</p>
+        <p className="page-description">Messaging is only available to admins.</p>
       </div>
     );
   }
@@ -112,7 +112,7 @@ export default function MessagesPage() {
     <div className="mx-auto flex h-[calc(100vh-104px)] max-w-7xl flex-col gap-5">
       <div>
         <h1 className="page-title">Messaging</h1>
-        <p className="text-sm text-grey-2">Chat with team members and branch admins in one place.</p>
+        <p className="page-description">Chat with team members and branch admins in one place.</p>
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-xl border border-grey-4 bg-white lg:grid-cols-[320px_1fr]">

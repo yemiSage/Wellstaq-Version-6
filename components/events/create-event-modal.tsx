@@ -122,6 +122,7 @@ export function CreateEventModal({
 
   return (
     <Modal
+      presentation="drawer"
       isOpen={isOpen}
       onClose={onClose}
       title="Create New Event"

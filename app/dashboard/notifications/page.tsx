@@ -52,8 +52,8 @@ export default function NotificationsPage() {
     <div className="mx-auto flex max-w-7xl flex-col gap-5 pb-12">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="page-title !font-bold">Notifications</h1>
-          <p className="text-sm text-grey-2">Review invitations and updates from your organization.</p>
+          <h1 className="page-title">Notifications</h1>
+          <p className="page-description">Review invitations and updates from your organization.</p>
         </div>
         <button type="button" onClick={markAllRead} disabled={!hasUnread} className="inline-flex h-10 items-center gap-2 rounded-lg border border-grey-4 bg-white px-4 text-sm font-medium text-grey-1 hover:bg-grey-5 disabled:opacity-50">
           <CheckCheck className="h-4 w-4" /> Mark all read

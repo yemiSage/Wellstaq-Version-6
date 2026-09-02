@@ -44,10 +44,10 @@ export function DashboardHeader({
   return (
     <div className="flex items-center justify-between flex-wrap gap-3">
       <div>
-        <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">
+        <h1 className="page-title">
           {greeting}{currentUser ? `, ${currentUser.firstName}` : ""}
         </h1>
-        <p className="text-grey-2">Here is how your team is doing today.</p>
+        <p className="page-description">Here is how your team is doing today.</p>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">

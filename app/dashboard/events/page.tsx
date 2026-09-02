@@ -113,8 +113,8 @@ export default function EventsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-0">
         <div>
-          <h1 className="text-[20px] font-bold text-grey-1 mb-[6px] leading-[30px]">My Events</h1>
-          <p className="text-sm text-grey-2">Discover, Manage and join events across your organization.</p>
+          <h1 className="page-title">My Events</h1>
+          <p className="page-description">Discover, Manage and join events across your organization.</p>
         </div>
         {canCreate && (
           <button
