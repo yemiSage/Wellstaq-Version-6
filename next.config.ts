@@ -38,15 +38,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  webpack: (config, {dev}) => {
-    // File watching can be disabled while an automated editor is changing files.
-    if (dev && process.env.DISABLE_HMR === 'true') {
-      config.watchOptions = {
-        ignored: /.*/,
-      };
-    }
-    return config;
-  },
 };
 
 export default nextConfig;

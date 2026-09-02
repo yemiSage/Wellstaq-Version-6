@@ -93,6 +93,12 @@ The application implements several industrial-standard responsive patterns:
 4. Run the dev server: `npm run dev`
 5. Open [http://localhost:3000](http://localhost:3000)
 
+### Fast local workflow
+
+- Use `npm run dev` while changing code. It uses Turbopack for faster refreshes; the first visit to a route still compiles that route once.
+- Use `npm run preview` when you want to test the optimized production build locally. It builds the app, then serves it at [http://localhost:3000](http://localhost:3000), so navigation speed matches the deployed build rather than development mode.
+- Use `npm run dev:webpack` only if a Turbopack-specific issue needs to be isolated.
+
 The backend contract and production switch-over checklist are documented in `docs/API_INTEGRATION.md`.
 
 ### Adding New Features

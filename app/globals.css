@@ -1,4 +1,9 @@
-@import "tailwindcss";
+/* Scan only the live UI source. This keeps archived backup copies from being
+   processed during each local development compilation. */
+@import "tailwindcss" source(none);
+@source "../app";
+@source "../components";
+@source "../design-system";
 
 @theme {
   --font-sans: var(--font-inter);

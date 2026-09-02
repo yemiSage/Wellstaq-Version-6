@@ -21,8 +21,14 @@ const funnelDisplay = Funnel_Display({
 export const metadata: Metadata = {
   title: 'Wellstaq',
   description: 'Track your wellness journey, join vibrant clubs, compete on leaderboards, and get AI-powered wellness coaching.',
+  manifest: '/manifest.webmanifest',
   icons: {
-    icon: 'https://res.cloudinary.com/dv7yvatu2/image/upload/v1772170704/wellstaq_logo_raxmmg.png',
+    icon: [
+      {url: '/icon.svg', type: 'image/svg+xml', sizes: 'any'},
+      {url: '/icons/wellstaq-192.png', type: 'image/png', sizes: '192x192'},
+      {url: '/icons/wellstaq-512.png', type: 'image/png', sizes: '512x512'},
+    ],
+    apple: [{url: '/apple-icon.png', type: 'image/png', sizes: '180x180'}],
   },
   openGraph: {
     title: 'Wellstaq - Wellness & Community',

@@ -8,5 +8,12 @@ const compat = new FlatCompat({baseDirectory});
 
 export default defineConfig([
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
-  globalIgnores(['.next/**', 'node_modules/**', 'coverage/**', 'next-env.d.ts']),
+  globalIgnores([
+    '.next/**',
+    'node_modules/**',
+    'coverage/**',
+    'next-env.d.ts',
+    '.agents/**',
+    '.codex-backups/**',
+  ]),
 ]);
