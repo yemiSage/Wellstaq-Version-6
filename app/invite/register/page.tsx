@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useMemo, useState, type ReactNode } from "react";
+import { Suspense, useMemo, useState, type DragEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowUp, CheckCircle2, Download, Eye, EyeOff, GripVertical, MailCheck } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, CheckCircle2, Download, Eye, EyeOff, GripVertical, MailCheck } from "lucide-react";
 import { Country, State } from "country-state-city";
 import { SplitLayout } from "@/components/layout/split-layout";
 import { OnboardingPane } from "@/components/layout/onboarding-pane";
@@ -27,8 +27,12 @@ const dimensionQuestion: Record<(typeof dimensions)[number], string> = {
   work_life_balance: "How is your work-life balance?",
 };
 
-function StepHeader({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
-  return <div><p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-primary-1">{eyebrow}</p><h1 className="text-2xl font-bold text-grey-1 md:text-[30px]">{title}</h1><p className="mt-2 text-sm text-grey-2">{description}</p></div>;
+function ProgressHeader({ current, onBack }: { current: number; onBack: () => void }) {
+  return <div className="space-y-4"><button type="button" onClick={onBack} className="-ml-1 inline-flex min-h-10 items-center gap-2 rounded px-1 text-sm font-medium text-grey-2 transition-colors hover:text-grey-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-grey-1"><ArrowLeft className="h-4 w-4" />Back</button><div className="grid grid-cols-3 gap-2" role="progressbar" aria-label="Registration progress" aria-valuemin={1} aria-valuemax={3} aria-valuenow={current}>{[1, 2, 3].map((segment) => <span key={segment} className={`h-1.5 rounded-full transition-colors ${segment <= current ? "bg-grey-1" : "bg-grey-4"}`} />)}</div></div>;
+}
+
+function StepHeader({ title, description }: { title: string; description: string }) {
+  return <div><h1 className="text-2xl font-bold text-grey-1 md:text-[30px]">{title}</h1><p className="mt-2 text-sm text-grey-2">{description}</p></div>;
 }
 
 function Field({ label: fieldLabel, children }: { label: string; children: ReactNode }) {
@@ -58,6 +62,7 @@ function InviteRegistrationContent() {
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>(priorities);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [draggedPriorityIndex, setDraggedPriorityIndex] = useState<number | null>(null);
   const [requiresApp, setRequiresApp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -112,13 +117,23 @@ function InviteRegistrationContent() {
     [next[index], next[target]] = [next[target], next[index]];
     setSelectedPriorities(next);
   };
+  const dropPriority = (event: DragEvent<HTMLLIElement>, targetIndex: number) => {
+    event.preventDefault();
+    if (draggedPriorityIndex === null || draggedPriorityIndex === targetIndex) return setDraggedPriorityIndex(null);
+    const next = [...selectedPriorities];
+    const [moved] = next.splice(draggedPriorityIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    setSelectedPriorities(next);
+    setDraggedPriorityIndex(null);
+  };
 
   return <SplitLayout><OnboardingPane><div className="mx-auto flex w-full max-w-xl flex-1 flex-col pb-10">
     {step === "verify" && <div className="space-y-5"><div><h1 className="text-2xl font-bold text-grey-1">Accept your invitation</h1><p className="mt-2 text-sm text-grey-2">Verify the email address that received your Wellstaq invitation.</p></div>
       {!sentTo ? <Button disabled={loading || !inviteCode} onClick={() => void sendCode()} className="w-full">{loading ? "Sending..." : "Send verification code"}</Button> : <><div className="rounded-xl bg-primary-1/5 p-4 text-sm text-grey-2"><MailCheck className="mb-2 h-5 w-5 text-primary-1" />Code sent to {sentTo}</div><div><Label htmlFor="inviteOtp">Verification code</Label><Input id="inviteOtp" inputMode="numeric" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} className="mt-2" /></div><Button disabled={loading || code.length !== 6} onClick={() => void verifyCode()} className="w-full">{loading ? "Verifying..." : "Verify and continue"}</Button></>}
     </div>}
     {step === "profile" && <div className="space-y-6">
-      <StepHeader eyebrow="Step 1 of 3" title="Create your account" description="Tell us a little about yourself before setting your wellbeing baseline." />
+      <ProgressHeader current={1} onBack={() => setStep("verify")} />
+      <StepHeader title="Create your account" description="Tell us a little about yourself before setting your wellbeing baseline." />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="First name"><Input value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} /></Field>
         <Field label="Last name"><Input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} /></Field>
@@ -130,14 +145,16 @@ function InviteRegistrationContent() {
       <Button disabled={!profileComplete} onClick={() => setStep("baseline")} className="w-full">Continue</Button>
     </div>}
     {step === "baseline" && <div className="space-y-6">
-      <StepHeader eyebrow="Step 2 of 3" title="Your starting wellbeing baseline" description="Select how you feel, then tell us what is influencing each area." />
+      <ProgressHeader current={2} onBack={() => setStep("profile")} />
+      <StepHeader title="Your starting wellbeing baseline" description="Select how you feel, then tell us what is influencing each area." />
       <div className="grid gap-4 lg:grid-cols-2">{dimensions.map((dimension) => <BaselineCard key={dimension} dimension={dimension} value={baseline[dimension]} onChange={(value) => setBaseline({ ...baseline, [dimension]: value })} />)}</div>
       <Button disabled={!baselineComplete} onClick={() => setStep("priorities")} className="w-full">Continue</Button>
     </div>}
     {step === "priorities" && <div className="space-y-6">
-      <StepHeader eyebrow="Step 3 of 3" title="Choose your priorities" description="Put what matters most at the top. We’ll use this to personalise your experience." />
-      <p className="text-xs font-medium text-grey-3">Arrange in order of importance</p>
-      <ol className="space-y-2">{selectedPriorities.map((priority, index) => <li key={priority} className="flex min-h-12 items-center gap-3 rounded-[8px] border border-grey-4 bg-white px-3"><GripVertical className="h-4 w-4 text-grey-3" /><span className="flex-1 text-sm font-medium text-grey-2">{label(priority)}</span><button type="button" disabled={index === 0} onClick={() => movePriority(index, -1)} aria-label={`Move ${label(priority)} up`} className="p-2 disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button><button type="button" disabled={index === selectedPriorities.length - 1} onClick={() => movePriority(index, 1)} aria-label={`Move ${label(priority)} down`} className="p-2 disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button></li>)}</ol>
+      <ProgressHeader current={3} onBack={() => setStep("baseline")} />
+      <StepHeader title="Choose your priorities" description="Put what matters most at the top. We’ll use this to personalise your experience." />
+      <p className="text-xs font-medium text-grey-3">Drag to rearrange, or use the arrow buttons</p>
+      <ol className="space-y-2">{selectedPriorities.map((priority, index) => <li key={priority} draggable onDragStart={(event) => { setDraggedPriorityIndex(index); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", priority); }} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }} onDrop={(event) => dropPriority(event, index)} onDragEnd={() => setDraggedPriorityIndex(null)} className={`flex min-h-12 cursor-grab items-center gap-3 rounded-[8px] border bg-white px-3 transition-all active:cursor-grabbing ${draggedPriorityIndex === index ? "border-grey-1 opacity-50" : "border-grey-4"}`}><GripVertical className="h-4 w-4 shrink-0 text-grey-3" aria-hidden="true" /><span className="flex-1 text-sm font-medium text-grey-2">{label(priority)}</span><button type="button" disabled={index === 0} onClick={() => movePriority(index, -1)} aria-label={`Move ${label(priority)} up`} className="rounded p-2 hover:bg-grey-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-grey-1 disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button><button type="button" disabled={index === selectedPriorities.length - 1} onClick={() => movePriority(index, 1)} aria-label={`Move ${label(priority)} down`} className="rounded p-2 hover:bg-grey-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-grey-1 disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button></li>)}</ol>
       <Button disabled={loading} onClick={() => void register()} className="w-full">{loading ? "Creating account..." : "Complete registration"}</Button>
     </div>}
     {step === "success" && requiresApp && <div className="flex flex-1 flex-col items-center justify-center text-center"><CheckCircle2 className="mb-5 h-16 w-16 text-green-500" /><h1 className="text-2xl font-bold text-grey-1">Registration successful</h1><p className="mt-3 max-w-sm text-sm text-grey-2">Your account is ready. Download the Wellstaq mobile app to continue your wellness journey.</p><div className="mt-7 flex flex-col gap-3 sm:flex-row"><Button disabled className="gap-2"><Download className="h-4 w-4" /> Mobile app coming soon</Button><Link href="/login" className="rounded-lg border border-grey-4 px-5 py-2.5 text-sm font-medium text-grey-2">Back to login</Link></div></div>}
