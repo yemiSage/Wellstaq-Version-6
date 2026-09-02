@@ -47,6 +47,15 @@ const TWO_FACTOR_METHOD_OPTIONS: FilterDropdownOption<"email" | "totp">[] = [
   { label: "Authenticator app", value: "totp" },
 ];
 
+const COUNTRY_OPTIONS = ["Nigeria"];
+const NIGERIA_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Federal Capital Territory",
+  "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara",
+  "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers",
+  "Sokoto", "Taraba", "Yobe", "Zamfara",
+];
+
 const NAV_ITEMS = [
   { id: "profile", label: "Profile", sublabel: "Personal information", icon: <User className="w-5 h-5" /> },
   { id: "account", label: "Account", sublabel: "Security & login", icon: <Shield className="w-5 h-5" /> },
@@ -462,27 +471,27 @@ export default function SettingsPage() {
         <p className="page-description">Manage your account and preferences.</p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-[12px] p-5 bg-white rounded-[12px]">
+      <div className="flex flex-col gap-[12px] border-0 bg-transparent p-0 lg:flex-row">
         {/* Left Sidebar */}
         <div className="w-full lg:w-[280px] flex flex-col gap-2 p-3 border border-grey-4 rounded-[8px] bg-white">
           {NAV_ITEMS.filter((item) => item.id !== "billing" || canManageBilling).map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center gap-3 rounded-[12px] p-2 text-left transition-all border-[1.5px] ${
+              className={`flex items-center gap-3 text-left transition-colors ${
                 activeTab === item.id
-                  ? "bg-white border-[#272625] shadow-sm"
-                  : "bg-white border-[#E6E6E6] hover:bg-grey-5"
+                  ? "rounded-none border-0 bg-transparent p-0 shadow-none"
+                  : "rounded-none border-0 bg-white p-0 hover:bg-grey-5"
               }`}
             >
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center border-[1.5px] ${
-                activeTab === item.id ? "bg-white border-[#272625] text-[#272625]" : "bg-grey-5 border-transparent text-grey-2"
+                activeTab === item.id ? "bg-[#F7F7F7] border-[#272625] text-[#272625]" : "bg-grey-5 border-transparent text-grey-2"
               }`}>
                 {item.icon}
               </div>
               <div>
                 <div className={`text-sm font-semibold ${activeTab === item.id ? "text-grey-1" : "text-grey-2"}`}>{item.label}</div>
-                <div className={`text-[12px] ${activeTab === item.id ? "text-grey-2" : "text-grey-3"}`}>{item.sublabel}</div>
+                <div className={`text-[12px] ${activeTab === item.id ? "font-medium text-grey-2" : "text-grey-3"}`}>{item.sublabel}</div>
               </div>
             </button>
           ))}
@@ -491,7 +500,7 @@ export default function SettingsPage() {
 
           <button
             onClick={() => setIsLogoutModalOpen(true)}
-            className="flex items-center gap-3 rounded-[12px] p-2 text-left text-red-500 hover:bg-red-50 transition-all border-[1.5px] border-transparent"
+            className="flex items-center gap-3 rounded-none border-0 p-0 text-left text-red-500 transition-colors hover:bg-red-50"
           >
             <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
               <LogOut className="w-5 h-5" />
@@ -580,8 +589,33 @@ export default function SettingsPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div className="space-y-2"><label className="text-sm font-medium text-grey-1">Country</label><Input value={formData.country} onChange={(e) => setFormData({...formData, country: e.target.value})} /></div>
-                <div className="space-y-2"><label className="text-sm font-medium text-grey-1">State</label><Input value={formData.state} onChange={(e) => setFormData({...formData, state: e.target.value})} /></div>
+                <div className="space-y-2">
+                  <label htmlFor="profile-country" className="text-sm font-medium text-grey-1">Country</label>
+                  <select
+                    id="profile-country"
+                    value={formData.country}
+                    onChange={(event) => setFormData({ ...formData, country: event.target.value, state: "" })}
+                    className="h-11 w-full border border-grey-4 bg-white text-sm"
+                  >
+                    <option value="">Select country</option>
+                    {formData.country && !COUNTRY_OPTIONS.includes(formData.country) && <option value={formData.country}>{formData.country}</option>}
+                    {COUNTRY_OPTIONS.map((country) => <option key={country} value={country}>{country}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="profile-state" className="text-sm font-medium text-grey-1">State</label>
+                  <select
+                    id="profile-state"
+                    value={formData.state}
+                    disabled={!formData.country}
+                    onChange={(event) => setFormData({ ...formData, state: event.target.value })}
+                    className="h-11 w-full border border-grey-4 bg-white text-sm disabled:bg-grey-5 disabled:text-grey-3"
+                  >
+                    <option value="">{formData.country ? "Select state" : "Select country first"}</option>
+                    {formData.state && !NIGERIA_STATES.includes(formData.state) && <option value={formData.state}>{formData.state}</option>}
+                    {formData.country === "Nigeria" && NIGERIA_STATES.map((state) => <option key={state} value={state}>{state}</option>)}
+                  </select>
+                </div>
               </div>
             </>
           )}
