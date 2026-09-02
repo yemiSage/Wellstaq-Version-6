@@ -207,7 +207,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <SplitLayout>
+    <SplitLayout lockContentScroll={step === 1}>
       <OnboardingPane>
         {step > 1 && <BackButton onClick={handleBack} />}
 

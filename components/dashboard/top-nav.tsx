@@ -379,7 +379,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-[420px] bg-white shadow-xl flex flex-col overflow-hidden"
+              className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-[420px] bg-white flex flex-col overflow-hidden"
             >
               {/* Chat Header */}
               <div className="p-4 flex items-center justify-between bg-white border-b border-grey-4">

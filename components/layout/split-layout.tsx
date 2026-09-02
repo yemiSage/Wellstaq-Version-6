@@ -12,7 +12,7 @@ const IMAGES = [
   "https://res.cloudinary.com/dv7yvatu2/image/upload/f_auto,q_auto:eco,w_1200,dpr_auto/v1773336646/freepik__wellness__84222_popnho.png"
 ];
 
-export function SplitLayout({ children }: { children: React.ReactNode }) {
+export function SplitLayout({ children, lockContentScroll = false }: { children: React.ReactNode; lockContentScroll?: boolean }) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export function SplitLayout({ children }: { children: React.ReactNode }) {
         <div className="absolute inset-0 bg-black/30 z-10" suppressHydrationWarning />
       </div>
       {/* Right Pane - Content */}
-      <div className="relative z-20 flex min-h-0 w-full flex-col overflow-y-auto overscroll-contain xl:w-[40%]">
+      <div className={`relative z-20 flex min-h-0 w-full flex-col overflow-y-auto overscroll-contain xl:w-[40%] ${lockContentScroll ? "md:overflow-y-hidden [@media(max-height:640px)]:overflow-y-auto" : ""}`}>
         {children}
       </div>
     </div>
