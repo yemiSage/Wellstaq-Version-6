@@ -2,7 +2,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown } from "lucide-react";
 import { OnboardingData } from "@/types";
 import { api } from "@/services/api";
 import { useFieldAvailability } from "@/hooks/use-field-availability";
@@ -59,39 +58,16 @@ export function Step4Personal({ data, updateData, onNext, isLoading, fieldErrors
         <Label htmlFor="phone">
           Phone Number <span className="text-red-600">*</span>
         </Label>
-        <div className="flex gap-3">
-          <div className="relative flex h-12 w-24 shrink-0 items-center rounded-[8px] border border-grey-4 bg-white px-3 sm:w-28">
-            <span className="text-sm font-medium">{data.phoneCode || '+1'}</span>
-            <ChevronDown size={18} strokeWidth={2} aria-hidden="true" className="absolute right-3 text-grey-2 pointer-events-none" />
-            <select
-              aria-label="Phone country code"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              value={data.phoneCode || '+1'}
-              onChange={(e) => updateData({ phoneCode: e.target.value })}
-            >
-              <option value="+1">+1 (US/CA)</option>
-              <option value="+44">+44 (UK)</option>
-              <option value="+234">+234 (NG)</option>
-              <option value="+91">+91 (IN)</option>
-              <option value="+61">+61 (AU)</option>
-              <option value="+49">+49 (DE)</option>
-              <option value="+33">+33 (FR)</option>
-              <option value="+81">+81 (JP)</option>
-              <option value="+86">+86 (CN)</option>
-              <option value="+55">+55 (BR)</option>
-              <option value="+27">+27 (ZA)</option>
-              <option value="+971">+971 (AE)</option>
-            </select>
-          </div>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder="+234"
-            value={data.phoneNumber}
-            onChange={(e) => updateData({ phoneNumber: e.target.value })}
-            className="flex-1"
-          />
-        </div>
+        <Input
+          id="phone"
+          type="tel"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={11}
+          placeholder="08012345678"
+          value={data.phoneNumber}
+          onChange={(e) => updateData({ phoneNumber: e.target.value.replace(/\D/g, "").slice(0, 11) })}
+        />
         {phoneStatus === "checking" && (
           <span className="text-sm text-grey-3">Checking availability...</span>
         )}

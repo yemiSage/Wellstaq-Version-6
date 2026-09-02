@@ -209,7 +209,7 @@ export default function ClubsPage() {
 
       {selectedClub && (
         <ModalLayer className="flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={`${selectedClub.name} details`}>
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+          <div className="max-h-[calc(100dvh-32px)] w-full max-w-[560px] overflow-y-auto rounded-[12px] border border-grey-4 bg-white p-5 shadow-[0px_16px_32px_-16px_rgba(0,0,0,0.24)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-grey-1">{selectedClub.name}</h2>

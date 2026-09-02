@@ -28,6 +28,7 @@ export function ConfirmModal({
       isOpen={isOpen}
       onClose={onClose}
       title={title}
+      size="compact"
       footer={
         <>
           <button

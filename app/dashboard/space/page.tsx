@@ -849,7 +849,7 @@ export default function SpacePage() {
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-lg max-h-[80vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+              className="relative flex max-h-[calc(100dvh-32px)] w-full max-w-[560px] flex-col overflow-hidden rounded-[12px] border border-grey-4 bg-white shadow-[0px_16px_32px_-16px_rgba(0,0,0,0.24)]"
             >
               <div className="p-5 border-b border-grey-4 flex items-center justify-between bg-grey-5/30 shrink-0">
                 <h3 className="text-lg font-bold text-grey-1">{hashtagModalTag}</h3>

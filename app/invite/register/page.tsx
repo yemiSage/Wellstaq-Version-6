@@ -147,7 +147,7 @@ function InviteRegistrationContent() {
     {step === "baseline" && <div className="space-y-6">
       <ProgressHeader current={2} onBack={() => setStep("profile")} />
       <StepHeader title="Your starting wellbeing baseline" description="Select how you feel, then tell us what is influencing each area." />
-      <div className="grid gap-4 lg:grid-cols-2">{dimensions.map((dimension) => <BaselineCard key={dimension} dimension={dimension} value={baseline[dimension]} onChange={(value) => setBaseline({ ...baseline, [dimension]: value })} />)}</div>
+      <div className="space-y-4">{dimensions.map((dimension) => <BaselineCard key={dimension} dimension={dimension} value={baseline[dimension]} onChange={(value) => setBaseline({ ...baseline, [dimension]: value })} />)}</div>
       <Button disabled={!baselineComplete} onClick={() => setStep("priorities")} className="w-full">Continue</Button>
     </div>}
     {step === "priorities" && <div className="space-y-6">

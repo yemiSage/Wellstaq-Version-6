@@ -57,7 +57,7 @@ export function DrawerLayer({ children, onClose, label, inert }: DrawerLayerProp
       <motion.div aria-hidden="true" className="absolute inset-0 bg-black/40" onClick={onClose}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} />
       <motion.div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1}
-        className="relative h-[100dvh] min-h-0 w-full overflow-hidden bg-white shadow-xl outline-none sm:max-w-[560px]"
+        className="relative h-[100dvh] min-h-0 w-full overflow-hidden bg-white shadow-xl outline-none sm:max-w-[480px]"
         initial={hidden} animate={{ opacity: 1, transform: "translateX(0)" }} exit={hidden}
         transition={{ duration: reduceMotion ? 0.15 : 0.25, ease: [0.32, 0.72, 0, 1] }}>
         {children}

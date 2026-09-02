@@ -13,6 +13,7 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   presentation?: "modal" | "drawer";
+  size?: "compact" | "default";
 }
 
 export function Modal({
@@ -23,18 +24,19 @@ export function Modal({
   children,
   footer,
   presentation = "modal",
+  size = "default",
 }: ModalProps) {
   if (presentation === "modal" && !isOpen) return null;
 
   const content = (
-      <div className={presentation === "drawer" ? "flex h-full w-full flex-col overflow-hidden bg-white" : "flex h-[75dvh] w-full max-w-[840px] flex-col overflow-hidden rounded-[12px] bg-white shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)]"}>
+      <div className={presentation === "drawer" ? "flex h-full w-full flex-col overflow-hidden bg-white" : `flex max-h-[calc(100dvh-32px)] w-full flex-col overflow-hidden rounded-[12px] border border-grey-4 bg-white shadow-[0px_16px_32px_-16px_rgba(0,0,0,0.24)] ${size === "compact" ? "max-w-[440px]" : "max-w-[620px]"}`}>
         {(title || subtitle) && (
-          <div className="flex h-[75px] shrink-0 items-center justify-between border-b border-grey-4 px-6">
+          <div className="flex min-h-16 shrink-0 items-center justify-between border-b border-grey-4 px-5">
             <div>
               {title && <h2 className="!text-base !leading-6 font-sans font-bold text-grey-1">{title}</h2>}
               {subtitle && <p className="text-xs leading-[18px] text-grey-3">{subtitle}</p>}
             </div>
-            <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] text-grey-3 hover:bg-grey-5 hover:text-grey-1" aria-label={presentation === "drawer" ? "Close drawer" : "Close modal"}>
+            <button type="button" onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-grey-3 hover:bg-grey-5 hover:text-grey-1" aria-label={presentation === "drawer" ? "Close drawer" : "Close modal"}>
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -45,7 +47,7 @@ export function Modal({
         </div>
 
         {footer && (
-          <div className="flex h-[75px] shrink-0 items-center justify-end gap-3 border-t border-grey-4 bg-grey-5 px-6">
+          <div className="flex min-h-16 shrink-0 items-center justify-end gap-3 border-t border-grey-4 bg-grey-5 px-5">
             {footer}
           </div>
         )}
