@@ -180,7 +180,7 @@ function LoginPageContent() {
                   <Label htmlFor="password">
                   Password <span className="text-red-600">*</span>
                   </Label>
-                  <Link href="/forgot-password" className="shrink-0 text-sm font-medium text-primary-1 hover:underline">
+                  <Link href="/forgot-password" className="shrink-0 text-sm font-medium text-[#8f8f8f] hover:text-grey-1 hover:underline">
                     Forgot password?
                   </Link>
                 </div>
