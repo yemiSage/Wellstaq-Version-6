@@ -59,6 +59,12 @@ export default function TeamsPage() {
   ];
   const activeManagementTab = managementTabs.find((tab) => tab.value === managementTab)?.value ?? managementTabs[0]?.value;
   const isRevokingRole = memberChanges.roleId === REVOKE_ROLE_OPTION;
+  const selectedMemberRoleId = selectedMember
+    ? scope.type === "branch" ? selectedMember.roleId : selectedMember.organizationRoleId ?? selectedMember.roleId
+    : null;
+  const selectedMemberRoleName = selectedMember
+    ? scope.type === "branch" ? selectedMember.roleName : selectedMember.organizationRoleName ?? selectedMember.roleName
+    : null;
 
   useEffect(() => {
     if (!selectedMember?.id) return;
@@ -145,13 +151,15 @@ export default function TeamsPage() {
 
   const openMemberManagement = async (member: OrganizationMemberInfo) => {
     if (!organizationId || (!canAssignRole && !canRevokeRole && !canAssignDepartment && !canAssignBranch)) return;
-    if (member.roleName === "super_admin") {
+    const scopedRoleName = scope.type === "branch" ? member.roleName : member.organizationRoleName ?? member.roleName;
+    if (scopedRoleName === "super_admin") {
       toast.error("The Super Admin account cannot be reassigned or moved.");
       return;
     }
     setSelectedMember(member);
     setManagementTab(canAssignRole || canRevokeRole ? "role" : canAssignDepartment ? "department" : "branch");
-    setMemberChanges({ roleId: member.roleId ?? "", departmentId: member.departmentId ?? "", branchId: member.branchId ?? "", branchDepartmentId: member.departmentId ?? "" });
+    const scopedRoleId = scope.type === "branch" ? member.roleId : member.organizationRoleId ?? member.roleId;
+    setMemberChanges({ roleId: scopedRoleId ?? "", departmentId: member.departmentId ?? "", branchId: member.branchId ?? "", branchDepartmentId: member.departmentId ?? "" });
     const [roleResponse, departmentResponse] = await Promise.all([
       api.roles.listOrganization(organizationId, permissionBranchId),
       api.organization.getDepartments(organizationId),
@@ -241,7 +249,22 @@ export default function TeamsPage() {
                     <td className="px-4 py-3 text-sm text-grey-2">{member.email}</td>
                     <td className="px-4 py-3 text-sm text-grey-2">{member.branchId ? branchNames.get(member.branchId) ?? "Assigned branch" : "General"}</td>
                     <td className="px-4 py-3 text-sm text-grey-2">{member.departmentId ? departmentNames.get(member.departmentId) ?? "Assigned department" : "Unassigned"}</td>
-                    <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.roleName ?? (member.id === currentUser?.userId ? currentUser.role : null) ?? "member")}</td>
+                    <td className="px-4 py-3 text-sm text-grey-2">
+                      {scope.type === "branch" ? (
+                        humanizeIdentifier(member.roleName ?? "member")
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="rounded-md border border-grey-4 bg-grey-5 px-2 py-1 text-[10px] font-bold">
+                            Org: {humanizeIdentifier(member.organizationRoleName ?? member.roleName ?? (member.id === currentUser?.userId ? currentUser.role : null) ?? "member")}
+                          </span>
+                          {(member.branchRoles ?? []).map((assignment) => (
+                            <span key={`${assignment.branchId}-${assignment.roleId}`} className="rounded-md border border-primary-1/15 bg-primary-1/5 px-2 py-1 text-[10px] font-bold text-primary-1">
+                              {branchNames.get(assignment.branchId) ?? "Branch"}: {humanizeIdentifier(assignment.roleName)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.status)}</td>
                   </tr>;
                 })}
@@ -315,7 +338,7 @@ export default function TeamsPage() {
           <div id="manage-team-panel" className="min-h-0 flex-1 overflow-y-auto px-6 pb-6" role="tabpanel" aria-labelledby={`manage-team-tab-${activeManagementTab}`}>
             {activeManagementTab === "role" && (
               <>
-                <p className="mb-4 text-sm text-grey-2">Choose a new role for this team member.</p>
+                <p className="mb-4 text-sm text-grey-2">Choose a new {scope.type === "branch" ? "branch" : "organization"} role for this team member. The other scope remains unchanged.</p>
                 <div>
                   <label htmlFor="manage-staff-role" className="mb-2 block text-sm font-medium text-grey-1">Role</label>
                   <FilterDropdown
@@ -324,14 +347,14 @@ export default function TeamsPage() {
                     onValueChange={(roleId) => setMemberChanges({ ...memberChanges, roleId })}
                     options={[
                       { value: "", label: "Select role" },
-                      ...manageRoles.filter((role) => canAssignRole || role.id === selectedMember.roleId).map((role) => ({ value: role.id, label: humanizeIdentifier(role.name) })),
-                      ...(canRevokeRole && selectedMember.roleName !== "member" ? [{ value: REVOKE_ROLE_OPTION, label: "Revoke role (return to Member)" }] : []),
+                      ...manageRoles.filter((role) => canAssignRole || role.id === selectedMemberRoleId).map((role) => ({ value: role.id, label: humanizeIdentifier(role.name) })),
+                      ...(canRevokeRole && selectedMemberRoleName !== "member" ? [{ value: REVOKE_ROLE_OPTION, label: "Revoke role (return to Member)" }] : []),
                     ]}
                     buttonClassName="h-12 w-full font-normal" menuClassName="max-h-36 w-full"
                   />
                 </div>
                 <div className="mt-[80px]">
-                  <Button type="button" disabled={isUpdatingMember || (isRevokingRole ? !canRevokeRole || selectedMember.roleName === "member" : !canAssignRole || !memberChanges.roleId || memberChanges.roleId === selectedMember.roleId)} onClick={() => setPendingChange(isRevokingRole ? "revoke_role" : "role")} className={`h-12 w-full ${isRevokingRole ? "bg-red-600 hover:bg-red-700" : ""}`}>
+                  <Button type="button" disabled={isUpdatingMember || (isRevokingRole ? !canRevokeRole || selectedMemberRoleName === "member" : !canAssignRole || !memberChanges.roleId || memberChanges.roleId === selectedMemberRoleId)} onClick={() => setPendingChange(isRevokingRole ? "revoke_role" : "role")} className={`h-12 w-full ${isRevokingRole ? "bg-red-600 hover:bg-red-700" : ""}`}>
                     {isUpdatingMember ? "Updating role..." : isRevokingRole ? "Revoke role" : "Change role"}
                   </Button>
                 </div>

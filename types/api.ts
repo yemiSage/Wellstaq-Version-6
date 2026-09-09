@@ -508,6 +508,9 @@ export interface OrganizationMemberInfo {
   status: string;
   roleId: string | null;
   roleName?: string | null;
+  organizationRoleId?: string | null;
+  organizationRoleName?: string | null;
+  branchRoles?: Array<{ branchId: string; roleId: string; roleName: string }>;
   branchId: string | null;
   departmentId?: string | null;
   publicProfile?: boolean;

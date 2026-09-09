@@ -299,6 +299,7 @@ export default function SettingsPage() {
 
   const toggleRolePermission = (permissionName: string) => {
     if (!selectedRoleForEdit || selectedRoleForEdit.isSystem) return;
+    if (!selectedRoleForEdit.branchId && permissionName === "overview") return;
     const current = new Set(selectedRoleForEdit.permissions ?? []);
     current.has(permissionName) ? current.delete(permissionName) : current.add(permissionName);
     setSelectedRoleForEdit({ ...selectedRoleForEdit, permissions: [...current] });
@@ -887,7 +888,8 @@ export default function SettingsPage() {
                 <div className="flex flex-wrap gap-2">
                   {permissionCatalogue.filter((permission) => selectedRoleForEdit.branchId ? permission.scope !== "org" : permission.scope !== "branch").map((permission) => {
                     const isSelected = (selectedRoleForEdit.permissions ?? []).includes(permission.name);
-                    return <SelectablePill key={permission.id} disabled={selectedRoleForEdit.name === "super_admin"} selected={isSelected} onClick={() => toggleRolePermission(permission.name)} className="px-3 text-xs disabled:cursor-default">{readablePermission(permission.name)}</SelectablePill>;
+                    const isMandatoryOverview = !selectedRoleForEdit.branchId && permission.name === "overview";
+                    return <SelectablePill key={permission.id} disabled={selectedRoleForEdit.name === "super_admin" || isMandatoryOverview} selected={isSelected || isMandatoryOverview} title={isMandatoryOverview ? "Overview access is required for every organization-wide role." : undefined} onClick={() => toggleRolePermission(permission.name)} className="px-3 text-xs disabled:cursor-default disabled:opacity-70">{readablePermission(permission.name)}{isMandatoryOverview ? " (Required)" : ""}</SelectablePill>;
                   })}
                 </div>
               </div>
