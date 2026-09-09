@@ -56,7 +56,7 @@ function ClubSidebar({
     <div className="w-full border-r border-grey-4 bg-white flex flex-col h-full shrink-0">
       <div className="pt-4 px-4 pb-0 border-b border-grey-4">
         <div className="flex flex-row-reverse items-center gap-2 mb-2">
-          <button onClick={onClose} className="text-grey-2 hover:text-grey-1 p-1 border border-grey-4 rounded-md bg-white flex-shrink-0">
+          <button onClick={onClose} className="text-grey-2 hover:text-grey-1 p-1.5 border border-grey-4 rounded-[4px] bg-white flex-shrink-0">
             <PanelLeftClose size={14} strokeWidth={1.5} />
           </button>
           <div className="relative min-w-0 flex-1">
