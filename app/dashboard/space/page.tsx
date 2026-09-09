@@ -654,7 +654,8 @@ export default function SpacePage() {
         mediaUrl,
         mediaType,
       });
-      setChatMessagesList((prev) => [...prev, created]);
+      // Sending a message must not create a pin. Pinning is an explicit moderator action.
+      setChatMessagesList((prev) => [...prev, { ...created, isPinned: false }]);
       setChatInput("");
     } catch {
       toast.error("We couldn't send the message. Check your club access and try again.");

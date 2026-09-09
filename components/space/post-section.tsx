@@ -175,9 +175,6 @@ function PostCard({
                     {badge.emoji} #{badge.rank} {badge.label}
                   </span>
                 )}
-                {!post.branchId && (
-                  <span className="text-[10px] font-medium text-primary-1 bg-primary-5 px-2 py-0.5 rounded-full">General</span>
-                )}
               </div>
               <p className="text-xs text-grey-3">{author?.email ?? ""} · {formatRelativeTime(post.createdAt)}</p>
             </div>
