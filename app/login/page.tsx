@@ -32,6 +32,7 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
+  const resetParam = searchParams.get("reset");
   const emailParam = searchParams.get("email")?.trim() ?? "";
   const isReturningFromSignup = searchParams.get("from") === "signup";
   const [email, setEmail] = useState(emailParam);
@@ -146,6 +147,12 @@ function LoginPageContent() {
               </p>
             )}
 
+            {resetParam === "success" && (
+              <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2 mb-6">
+                Your password has been updated. You can now sign in.
+              </p>
+            )}
+
             {!twoFaChallenge ? <div className="flex flex-col gap-6 mb-6">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="email">
@@ -169,9 +176,14 @@ function LoginPageContent() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <Label htmlFor="password">
+                <div className="flex items-center justify-between gap-4">
+                  <Label htmlFor="password">
                   Password <span className="text-red-600">*</span>
-                </Label>
+                  </Label>
+                  <Link href="/forgot-password" className="shrink-0 text-sm font-medium text-primary-1 hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Input
                     id="password"

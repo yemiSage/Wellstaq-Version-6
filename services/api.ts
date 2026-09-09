@@ -155,6 +155,14 @@ export const api = {
         "/auth/login",
         { method: "POST", body: { email, password }, suppressErrorNotification: true },
       ),
+    forgotPassword: (email: string) => fromApi<{ message?: string }>(
+      "/auth/forgot-password",
+      { method: "POST", body: { email }, suppressErrorNotification: true },
+    ),
+    resetPassword: (token: string, password: string) => fromApi<{ message?: string }>(
+      "/auth/reset-password",
+      { method: "POST", body: { token, password }, suppressErrorNotification: true },
+    ),
     verifyTwoFa: (twoFaChallengeToken: string, code: string) =>
       fromApi<AuthTokenResponse>(
         "/auth/2fa/verify",
