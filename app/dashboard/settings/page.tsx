@@ -271,6 +271,7 @@ export default function SettingsPage() {
 
   const toggleRolePermission = (permissionName: string) => {
     if (!selectedRoleForEdit || selectedRoleForEdit.isSystem) return;
+    if (!selectedRoleForEdit.branchId && permissionName === "overview") return;
     const current = new Set(selectedRoleForEdit.permissions ?? []);
     current.has(permissionName) ? current.delete(permissionName) : current.add(permissionName);
     setSelectedRoleForEdit({ ...selectedRoleForEdit, permissions: [...current] });
@@ -838,7 +839,8 @@ export default function SettingsPage() {
                 <div className="flex flex-wrap gap-2">
                   {permissionCatalogue.filter((permission) => selectedRoleForEdit.branchId ? permission.scope !== "org" : permission.scope !== "branch").map((permission) => {
                     const isSelected = (selectedRoleForEdit.permissions ?? []).includes(permission.name);
-                    return <button key={permission.id} disabled={selectedRoleForEdit.name === "super_admin"} onClick={() => toggleRolePermission(permission.name)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${isSelected ? "bg-white border-primary-1 text-primary-1 shadow-sm" : "bg-white border-grey-4 text-grey-2 hover:border-grey-3"} disabled:cursor-default`}>{readablePermission(permission.name)}</button>;
+                    const isMandatoryOverview = !selectedRoleForEdit.branchId && permission.name === "overview";
+                    return <button key={permission.id} disabled={selectedRoleForEdit.name === "super_admin" || isMandatoryOverview} title={isMandatoryOverview ? "Overview access is required for every organization-wide role." : undefined} onClick={() => toggleRolePermission(permission.name)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${isSelected || isMandatoryOverview ? "bg-white border-primary-1 text-primary-1 shadow-sm" : "bg-white border-grey-4 text-grey-2 hover:border-grey-3"} disabled:cursor-default disabled:opacity-70`}>{readablePermission(permission.name)}{isMandatoryOverview ? " (Required)" : ""}</button>;
                   })}
                 </div>
               </div>

@@ -122,12 +122,14 @@ export default function TeamsPage() {
 
   const openMemberManagement = async (member: OrganizationMemberInfo) => {
     if (!organizationId || (!canAssignRole && !canRevokeRole && !canAssignDepartment && !canAssignBranch)) return;
-    if (member.roleName === "super_admin") {
+    const scopedRoleName = scope.type === "branch" ? member.roleName : member.organizationRoleName ?? member.roleName;
+    if (scopedRoleName === "super_admin") {
       toast.error("The Super Admin account cannot be reassigned or moved.");
       return;
     }
     setSelectedMember(member);
-    setMemberChanges({ roleId: member.roleId ?? "", departmentId: member.departmentId ?? "", branchId: member.branchId ?? "", branchDepartmentId: member.departmentId ?? "" });
+    const scopedRoleId = scope.type === "branch" ? member.roleId : member.organizationRoleId ?? member.roleId;
+    setMemberChanges({ roleId: scopedRoleId ?? "", departmentId: member.departmentId ?? "", branchId: member.branchId ?? "", branchDepartmentId: member.departmentId ?? "" });
     const [roleResponse, departmentResponse] = await Promise.all([
       api.roles.listOrganization(organizationId, permissionBranchId),
       api.organization.getDepartments(organizationId),
@@ -217,7 +219,22 @@ export default function TeamsPage() {
                     <td className="px-4 py-3 text-sm text-grey-2">{member.email}</td>
                     <td className="px-4 py-3 text-sm text-grey-2">{member.branchId ? branchNames.get(member.branchId) ?? "Assigned branch" : "General"}</td>
                     <td className="px-4 py-3 text-sm text-grey-2">{member.departmentId ? departmentNames.get(member.departmentId) ?? "Assigned department" : "Unassigned"}</td>
-                    <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.roleName ?? (member.id === currentUser?.userId ? currentUser.role : null) ?? "member")}</td>
+                    <td className="px-4 py-3 text-sm text-grey-2">
+                      {scope.type === "branch" ? (
+                        humanizeIdentifier(member.roleName ?? "member")
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="rounded-md border border-grey-4 bg-grey-5 px-2 py-1 text-[10px] font-bold">
+                            Org: {humanizeIdentifier(member.organizationRoleName ?? member.roleName ?? "member")}
+                          </span>
+                          {(member.branchRoles ?? []).map((assignment) => (
+                            <span key={`${assignment.branchId}-${assignment.roleId}`} className="rounded-md border border-primary-1/15 bg-primary-1/5 px-2 py-1 text-[10px] font-bold text-primary-1">
+                              {branchNames.get(assignment.branchId) ?? "Branch"}: {humanizeIdentifier(assignment.roleName)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.status)}</td>
                   </tr>;
                 })}
@@ -232,7 +249,7 @@ export default function TeamsPage() {
         <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
           <div className="mb-5 flex items-start justify-between"><div><h2 className="text-lg font-bold text-grey-1">Manage {selectedMember.firstName} {selectedMember.lastName}</h2><p className="mt-1 text-sm text-grey-2">Changes replace the user&apos;s current assignment and require confirmation.</p></div><button type="button" onClick={() => setSelectedMember(null)}><X className="h-5 w-5" /></button></div>
           <div className="space-y-5">
-            {(canAssignRole || canRevokeRole) && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Change role</h3><p className="mb-3 text-xs text-grey-3">Changing replaces the current role. Revoking returns the user to Member.</p><div className="flex flex-wrap gap-2"><select disabled={!canAssignRole} value={memberChanges.roleId} onChange={(event) => setMemberChanges({ ...memberChanges, roleId: event.target.value })} className="h-10 min-w-0 flex-1 rounded-lg border border-grey-4 px-3 text-sm disabled:bg-grey-5"><option value="">Select role</option>{manageRoles.map((role) => <option key={role.id} value={role.id}>{humanizeIdentifier(role.name)}</option>)}</select>{canAssignRole && <button disabled={!memberChanges.roleId || memberChanges.roleId === selectedMember.roleId} onClick={() => setPendingChange("role")} className="rounded-lg bg-primary-1 px-4 text-sm font-medium text-white disabled:opacity-40">Change</button>}{canRevokeRole && selectedMember.roleName !== "member" && <button onClick={() => setPendingChange("revoke_role")} className="rounded-lg border border-red-200 px-4 text-sm font-medium text-red-600 hover:bg-red-50">Revoke</button>}</div></section>}
+            {(canAssignRole || canRevokeRole) && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Change role</h3><p className="mb-3 text-xs text-grey-3">Changing replaces only the current {scope.type === "branch" ? "branch" : "organization"} role. The other scope is unchanged.</p><div className="flex flex-wrap gap-2"><select disabled={!canAssignRole} value={memberChanges.roleId} onChange={(event) => setMemberChanges({ ...memberChanges, roleId: event.target.value })} className="h-10 min-w-0 flex-1 rounded-lg border border-grey-4 px-3 text-sm disabled:bg-grey-5"><option value="">Select role</option>{manageRoles.map((role) => <option key={role.id} value={role.id}>{humanizeIdentifier(role.name)}</option>)}</select>{canAssignRole && <button disabled={!memberChanges.roleId || memberChanges.roleId === (scope.type === "branch" ? selectedMember.roleId : selectedMember.organizationRoleId ?? selectedMember.roleId)} onClick={() => setPendingChange("role")} className="rounded-lg bg-primary-1 px-4 text-sm font-medium text-white disabled:opacity-40">Change</button>}{canRevokeRole && (scope.type === "branch" ? selectedMember.roleName : selectedMember.organizationRoleName ?? selectedMember.roleName) !== "member" && <button onClick={() => setPendingChange("revoke_role")} className="rounded-lg border border-red-200 px-4 text-sm font-medium text-red-600 hover:bg-red-50">Revoke</button>}</div></section>}
             {canAssignDepartment && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Move department</h3><p className="mb-3 text-xs text-grey-3">Choose another department in the user&apos;s current branch.</p><div className="flex gap-2"><select value={memberChanges.departmentId} onChange={(event) => setMemberChanges({ ...memberChanges, departmentId: event.target.value })} className="h-10 flex-1 rounded-lg border border-grey-4 px-3 text-sm"><option value="">Select department</option>{manageDepartments.filter((department) => department.branchId === selectedMember.branchId).map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select><button disabled={!memberChanges.departmentId || memberChanges.departmentId === selectedMember.departmentId} onClick={() => setPendingChange("department")} className="rounded-lg bg-primary-1 px-4 text-sm font-medium text-white disabled:opacity-40">Move</button></div></section>}
             {canAssignBranch && <section className="rounded-xl border border-grey-4 p-4"><h3 className="text-sm font-bold text-grey-1">Move branch</h3><p className="mb-3 text-xs text-grey-3">A destination department is required because branch and department change together.</p><div className="grid gap-2 sm:grid-cols-2"><select value={memberChanges.branchId} onChange={(event) => setMemberChanges({ ...memberChanges, branchId: event.target.value, branchDepartmentId: "" })} className="h-10 rounded-lg border border-grey-4 px-3 text-sm"><option value="">Select branch</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select><select value={memberChanges.branchDepartmentId} onChange={(event) => setMemberChanges({ ...memberChanges, branchDepartmentId: event.target.value })} className="h-10 rounded-lg border border-grey-4 px-3 text-sm"><option value="">Select destination department</option>{manageDepartments.filter((department) => department.branchId === memberChanges.branchId).map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></div><button disabled={!memberChanges.branchId || !memberChanges.branchDepartmentId || memberChanges.branchId === selectedMember.branchId} onClick={() => setPendingChange("branch")} className="mt-3 h-10 w-full rounded-lg bg-primary-1 text-sm font-medium text-white disabled:opacity-40">Move to branch</button></section>}
           </div>
