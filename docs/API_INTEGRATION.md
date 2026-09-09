@@ -1,9 +1,6 @@
 # Wellstaq API Integration Contract
 
-The web app has two explicit data modes:
-
-- `NEXT_PUBLIC_DATA_SOURCE=mock`: local preview using seeded data.
-- `NEXT_PUBLIC_DATA_SOURCE=api`: production mode using the backend through the same-origin BFF route.
+The web app is API-only. `NEXT_PUBLIC_DATA_SOURCE` must be set to `api` in local, preview, and production environments.
 
 Set `BACKEND_API_URL` only on the Next.js server. Browser code calls `/api/backend/*`; it never receives the backend base URL, access token, refresh token, or Gemini key.
 

@@ -55,8 +55,7 @@ components/
 ├── ui/                # Reusable UI components (Buttons, Modals, etc.)
 ├── dashboard/         # Dashboard-specific components (Sidebar, TopNav)
 └── onboarding/        # Onboarding-specific components
-lib/
-└── mock-data.ts       # Centralized mock data for development
+lib/                    # Shared frontend utilities and formatting helpers
 ```
 
 ## 🧠 Key Terms & Concepts
@@ -73,8 +72,8 @@ The application is built on the science of habit formation.
 ### 3. Wellness Reports
 The product is designed for aggregated, privacy-focused HR insights. The production backend must enforce tenant authorization, aggregation thresholds, consent, retention, and applicable NDPR requirements before real employee wellness data is enabled.
 
-### 4. API and Preview Modes
-`NEXT_PUBLIC_DATA_SOURCE=mock` runs the existing interface against seeded preview data. `NEXT_PUBLIC_DATA_SOURCE=api` enables the production BFF, secure session cookies, route protection, and backend persistence.
+### 4. API Data
+The interface loads workspace data from the backend API. During requests, screens render loading placeholders and then show either returned records, an empty state, or an error state.
 
 ### 5. Shared Dashboard State
 Profile, branch, member, event, department, challenge, and leaderboard data are loaded through `DashboardDataProvider`. Screens do not persist organization or personal information in browser storage.
@@ -89,7 +88,7 @@ The application implements several industrial-standard responsive patterns:
 
 ### Getting Started
 1. Install dependencies: `npm ci`
-2. Copy `.env.example` to `.env.local` and keep `NEXT_PUBLIC_DATA_SOURCE=mock` for preview.
+2. Copy `.env.example` to `.env.local`; `NEXT_PUBLIC_DATA_SOURCE` must remain `api`.
 3. Run the quality gate: `npm run check`
 4. Run the dev server: `npm run dev`
 5. Open [http://localhost:3000](http://localhost:3000)

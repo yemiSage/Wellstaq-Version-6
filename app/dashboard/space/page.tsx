@@ -702,7 +702,7 @@ export default function SpacePage() {
                 {scope.type === "branch" && (
                   <div className="ml-auto flex bg-grey-5 rounded-lg p-0.5">
                     <button onClick={() => setFeedView("branch")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${feedView === "branch" ? "bg-white text-primary-1 shadow-sm" : "text-grey-2"}`}>My Branch</button>
-                    <button onClick={() => setFeedView("org")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${feedView === "org" ? "bg-white text-primary-1 shadow-sm" : "text-grey-2"}`}>Org-wide</button>
+                    <button onClick={() => setFeedView("org")} className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${feedView === "org" ? "bg-white text-primary-1 shadow-sm" : "text-grey-2"}`}>General</button>
                   </div>
                 )}
               </div>
@@ -736,7 +736,7 @@ export default function SpacePage() {
                   onShareLocation={handleShareLocation}
                   onClearLocation={() => setPostLocation(null)}
                   onSubmitPost={handleCreatePost}
-                  placeholder={effectiveFeedScope === "org_only" ? "Share something org-wide..." : "Share a workout, milestone, or wellness tip..."}
+                  placeholder={effectiveFeedScope === "org_only" ? "Share something in General..." : "Share a workout, milestone, or wellness tip..."}
                   onToggleLike={handleToggleLike}
                   onToggleComments={handleToggleComments}
                   onAddComment={handleAddComment}

@@ -10,6 +10,7 @@ import { useDashboardData } from "@/components/providers/dashboard-data-provider
 import { useDashboardScope } from "@/lib/scope";
 import { hasPermission } from "@/lib/permissions";
 import { CreateChallengeModal } from "@/components/challenges/create-challenge-modal";
+import { FilterDropdown, type FilterDropdownOption } from "@/components/ui/filter-dropdown";
 import type { ChallengeItem, ChallengeStatus, TrendData } from "@/types/api";
 
 const STATUS_TABS: { label: string; value: ChallengeStatus | "All" }[] = [
@@ -29,8 +30,16 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
 
 const ITEMS_PER_PAGE = 4;
 
-type ChallengeFilter = "all" | "branch" | "org_wide";
+type ChallengeFilter = "all" | "org_wide" | `branch:${string}`;
 type Period = "all" | "week" | "month" | "six_months" | "custom";
+
+const PERIOD_OPTIONS: FilterDropdownOption<Period>[] = [
+  { label: "Overall", value: "all" },
+  { label: "This week", value: "week" },
+  { label: "This month", value: "month" },
+  { label: "Last 6 months", value: "six_months" },
+  { label: "Custom range", value: "custom" },
+];
 
 function daysLeft(endDate: string): number {
   const diff = new Date(endDate).getTime() - Date.now();
@@ -48,7 +57,7 @@ function TrendLabel({ trend }: { trend: TrendData | null }) {
 }
 
 export default function ChallengesPage() {
-  const { organizationId, currentUser } = useDashboardData();
+  const { organizationId, currentUser, branches } = useDashboardData();
   const { scope } = useDashboardScope();
 
   const [activeTab, setActiveTab] = useState<ChallengeStatus | "All">("All");
@@ -72,11 +81,23 @@ export default function ChallengesPage() {
   });
 
   const canCreate = currentUser ? hasPermission(currentUser.permissions, "challenge.create") : false;
+  const audienceOptions = useMemo<FilterDropdownOption<ChallengeFilter>[]>(() => [
+    { label: "All challenges", value: "all" },
+    { label: "General challenges", value: "org_wide" },
+    ...branches.map((branch) => ({
+      label: branch.name,
+      value: `branch:${branch.id}` as ChallengeFilter,
+      group: "Branches",
+    })),
+  ], [branches]);
 
   useEffect(() => {
-    if (canCreate && new URLSearchParams(window.location.search).get("create") === "1") {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (canCreate && searchParams.get("create") === "1") {
       setIsCreateModalOpen(true);
-      window.history.replaceState(null, "", "/dashboard/challenges");
+      searchParams.delete("create");
+      const remainingQuery = searchParams.toString();
+      window.history.replaceState(null, "", `/dashboard/challenges${remainingQuery ? `?${remainingQuery}` : ""}`);
     }
     const openCreateModal = () => {
       if (canCreate) setIsCreateModalOpen(true);
@@ -85,12 +106,14 @@ export default function ChallengesPage() {
     return () => window.removeEventListener("wellstaq:open-create-challenge", openCreateModal);
   }, [canCreate]);
 
-  // Overview has no single branch, so "branch only" isn't a valid choice there.
   useEffect(() => {
-    if (scope.type === "overview" && challengeFilter === "branch") {
+    if (
+      challengeFilter.startsWith("branch:") &&
+      !branches.some((branch) => `branch:${branch.id}` === challengeFilter)
+    ) {
       setChallengeFilter("all");
     }
-  }, [scope, challengeFilter]);
+  }, [branches, challengeFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -104,20 +127,18 @@ export default function ChallengesPage() {
     }).catch(() => setWellbeingNames({}));
   }, []);
 
-  // Maps (dashboard scope × challengeFilter) -> API params, per the backend's actual filter semantics.
+  // Maps user-facing audience choices to the existing API filters.
   const scopeParams = useMemo(() => {
-    if (scope.type === "overview") {
-      return challengeFilter === "org_wide"
-        ? { scope: "organization" as const }        // org-wide only, no branch_id
-        : { scope: "all" as const };                  // every challenge, all branches + org-wide
-    }
-    if (challengeFilter === "branch") {
-      return { branchId: scope.branchId };            // exact branch only, org-wide excluded
+    if (challengeFilter.startsWith("branch:")) {
+      return { branchId: challengeFilter.slice("branch:".length) };
     }
     if (challengeFilter === "org_wide") {
-      return { scope: "organization" as const };      // org-wide only, no branch_id
+      return { scope: "organization" as const };
     }
-    return { branchId: scope.branchId, scope: "organization" as const }; // branch + org-wide
+
+    return scope.type === "overview"
+      ? { scope: "all" as const }
+      : { branchId: scope.branchId, scope: "organization" as const };
   }, [scope, challengeFilter]);
 
   useEffect(() => {
@@ -189,17 +210,15 @@ export default function ChallengesPage() {
           <p className="text-sm text-grey-2">Join community challenges, track your progress, and earn rewards.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <select
+          <FilterDropdown
             value={period}
-            onChange={(e) => setPeriod(e.target.value as Period)}
-            className="h-10 px-3 rounded-lg border border-grey-4 bg-white text-sm text-grey-2 focus:outline-none focus:ring-2 focus:ring-primary-1"
-          >
-            <option value="all">Overall</option>
-            <option value="week">This week</option>
-            <option value="month">This month</option>
-            <option value="six_months">Last 6 months</option>
-            <option value="custom">Custom range</option>
-          </select>
+            options={PERIOD_OPTIONS}
+            onValueChange={setPeriod}
+            ariaLabel="Challenge statistics period"
+            align="right"
+            buttonClassName="min-w-[132px]"
+            menuClassName="w-48"
+          />
           {period === "custom" && (
             <>
               <input
@@ -278,45 +297,33 @@ export default function ChallengesPage() {
                 className="h-10 pl-9 pr-4 w-full rounded-lg border border-grey-4 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-1"
               />
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
-              {STATUS_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setActiveTab(tab.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeTab === tab.value
-                      ? "bg-white border border-[#C45700] text-[#C45700]"
-                      : "bg-white border border-grey-4 text-grey-2 hover:bg-grey-5"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
+            <div className="flex w-full items-center gap-2 pb-2 sm:w-auto sm:pb-0">
+              <FilterDropdown
+                id="challenge-audience-filter"
+                value={challengeFilter}
+                options={audienceOptions}
+                onValueChange={setChallengeFilter}
+                ariaLabel="Challenge audience"
+                buttonClassName="min-w-[180px] shrink-0"
+                menuClassName="w-56"
+              />
 
-          {/* Scope-of-challenges toggle: works in BOTH branch view and org overview */}
-          <div className="flex items-center gap-2 text-sm">
-            <button
-              onClick={() => setChallengeFilter("all")}
-              className={`px-3 py-1.5 rounded-md transition-colors ${challengeFilter === "all" ? "bg-primary-5 text-primary-1 font-medium" : "text-grey-2 hover:bg-grey-5"}`}
-            >
-              {scope.type === "overview" ? "All (overall branches + org-wide)" : "All (branch + org-wide)"}
-            </button>
-            {scope.type === "branch" && (
-              <button
-                onClick={() => setChallengeFilter("branch")}
-                className={`px-3 py-1.5 rounded-md transition-colors ${challengeFilter === "branch" ? "bg-primary-5 text-primary-1 font-medium" : "text-grey-2 hover:bg-grey-5"}`}
-              >
-                This branch only
-              </button>
-            )}
-            <button
-              onClick={() => setChallengeFilter("org_wide")}
-              className={`px-3 py-1.5 rounded-md transition-colors ${challengeFilter === "org_wide" ? "bg-primary-5 text-primary-1 font-medium" : "text-grey-2 hover:bg-grey-5"}`}
-            >
-              Org-wide only
-            </button>
+              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto no-scrollbar sm:flex-none">
+                {STATUS_TABS.map((tab) => (
+                  <button
+                    key={tab.value}
+                    onClick={() => setActiveTab(tab.value)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      activeTab === tab.value
+                        ? "bg-white border border-[#C45700] text-[#C45700]"
+                        : "bg-white border border-grey-4 text-grey-2 hover:bg-grey-5"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 

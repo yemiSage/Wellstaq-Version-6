@@ -1,21 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Search, Plus, Calendar, Mail, MessageSquare, Video, Link as LinkIcon, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 
-const INTEGRATIONS = [
+const INTEGRATION_PRESENTATION = [
   {
     id: "google_calendar",
     name: "Google Calendar",
     description: "Sync your wellness events and challenges directly to your Google Calendar.",
     icon: <Calendar className="w-6 h-6 text-blue-500" />,
     iconBg: "bg-blue-50",
-    status: "connected",
-    enabled: true,
   },
   {
     id: "slack",
@@ -23,8 +22,6 @@ const INTEGRATIONS = [
     description: "Get notifications about team wellness challenges and updates in your Slack channels.",
     icon: <MessageSquare className="w-6 h-6 text-purple-500" />,
     iconBg: "bg-purple-50",
-    status: "disconnected",
-    enabled: false,
   },
   {
     id: "zoom",
@@ -32,8 +29,6 @@ const INTEGRATIONS = [
     description: "Automatically generate Zoom links for your virtual wellness sessions.",
     icon: <Video className="w-6 h-6 text-blue-400" />,
     iconBg: "bg-blue-50",
-    status: "connected",
-    enabled: false,
   },
   {
     id: "microsoft_outlook",
@@ -41,27 +36,49 @@ const INTEGRATIONS = [
     description: "Sync events and get email reminders through your Outlook account.",
     icon: <Mail className="w-6 h-6 text-blue-600" />,
     iconBg: "bg-blue-50",
-    status: "disconnected",
-    enabled: false,
   }
 ];
 
+interface IntegrationView {
+  id: string;
+  name: string;
+  description: string;
+  status: "connected" | "disconnected";
+  enabled: boolean;
+  icon: ReactNode;
+  iconBg: string;
+}
+
 export default function IntegrationsPage() {
-  const [integrations, setIntegrations] = useState(INTEGRATIONS);
+  const [integrations, setIntegrations] = useState<IntegrationView[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { organizationId } = useDashboardData();
   const [searchQuery, setSearchQuery] = useState("");
   const [integrationToDisconnect, setIntegrationToDisconnect] = useState<string | null>(null);
 
   useEffect(() => {
     if (!organizationId) return;
+    let cancelled = false;
+    setIntegrations([]);
+    setIsLoading(true);
+    setError(null);
     void api.integrations.list(organizationId).then(({ items: remoteIntegrations }) => {
-      setIntegrations(INTEGRATIONS.map((presentation) => ({
-        ...presentation,
-        ...remoteIntegrations.find((integration) => integration.id === presentation.id),
-        icon: presentation.icon,
-        iconBg: presentation.iconBg,
-      })));
+      if (cancelled) return;
+      setIntegrations(remoteIntegrations.map((integration) => {
+        const presentation = INTEGRATION_PRESENTATION.find((item) => item.id === integration.id);
+        return {
+          ...integration,
+          icon: presentation?.icon ?? <LinkIcon className="h-6 w-6 text-grey-2" />,
+          iconBg: presentation?.iconBg ?? "bg-grey-5",
+        };
+      }));
+    }).catch(() => {
+      if (!cancelled) setError("Unable to load integrations from the backend.");
+    }).finally(() => {
+      if (!cancelled) setIsLoading(false);
     });
+    return () => { cancelled = true; };
   }, [organizationId]);
 
   const filteredIntegrations = integrations.filter(i => 
@@ -154,7 +171,17 @@ export default function IntegrationsPage() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {filteredIntegrations.map((integration) => (
+          {isLoading && Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="h-48 animate-pulse rounded-xl bg-grey-4" />
+          ))}
+
+          {!isLoading && error && (
+            <div className="col-span-1 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700 md:col-span-2" role="alert">
+              {error}
+            </div>
+          )}
+
+          {!isLoading && !error && filteredIntegrations.map((integration) => (
             <div key={integration.id} className="bg-[#FAFAFA] rounded-xl border border-grey-4 p-5 flex flex-col gap-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-4">
@@ -215,7 +242,7 @@ export default function IntegrationsPage() {
             </div>
           ))}
           
-          {filteredIntegrations.length === 0 && (
+          {!isLoading && !error && filteredIntegrations.length === 0 && (
             <div className="col-span-1 md:col-span-2 py-12 text-center flex flex-col items-center justify-center">
               <div className="w-16 h-16 bg-grey-5 rounded-full flex items-center justify-center mb-4">
                 <Search className="w-8 h-8 text-grey-3" />

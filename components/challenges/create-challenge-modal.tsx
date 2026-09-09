@@ -373,14 +373,14 @@ export function CreateChallengeModal({
 
         {scope.type === "overview" && creatable?.canCreateOrgWide && (
           <div className="space-y-2">
-            <Label htmlFor="branchSelectWide">Branch (optional — leave blank for org-wide)</Label>
+            <Label htmlFor="branchSelectWide">Branch (optional — leave blank for General)</Label>
             <select
               id="branchSelectWide"
               value={selectedBranchId}
               onChange={(e) => { setSelectedBranchId(e.target.value); clearErrors(); }}
               className="w-full h-[44px] rounded-[8px] border border-grey-4 bg-white px-3 text-sm"
             >
-              <option value="">Org-wide</option>
+              <option value="">General</option>
               {branchOptions.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}

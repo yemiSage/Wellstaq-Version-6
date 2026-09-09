@@ -1,61 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import { Building2, HeartPulse } from "lucide-react";
 import { 
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell
 } from "recharts";
+import { DashboardEmptyState } from "@/components/dashboard/dashboard-empty-state";
 
-const monthlyStepsData = [
-  { name: 'Jan', actual: 48000, target: 40000 },
-  { name: 'Feb', actual: 52000, target: 45000 },
-  { name: 'Mar', actual: 56000, target: 50000 },
-  { name: 'Apr', actual: 60000, target: 55000 },
-  { name: 'May', actual: 65000, target: 60000 },
-  { name: 'Jun', actual: 70000, target: 65000 },
-  { name: 'Jul', actual: 73000, target: 62000 },
-  { name: 'Aug', actual: 62000, target: 35000 },
-  { name: 'Sep', actual: 75000, target: 65000 },
-  { name: 'Oct', actual: 82000, target: 80000 },
-  { name: 'Nov', actual: 81000, target: 80000 },
-  { name: 'Dec', actual: 70000, target: 75000 },
-];
-
-const healthDistributionData = [
-  { name: 'Excellent', value: 35, color: '#22C55E' },
-  { name: 'Good', value: 42, color: '#F97316' },
-  { name: 'Fair', value: 15, color: '#FDBA74' },
-  { name: 'At Risk', value: 8, color: '#DC2626' },
-];
-
-type DepartmentPerformancePoint = { name: string; branchName?: string | null; engagement: number };
-
-const departmentPerformanceData: DepartmentPerformancePoint[] = [
-  { name: 'Engineering', engagement: 8 },
-  { name: 'Marketing', engagement: 7 },
-  { name: 'TheVipers', engagement: 6 },
-  { name: 'Unbeaten HR', engagement: 9 },
-  { name: 'Finance M...', engagement: 6.5 },
-  { name: 'Elon Musk...', engagement: 7.5 },
-];
-
-const weeklyActivityData = [
-  { name: 'W1', steps: 42000 },
-  { name: 'W2', steps: 38000 },
-  { name: 'W3', steps: 45000 },
-  { name: 'W4', steps: 52000 },
-  { name: 'W5', steps: 48000 },
-  { name: 'W6', steps: 56000 },
-  { name: 'W7', steps: 52000 },
-  { name: 'W8', steps: 59000 },
-  { name: 'W9', steps: 62000 },
-];
+export interface MonthlyStepsPoint { name: string; actual: number; target: number }
+export interface HealthDistributionPoint { name: string; value: number; color: string }
+export interface DepartmentPerformancePoint { name: string; branchName?: string | null; engagement: number }
+export interface WeeklyActivityPoint { name: string; steps: number }
 
 function EmptyChart() {
   return <div className="flex h-full items-center justify-center text-sm text-grey-3">No KPI data available for this period.</div>;
 }
 
-export function MonthlyStepsChart({data}: {data?: typeof monthlyStepsData | null}) {
+export function MonthlyStepsChart({data}: {data?: MonthlyStepsPoint[] | null}) {
   const chartData = data ?? [];
   return (
     <div className="lg:col-span-2 bg-white p-[12px] rounded-[12px]">
@@ -89,13 +51,20 @@ export function MonthlyStepsChart({data}: {data?: typeof monthlyStepsData | null
   );
 }
 
-export function HealthDistributionChart({data}: {data?: typeof healthDistributionData | null}) {
+export function HealthDistributionChart({data}: {data?: HealthDistributionPoint[] | null}) {
   const chartData = data ?? [];
   return (
     <div className="bg-white p-[12px] rounded-[12px] flex flex-col">
       <h3 className="text-[16px] font-bold text-grey-1 mb-6">Health Distribution</h3>
       
-      {chartData.length === 0 ? <div className="h-[300px]"><EmptyChart /></div> : <div className="flex-1 flex flex-col items-center justify-center">
+      {chartData.length === 0 ? (
+        <DashboardEmptyState
+          icon={HeartPulse}
+          title="No health distribution data yet"
+          description="Health distribution will appear here when wellbeing responses are available."
+          className="min-h-[300px] flex-1"
+        />
+      ) : <div className="flex-1 flex flex-col items-center justify-center">
         <div className="h-[200px] w-[200px] relative mb-8">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -139,43 +108,54 @@ export function DepartmentPerformanceChart({data}: {data?: DepartmentPerformance
   return (
     <div className="bg-white p-[20px] rounded-[12px]">
       <h3 className="text-[16px] font-bold text-grey-1 mb-4">Department Performance</h3>
-      <div className="flex items-center gap-4 text-xs text-grey-2 mb-6">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#EA6A05]"></div>
-          <span>Health Score</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#4F46E5]"></div>
-          <span>Engagement</span>
-        </div>
-      </div>
-      
-      <div className="h-[250px] w-full">
-        {chartData.length === 0 ? <EmptyChart /> : <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }} barSize={16}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 10 }} dy={10} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} domain={[0, 100]} />
-            <Tooltip cursor={{ fill: 'transparent' }} />
-            <Bar dataKey="engagement" fill="#4F46E5" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>}
-      </div>
-      {chartData.some((item) => item.branchName) && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {chartData.map((item) => (
-            <div key={`${item.branchName}-${item.name}`} className="flex items-center gap-1.5 text-xs text-grey-2">
-              <span>{item.name}</span>
-              <span className="rounded-full bg-grey-5 px-2 py-0.5 font-medium text-grey-1">{item.branchName}</span>
+      {chartData.length === 0 ? (
+        <DashboardEmptyState
+          icon={Building2}
+          title="No department performance data yet"
+          description="Department performance will appear here when team activity is available."
+          className="min-h-[300px]"
+        />
+      ) : (
+        <>
+          <div className="flex items-center gap-4 text-xs text-grey-2 mb-6">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#EA6A05]"></div>
+              <span>Health Score</span>
             </div>
-          ))}
-        </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#4F46E5]"></div>
+              <span>Engagement</span>
+            </div>
+          </div>
+
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }} barSize={16}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E7EC" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 10 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#667085', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} domain={[0, 100]} />
+                <Tooltip cursor={{ fill: 'transparent' }} />
+                <Bar dataKey="engagement" fill="#4F46E5" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          {chartData.some((item) => item.branchName) && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {chartData.map((item) => (
+                <div key={`${item.branchName}-${item.name}`} className="flex items-center gap-1.5 text-xs text-grey-2">
+                  <span>{item.name}</span>
+                  <span className="rounded-full bg-grey-5 px-2 py-0.5 font-medium text-grey-1">{item.branchName}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-export function WeeklyActivityChart({data}: {data?: typeof weeklyActivityData | null}) {
+export function WeeklyActivityChart({data}: {data?: WeeklyActivityPoint[] | null}) {
   const chartData = data ?? [];
   const [activityTab, setActivityTab] = useState("Steps");
 

@@ -3,17 +3,23 @@
 import { useState } from "react";
 import { 
   Mail, 
-  MessageSquare, 
   Phone, 
   MapPin, 
   Send, 
   CheckCircle2,
-  HelpCircle,
   Clock,
   Globe
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/services/api";
+import { FilterDropdown, type FilterDropdownOption } from "@/components/ui/filter-dropdown";
+
+const SUBJECT_OPTIONS: FilterDropdownOption<string>[] = [
+  { label: "General Inquiry", value: "General Inquiry" },
+  { label: "Technical Support", value: "Technical Support" },
+  { label: "Billing Question", value: "Billing Question" },
+  { label: "Partnership", value: "Partnership" },
+];
 
 export default function ContactPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -23,6 +29,12 @@ export default function ContactPage() {
     subject: "General Inquiry",
     message: ""
   });
+  const isFormComplete = Boolean(
+    formData.name.trim() &&
+    formData.email.trim() &&
+    formData.subject.trim() &&
+    formData.message.trim(),
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +90,7 @@ export default function ContactPage() {
               
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#EA6A05]/10 text-[#EA6A05] rounded-xl flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 bg-grey-5 text-grey-2 rounded-xl flex items-center justify-center shrink-0">
                     <Mail size={20} />
                   </div>
                   <div>
@@ -88,7 +100,7 @@ export default function ContactPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#EA6A05]/10 text-[#EA6A05] rounded-xl flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 bg-grey-5 text-grey-2 rounded-xl flex items-center justify-center shrink-0">
                     <Phone size={20} />
                   </div>
                   <div>
@@ -98,7 +110,7 @@ export default function ContactPage() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-[#EA6A05]/10 text-[#EA6A05] rounded-xl flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 bg-grey-5 text-grey-2 rounded-xl flex items-center justify-center shrink-0">
                     <MapPin size={20} />
                   </div>
                   <div>
@@ -109,16 +121,6 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <div className="bg-[#EA6A05] p-6 rounded-[12px] text-white">
-              <HelpCircle className="mb-4 opacity-80" size={32} />
-              <h3 className="text-[18px] font-bold mb-2">Check our Help Center</h3>
-              <p className="text-white/80 text-sm mb-6">
-                Find quick answers to common questions in our comprehensive documentation.
-              </p>
-              <button className="w-full py-3 bg-white text-[#EA6A05] rounded-xl font-bold text-sm hover:bg-white/90 transition-all">
-                Go to Help Center
-              </button>
-            </div>
           </div>
 
           {/* Contact Form */}
@@ -133,7 +135,7 @@ export default function ContactPage() {
                       placeholder="John Doe"
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all"
+                      className="w-full px-4 py-3 rounded-[12px] border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -143,23 +145,21 @@ export default function ContactPage() {
                       placeholder="john@example.com"
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all"
+                      className="w-full px-4 py-3 rounded-[12px] border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-grey-1">Subject</label>
-                  <select
+                  <FilterDropdown
                     value={formData.subject}
-                    onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all bg-white"
-                  >
-                    <option>General Inquiry</option>
-                    <option>Technical Support</option>
-                    <option>Billing Question</option>
-                    <option>Partnership</option>
-                  </select>
+                    options={SUBJECT_OPTIONS}
+                    onValueChange={(subject) => setFormData({...formData, subject})}
+                    ariaLabel="Subject"
+                    buttonClassName="h-12 w-full rounded-[12px] px-4 font-normal"
+                    menuClassName="w-full"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -169,13 +169,14 @@ export default function ContactPage() {
                     placeholder="How can we help you?"
                     value={formData.message}
                     onChange={(e) => setFormData({...formData, message: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all resize-none"
+                    className="w-full px-4 py-3 rounded-[12px] border border-grey-4 focus:outline-none focus:ring-2 focus:ring-[#EA6A05]/20 focus:border-[#EA6A05] transition-all resize-none"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-[#EA6A05] text-white rounded-xl font-bold text-lg hover:bg-[#C45700] transition-all flex items-center justify-center gap-2"
+                  disabled={!isFormComplete}
+                  className="flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#EA6A05] py-[14px] text-lg font-bold text-white transition-all hover:bg-[#C45700] disabled:cursor-not-allowed disabled:bg-grey-4 disabled:text-grey-3 disabled:hover:bg-grey-4"
                 >
                   <Send size={20} />
                   Send Message
@@ -183,26 +184,19 @@ export default function ContactPage() {
               </form>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-[12px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-[12px]">
               <div className="flex items-center gap-3 p-4 bg-white rounded-[12px] border border-grey-4">
-                <Clock className="text-[#EA6A05]" size={20} />
+                <Clock className="text-grey-2" size={20} />
                 <div className="text-xs">
                   <p className="font-bold text-grey-1">Response Time</p>
                   <p className="text-grey-2">Under 24 hours</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-4 bg-white rounded-[12px] border border-grey-4">
-                <Globe className="text-[#EA6A05]" size={20} />
+                <Globe className="text-grey-2" size={20} />
                 <div className="text-xs">
                   <p className="font-bold text-grey-1">Global Support</p>
                   <p className="text-grey-2">Available 24/7</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-white rounded-[12px] border border-grey-4">
-                <MessageSquare className="text-[#EA6A05]" size={20} />
-                <div className="text-xs">
-                  <p className="font-bold text-grey-1">Live Chat</p>
-                  <p className="text-grey-2">Available for Pro</p>
                 </div>
               </div>
             </div>

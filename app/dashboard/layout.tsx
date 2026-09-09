@@ -74,7 +74,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <div className="flex-1 flex flex-col overflow-hidden w-full">
               <TopNav onMenuClick={() => setIsSidebarOpen(true)} />
-              <main className="flex-1 overflow-y-auto p-3 no-scrollbar">
+              <main className="flex-1 min-w-0 overflow-y-auto px-3 py-3 sm:px-6 no-scrollbar [&>div]:!mx-0 [&>div]:!w-full [&>div]:!max-w-none">
                 {children}
               </main>
             </div>

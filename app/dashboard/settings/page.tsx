@@ -18,6 +18,7 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
+  ChevronDown,
   Monitor,
   Trash2,
 } from "lucide-react";
@@ -34,6 +35,12 @@ import { hasPermission, readablePermission } from "@/lib/permissions";
 import { clearAuthTokens } from "@/services/auth-token";
 import { humanizeIdentifier } from "@/lib/format";
 import { useDashboardScope } from "@/lib/scope";
+import { FilterDropdown, type FilterDropdownOption } from "@/components/ui/filter-dropdown";
+
+const TWO_FACTOR_METHOD_OPTIONS: FilterDropdownOption<"email" | "totp">[] = [
+  { label: "Email code", value: "email" },
+  { label: "Authenticator app", value: "totp" },
+];
 
 const NAV_ITEMS = [
   { id: "profile", label: "Profile", sublabel: "Personal information", icon: <User className="w-5 h-5" /> },
@@ -78,6 +85,7 @@ export default function SettingsPage() {
   const [preferences, setPreferences] = useState<UserPreferences>({ emailNotifications: true, pushNotifications: true, challengeReminders: true, publicProfile: false, showActivity: false, theme: "light" });
   const [preferencesSaving, setPreferencesSaving] = useState(false);
   const [rolesList, setRolesList] = useState<RoleItem[]>([]);
+  const [expandedRoleIds, setExpandedRoleIds] = useState<Set<string>>(() => new Set());
   const [roleMembers, setRoleMembers] = useState<OrganizationMemberInfo[]>([]);
   const [permissionCatalogue, setPermissionCatalogue] = useState<PermissionCatalogueItem[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState("");
@@ -108,7 +116,17 @@ export default function SettingsPage() {
     setIsAddRoleModalOpen(false);
     setPlanPickerOpen(false);
     setSelectedRoleForEdit(null);
+    setExpandedRoleIds(new Set());
   }, [activeTab, selectedBranchId]);
+
+  const toggleRoleExpanded = (roleId: string) => {
+    setExpandedRoleIds((current) => {
+      const next = new Set(current);
+      if (next.has(roleId)) next.delete(roleId);
+      else next.add(roleId);
+      return next;
+    });
+  };
 
   const handleAddRole = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -432,7 +450,7 @@ export default function SettingsPage() {
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center gap-3 p-3 rounded-xl text-left transition-all border-[1.5px] ${
+              className={`flex items-center gap-3 rounded-[12px] p-2 text-left transition-all border-[1.5px] ${
                 activeTab === item.id
                   ? "bg-white border-[#EA6A05] shadow-sm"
                   : "bg-white border-[#E6E6E6] hover:bg-grey-5"
@@ -444,7 +462,7 @@ export default function SettingsPage() {
                 {item.icon}
               </div>
               <div>
-                <div className={`text-sm font-bold ${activeTab === item.id ? "text-grey-1" : "text-grey-2"}`}>{item.label}</div>
+                <div className={`text-sm font-semibold ${activeTab === item.id ? "text-grey-1" : "text-grey-2"}`}>{item.label}</div>
                 <div className={`text-[12px] ${activeTab === item.id ? "text-grey-2" : "text-grey-3"}`}>{item.sublabel}</div>
               </div>
             </button>
@@ -454,7 +472,7 @@ export default function SettingsPage() {
 
           <button
             onClick={() => setIsLogoutModalOpen(true)}
-            className="flex items-center gap-3 p-3 rounded-xl text-left text-red-500 hover:bg-red-50 transition-all border-[1.5px] border-transparent"
+            className="flex items-center gap-3 rounded-[12px] p-2 text-left text-red-500 hover:bg-red-50 transition-all border-[1.5px] border-transparent"
           >
             <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
               <LogOut className="w-5 h-5" />
@@ -467,7 +485,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Right Content */}
-        <div className="flex-1 bg-white rounded-[8px] border border-grey-4 p-5">
+        <div className="flex flex-1 flex-col rounded-[8px] border border-grey-4 bg-white p-5 pb-10">
           {activeTab === "profile" && (
             <>
               <h2 className="text-[18px] font-bold text-grey-1 mb-0 leading-[32px]">Profile Information</h2>
@@ -562,7 +580,7 @@ export default function SettingsPage() {
                 <div className="space-y-4 rounded-xl border border-grey-4 p-4">
                   <div className="flex items-center justify-between"><div><div className="text-sm font-bold text-grey-1">Two-Factor Authentication</div><div className="text-xs text-grey-2">{securityUser.twoFaEnabled ? `Enabled using ${securityUser.twoFaMethod}.` : "Add an extra layer of security."}</div></div><span className={`rounded-full px-2 py-1 text-xs font-medium ${securityUser.twoFaEnabled ? "bg-green-50 text-green-700" : "bg-grey-5 text-grey-2"}`}>{securityUser.twoFaEnabled ? "Enabled" : "Disabled"}</span></div>
                   {!securityUser.twoFaEnabled ? <>
-                    {!twoFaSetup ? <div className="flex flex-wrap items-end gap-3"><label className="text-xs font-medium text-grey-1">Method<select value={twoFaMethod} onChange={(e) => setTwoFaMethod(e.target.value as "email" | "totp")} className="mt-1 block h-10 rounded-lg border border-grey-4 px-3 text-sm"><option value="email">Email code</option><option value="totp">Authenticator app</option></select></label><Button disabled={securitySaving} onClick={() => void startTwoFa()}>Start setup</Button></div> : <div className="space-y-3">{twoFaSetup.secret && <div className="rounded-lg bg-grey-5 p-3 text-xs"><p className="mb-1 font-medium">Authenticator secret</p><code className="break-all">{twoFaSetup.secret}</code></div>}<div className="flex gap-2"><Input inputMode="numeric" maxLength={8} placeholder="Verification code" value={twoFaCode} onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, ""))} /><Button disabled={securitySaving || twoFaCode.length < 6} onClick={() => void confirmTwoFa()}>Confirm</Button></div></div>}
+                    {!twoFaSetup ? <div className="flex flex-wrap items-end gap-3"><div className="text-xs font-medium text-grey-1"><span>Method</span><FilterDropdown value={twoFaMethod} options={TWO_FACTOR_METHOD_OPTIONS} onValueChange={setTwoFaMethod} ariaLabel="Two-factor authentication method" buttonClassName="mt-1 min-w-[180px]" menuClassName="w-full" /></div><Button disabled={securitySaving} onClick={() => void startTwoFa()}>Start setup</Button></div> : <div className="space-y-3">{twoFaSetup.secret && <div className="rounded-lg bg-grey-5 p-3 text-xs"><p className="mb-1 font-medium">Authenticator secret</p><code className="break-all">{twoFaSetup.secret}</code></div>}<div className="flex gap-2"><Input inputMode="numeric" maxLength={8} placeholder="Verification code" value={twoFaCode} onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, ""))} /><Button disabled={securitySaving || twoFaCode.length < 6} onClick={() => void confirmTwoFa()}>Confirm</Button></div></div>}
                   </> : <div className="flex gap-2"><Input type="password" placeholder="Current password" value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)} /><Button variant="outline" disabled={securitySaving || !disablePassword} onClick={() => void disableTwoFa()}>Disable 2FA</Button></div>}
                 </div>
                 <div className="space-y-3 rounded-xl border border-grey-4 p-4">
@@ -671,7 +689,11 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between mb-0">
                 <div>
                   <h2 className="text-[18px] font-bold text-grey-1 leading-[32px]">Roles & Permissions</h2>
-                  <p className="text-[14px] text-grey-2 pb-[12px]">Manage user roles and their access levels across the platform.</p>
+                  <p className="text-[14px] text-grey-2 pb-[12px]">
+                    {selectedBranchId
+                      ? "Manage user roles and their access level for this branch."
+                      : "Manage General user roles and their access levels."}
+                  </p>
                 </div>
                 {canAssignRoles && <Button
                   onClick={() => { setNewRoleData({ role: "", description: "" }); setIsAddRoleModalOpen(true); }}
@@ -683,42 +705,55 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-6 mt-4">
-                {rolesList.map((role) => (
-                  <div key={role.id} className="p-5 rounded-xl border border-grey-4 hover:border-primary-1/30 transition-all">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-base font-bold text-grey-1">{humanizeIdentifier(role.name)}</h3>
-                        <p className="text-xs text-grey-2 mt-1">{role.description}</p>
+                {rolesList.map((role) => {
+                  const isExpanded = expandedRoleIds.has(role.id);
+                  return (
+                    <div key={role.id} className="rounded-[12px] border border-grey-4 p-3">
+                      <div className={`flex items-start justify-between gap-4 ${isExpanded ? "mb-4" : ""}`}>
+                        <div>
+                          <h3 className="text-base font-semibold text-grey-1">{humanizeIdentifier(role.name)}</h3>
+                          <p className="text-xs text-grey-2 mt-1">{role.description}</p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          aria-controls={`role-permissions-${role.id}`}
+                          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${humanizeIdentifier(role.name)} permissions`}
+                          onClick={() => toggleRoleExpanded(role.id)}
+                          className="inline-flex shrink-0 items-center gap-2 rounded-full bg-grey-5 px-3 py-1 text-[10px] font-bold text-grey-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1"
+                        >
+                          {role.userCount ?? 0} USERS
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                        </button>
                       </div>
-                      <div className="px-3 py-1 bg-grey-5 rounded-full text-[10px] font-bold text-grey-2">
-                        {role.userCount ?? 0} USERS
-                      </div>
+                      {isExpanded && <div id={`role-permissions-${role.id}`}>
+                        <div className="flex flex-wrap gap-2">
+                          {(role.permissions ?? []).map((permission) => <span key={permission} className="px-2 py-1 bg-primary-1/5 text-primary-1 text-[10px] font-medium rounded-md border border-primary-1/10">{readablePermission(permission)}</span>)}
+                          {(role.permissions ?? []).length === 0 && <span className="px-2 py-1 bg-grey-5 text-grey-3 text-[10px] font-medium rounded-md">No default permissions</span>}
+                        </div>
+                        <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-grey-4/50">
+                          <button
+                            disabled={role.isSystem || role.isDefault || !canRevokeRoles}
+                            onClick={() => void handleDeleteRole(role)}
+                            className={`text-xs font-bold ${role.isSystem || role.isDefault || !canRevokeRoles ? "text-grey-4 cursor-not-allowed" : "text-red-500 hover:text-red-600"}`}
+                          >
+                            Delete Role
+                          </button>
+                          <button
+                            disabled={cannotEditRole(role) || (!canGrantPermissions && !canRevokePermissions)}
+                            onClick={() => {
+                              setSelectedRoleForEdit(role);
+                              setIsEditPermissionsModalOpen(true);
+                            }}
+                            className="text-xs font-bold text-primary-1 hover:text-primary-2 disabled:text-grey-4 disabled:cursor-not-allowed"
+                          >
+                            {cannotEditRole(role) ? "Protected" : "Edit Permissions"}
+                          </button>
+                        </div>
+                      </div>}
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {(role.permissions ?? []).map((permission) => <span key={permission} className="px-2 py-1 bg-primary-1/5 text-primary-1 text-[10px] font-medium rounded-md border border-primary-1/10">{readablePermission(permission)} · {role.branchId ? "This branch" : "Organization-wide"}</span>)}
-                      {(role.permissions ?? []).length === 0 && <span className="px-2 py-1 bg-grey-5 text-grey-3 text-[10px] font-medium rounded-md">No default permissions</span>}
-                    </div>
-                    <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-grey-4/50">
-                      <button
-                        disabled={role.isSystem || role.isDefault || !canRevokeRoles}
-                        onClick={() => void handleDeleteRole(role)}
-                        className={`text-xs font-bold ${role.isSystem || role.isDefault || !canRevokeRoles ? "text-grey-4 cursor-not-allowed" : "text-red-500 hover:text-red-600"}`}
-                      >
-                        Delete Role
-                      </button>
-                      <button
-                        disabled={cannotEditRole(role) || (!canGrantPermissions && !canRevokePermissions)}
-                        onClick={() => {
-                          setSelectedRoleForEdit(role);
-                          setIsEditPermissionsModalOpen(true);
-                        }}
-                        className="text-xs font-bold text-primary-1 hover:text-primary-2 disabled:text-grey-4 disabled:cursor-not-allowed"
-                      >
-                        {cannotEditRole(role) ? "Protected" : "Edit Permissions"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
@@ -729,22 +764,21 @@ export default function SettingsPage() {
               <p className="text-[14px] text-grey-2 pb-[12px]">Manage your subscription plan and billing details.</p>
               {canManageBilling && billingLoading && <div className="flex items-center justify-center gap-2 py-16 text-sm text-grey-3"><LoaderCircle className="h-5 w-5 animate-spin" /> Loading billing information...</div>}
               {canManageBilling && !billingLoading && subscription && <>
-                <div className="mb-8 rounded-xl border border-[#EA6A05]/20 bg-[#EA6A05]/5 p-6">
-                  <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-                    <div><div className="text-xs font-bold uppercase tracking-wider text-[#EA6A05]">Current Plan</div><div className="text-2xl font-bold text-grey-1">{subscription.status === "trialing" ? "Free Trial" : plans.find((plan) => plan.id === subscription.planId)?.name ?? "Subscription plan"}</div></div>
-                    <span className="rounded-full bg-[#EA6A05] px-3 py-1 text-[10px] font-bold uppercase text-white">{subscription.status === "trialing" ? "FREE TRIAL" : subscription.status.replaceAll("_", " ")}</span>
+                <div className="mb-8 rounded-xl border border-grey-4 bg-grey-5 p-6">
+                  <div className="mb-4">
+                    <div><div className="text-xs font-bold uppercase tracking-wider text-[#EA6A05]">Current Plan</div><div className="pt-1 text-[20px] font-semibold text-grey-1">{subscription.status === "trialing" ? "Free Trial" : plans.find((plan) => plan.id === subscription.planId)?.name ?? "Subscription plan"}</div></div>
                   </div>
                   <div className="mb-6 text-sm text-grey-2">{subscription.status === "trialing" ? `Your free trial ends on ${formatDate(subscription.trialEndsAt ?? subscription.currentPeriodEnd)}.` : `Your current billing period ends on ${formatDate(subscription.currentPeriodEnd)}.`}</div>
                   <div className="flex flex-wrap items-center gap-4">
                     <Button disabled={checkoutPlanId !== null} onClick={() => setPlanPickerOpen(true)} className="bg-[#EA6A05] hover:bg-[#EA6A05]/90">Upgrade Plan</Button>
-                    <div className="ml-auto flex items-center gap-3"><span className="text-sm font-medium text-grey-1">Auto renew</span><button disabled={renewalSaving} type="button" onClick={() => void updateRenewal(!autoRenew)} className={`relative h-6 w-11 rounded-full transition-colors disabled:opacity-50 ${autoRenew ? "bg-[#EA6A05]" : "bg-grey-4"}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${autoRenew ? "left-6" : "left-1"}`} /></button></div>
+                    <div className="ml-auto flex items-center gap-3"><span className="text-sm font-medium text-grey-1">Auto renew</span><button disabled={renewalSaving} type="button" onClick={() => void updateRenewal(!autoRenew)} className={`relative h-6 w-11 rounded-full transition-colors disabled:opacity-50 ${autoRenew ? "bg-grey-2" : "bg-grey-4"}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${autoRenew ? "left-6" : "left-1"}`} /></button></div>
                   </div>
                 </div>
               </>}
             </>
           )}
 
-          {["profile", "notifications", "privacy"].includes(activeTab) && <div className="flex items-center justify-end gap-3 pt-6 border-t border-grey-4 mt-8">
+          {["profile", "notifications", "privacy"].includes(activeTab) && <div className="mt-auto flex items-center justify-end gap-3 border-t border-grey-4 pt-6">
             <Button variant="outline" onClick={() => void discardChanges()}>Discard Changes</Button>
             <Button disabled={profileSaving || preferencesSaving} onClick={handleSave}>{profileSaving || preferencesSaving ? "Saving..." : "Save Changes"}</Button>
           </div>}
@@ -790,7 +824,7 @@ export default function SettingsPage() {
               <div className="flex shrink-0 items-center justify-between border-b border-grey-4 p-6">
                 <div>
                   <h3 className="text-lg font-bold text-grey-1">Manage Permissions: {humanizeIdentifier(selectedRoleForEdit.name)}</h3>
-                  <p className="text-xs text-grey-2">{selectedRoleForEdit.branchId ? "Only permissions for this branch are shown and changes apply only to this branch." : "Only organization-wide permissions are shown and changes apply across the organization."}</p>
+                  <p className="text-xs text-grey-2">{selectedRoleForEdit.branchId ? "Only permissions for this branch are shown and changes apply only to this branch." : "General permissions are shown and changes apply across the organization."}</p>
                 </div>
                 <button
                   onClick={() => setIsEditPermissionsModalOpen(false)}
@@ -804,7 +838,7 @@ export default function SettingsPage() {
                 <div className="flex flex-wrap gap-2">
                   {permissionCatalogue.filter((permission) => selectedRoleForEdit.branchId ? permission.scope !== "org" : permission.scope !== "branch").map((permission) => {
                     const isSelected = (selectedRoleForEdit.permissions ?? []).includes(permission.name);
-                    return <button key={permission.id} disabled={selectedRoleForEdit.name === "super_admin"} onClick={() => toggleRolePermission(permission.name)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${isSelected ? "bg-white border-primary-1 text-primary-1 shadow-sm" : "bg-white border-grey-4 text-grey-2 hover:border-grey-3"} disabled:cursor-default`}>{readablePermission(permission.name)} · {selectedRoleForEdit.branchId ? "This branch" : "Organization-wide"}</button>;
+                    return <button key={permission.id} disabled={selectedRoleForEdit.name === "super_admin"} onClick={() => toggleRolePermission(permission.name)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${isSelected ? "bg-white border-primary-1 text-primary-1 shadow-sm" : "bg-white border-grey-4 text-grey-2 hover:border-grey-3"} disabled:cursor-default`}>{readablePermission(permission.name)}</button>;
                   })}
                 </div>
               </div>
