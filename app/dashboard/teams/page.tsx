@@ -23,12 +23,47 @@ import { DrawerLayer } from "@/components/ui/drawer";
 
 type ManagementTab = "role" | "department" | "branch";
 const REVOKE_ROLE_OPTION = "__revoke_role__";
+const SUPER_ADMIN_ROLE = "super_admin";
+const BRANCH_MANAGER_ROLE = "branch_manager";
+
+type MemberRole = { id: string | null; name: string | null };
+
+function normalizeRoleName(name: string | null | undefined) {
+  return name?.trim().toLowerCase().replaceAll(" ", "_") ?? "";
+}
+
+function getOrganizationRole(member: OrganizationMemberInfo, superAdminUserId?: string): MemberRole {
+  if (member.organizationRoleName) {
+    return { id: member.organizationRoleId ?? null, name: member.organizationRoleName };
+  }
+  if (normalizeRoleName(member.roleName) === SUPER_ADMIN_ROLE || member.id === superAdminUserId) {
+    return { id: member.organizationRoleId ?? member.roleId, name: SUPER_ADMIN_ROLE };
+  }
+  return { id: member.organizationRoleId ?? null, name: null };
+}
+
+function getBranchRole(
+  member: OrganizationMemberInfo,
+  branchId: string | undefined,
+  branchManagers: ReadonlyMap<string, string>,
+  superAdminUserId?: string,
+): MemberRole {
+  const organizationRole = getOrganizationRole(member, superAdminUserId);
+  if (organizationRole.name === SUPER_ADMIN_ROLE) return organizationRole;
+  const assignment = branchId ? member.branchRoles?.find((role) => role.branchId === branchId) : undefined;
+  if (branchId && branchManagers.get(branchId) === member.id) return { id: assignment?.roleId ?? null, name: BRANCH_MANAGER_ROLE };
+  if (assignment) return { id: assignment.roleId, name: assignment.roleName };
+  // The organization role must not leak into a branch-scoped view.
+  return { id: null, name: null };
+}
 
 export default function TeamsPage() {
-  const { organizationId, branches, currentUser } = useDashboardData();
+  const { organizationId, branches, currentUser, refresh } = useDashboardData();
   const { scope } = useDashboardScope();
   const scopeBranchId = scope.type === "branch" ? scope.branchId : undefined;
   const scopeKey = scopeBranchId ?? "overview";
+  const branchManagers = useMemo(() => new Map(branches.flatMap((branch) => branch.managerId ? [[branch.id, branch.managerId] as const] : [])), [branches]);
+  const superAdminUserId = currentUser?.role === SUPER_ADMIN_ROLE ? currentUser.userId : undefined;
   const [members, setMembers] = useState<OrganizationMemberInfo[]>([]);
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,12 +94,11 @@ export default function TeamsPage() {
   ];
   const activeManagementTab = managementTabs.find((tab) => tab.value === managementTab)?.value ?? managementTabs[0]?.value;
   const isRevokingRole = memberChanges.roleId === REVOKE_ROLE_OPTION;
-  const selectedMemberRoleId = selectedMember
-    ? scope.type === "branch" ? selectedMember.roleId : selectedMember.organizationRoleId ?? selectedMember.roleId
+  const selectedMemberRole = selectedMember
+    ? scope.type === "branch" ? getBranchRole(selectedMember, scope.branchId, branchManagers, superAdminUserId) : getOrganizationRole(selectedMember, superAdminUserId)
     : null;
-  const selectedMemberRoleName = selectedMember
-    ? scope.type === "branch" ? selectedMember.roleName : selectedMember.organizationRoleName ?? selectedMember.roleName
-    : null;
+  const selectedMemberRoleId = selectedMemberRole?.id ?? null;
+  const selectedMemberRoleName = selectedMemberRole?.name ?? null;
 
   useEffect(() => {
     if (!selectedMember?.id) return;
@@ -86,7 +120,7 @@ export default function TeamsPage() {
     let cancelled = false;
     setIsLoading(true);
     Promise.all([
-      api.organization.getMembers(organizationId, { limit: 200, branchId: scopeBranchId }),
+      api.organization.getMembers(organizationId, { limit: 200 }),
       api.organization.getDepartments(organizationId, scopeBranchId),
     ]).then(([memberResponse, departmentResponse]) => {
       if (cancelled) return;
@@ -115,8 +149,21 @@ export default function TeamsPage() {
   const branchNames = useMemo(() => new Map(branches.map((branch) => [branch.id, branch.name])), [branches]);
   const departmentNames = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments]);
   const scopedMembers = useMemo(() => (
-    scope.type === "branch" ? members.filter((member) => member.branchId === scope.branchId) : members
-  ), [members, scope]);
+    scope.type === "branch"
+      ? members.filter((member) => (
+        member.branchId === scope.branchId ||
+        branchManagers.get(scope.branchId) === member.id ||
+        member.branchRoles?.some((role) => role.branchId === scope.branchId && normalizeRoleName(role.roleName) === BRANCH_MANAGER_ROLE)
+      ))
+      : members
+  ), [branchManagers, members, scope]);
+  const occupiedBranchManagerId = scope.type === "branch"
+    ? branchManagers.get(scope.branchId) ?? scopedMembers.find((member) => member.branchRoles?.some((role) => role.branchId === scope.branchId && normalizeRoleName(role.roleName) === BRANCH_MANAGER_ROLE))?.id
+    : undefined;
+  const occupiedBranchManager = occupiedBranchManagerId ? members.find((member) => member.id === occupiedBranchManagerId) : undefined;
+  const occupiedBranchManagerName = occupiedBranchManager
+    ? `${occupiedBranchManager.firstName ?? ""} ${occupiedBranchManager.lastName ?? ""}`.trim() || occupiedBranchManager.email
+    : "another team member";
   const query = searchQuery.trim().toLowerCase();
   const filteredMembers = scopedMembers.filter((member) => {
     const name = `${member.firstName ?? ""} ${member.lastName ?? ""}`.trim();
@@ -151,15 +198,17 @@ export default function TeamsPage() {
 
   const openMemberManagement = async (member: OrganizationMemberInfo) => {
     if (!organizationId || (!canAssignRole && !canRevokeRole && !canAssignDepartment && !canAssignBranch)) return;
-    const scopedRoleName = scope.type === "branch" ? member.roleName : member.organizationRoleName ?? member.roleName;
+    const scopedRole = scope.type === "branch"
+      ? getBranchRole(member, scope.branchId, branchManagers, superAdminUserId)
+      : getOrganizationRole(member, superAdminUserId);
+    const scopedRoleName = scopedRole.name;
     if (scopedRoleName === "super_admin") {
       toast.error("The Super Admin account cannot be reassigned or moved.");
       return;
     }
     setSelectedMember(member);
     setManagementTab(canAssignRole || canRevokeRole ? "role" : canAssignDepartment ? "department" : "branch");
-    const scopedRoleId = scope.type === "branch" ? member.roleId : member.organizationRoleId ?? member.roleId;
-    setMemberChanges({ roleId: scopedRoleId ?? "", departmentId: member.departmentId ?? "", branchId: member.branchId ?? "", branchDepartmentId: member.departmentId ?? "" });
+    setMemberChanges({ roleId: scopedRole.id ?? "", departmentId: member.departmentId ?? "", branchId: member.branchId ?? "", branchDepartmentId: member.departmentId ?? "" });
     const [roleResponse, departmentResponse] = await Promise.all([
       api.roles.listOrganization(organizationId, permissionBranchId),
       api.organization.getDepartments(organizationId),
@@ -170,6 +219,19 @@ export default function TeamsPage() {
 
   const confirmMemberChange = async () => {
     if (!organizationId || !selectedMember || !pendingChange) return;
+    if (pendingChange === "role") {
+      const nextRole = manageRoles.find((item) => item.id === memberChanges.roleId);
+      if (
+        scope.type === "branch" &&
+        normalizeRoleName(nextRole?.name) === BRANCH_MANAGER_ROLE &&
+        occupiedBranchManagerId &&
+        occupiedBranchManagerId !== selectedMember.id
+      ) {
+        toast.error(`${occupiedBranchManagerName} is already the Branch Manager. Change or revoke that assignment first.`);
+        setPendingChange(null);
+        return;
+      }
+    }
     setIsUpdatingMember(true);
     try {
       if (pendingChange === "role") {
@@ -179,7 +241,7 @@ export default function TeamsPage() {
         toast.success(`${selectedMember.firstName}'s role is now ${humanizeIdentifier(role.name)}.`);
       } else if (pendingChange === "revoke_role") {
         await api.roles.revokeFromMember(organizationId, selectedMember.id, permissionBranchId);
-        toast.success(`${selectedMember.firstName}'s role was revoked. The user is now a Member.`);
+        toast.success(`${selectedMember.firstName}'s ${scope.type === "branch" ? "branch" : "organization"} role was revoked.`);
       } else if (pendingChange === "department") {
         const department = manageDepartments.find((item) => item.id === memberChanges.departmentId);
         if (!department) return;
@@ -197,7 +259,10 @@ export default function TeamsPage() {
         toast.success(`${selectedMember.firstName} was moved to ${branch.name}, ${department.name}.`);
       }
       if (pendingChange === "role" || pendingChange === "revoke_role") {
-        const refreshed = await api.organization.getMembers(organizationId, { limit: 200, branchId: scopeBranchId });
+        const [refreshed] = await Promise.all([
+          api.organization.getMembers(organizationId, { limit: 200 }),
+          refresh(),
+        ]);
         setMembers(refreshed.items);
         setSelectedMember(null);
       }
@@ -250,20 +315,28 @@ export default function TeamsPage() {
                     <td className="px-4 py-3 text-sm text-grey-2">{member.branchId ? branchNames.get(member.branchId) ?? "Assigned branch" : "General"}</td>
                     <td className="px-4 py-3 text-sm text-grey-2">{member.departmentId ? departmentNames.get(member.departmentId) ?? "Assigned department" : "Unassigned"}</td>
                     <td className="px-4 py-3 text-sm text-grey-2">
-                      {scope.type === "branch" ? (
-                        humanizeIdentifier(member.roleName ?? "member")
-                      ) : (
+                  {scope.type === "branch" ? (() => {
+                    const role = getBranchRole(member, scope.branchId, branchManagers, superAdminUserId);
+                    return role.name ? humanizeIdentifier(role.name) : null;
+                  })() : (() => {
+                    const organizationRole = getOrganizationRole(member, superAdminUserId);
+                    const branchAssignments = member.branchRoles ?? [];
+                    const managerAssignments = branches
+                      .filter((branch) => branch.managerId === member.id && !branchAssignments.some((assignment) => assignment.branchId === branch.id))
+                      .map((branch) => ({ branchId: branch.id, roleId: `manager:${branch.id}`, roleName: BRANCH_MANAGER_ROLE }));
+                    return (
                         <div className="flex flex-wrap gap-1.5">
-                          <span className="rounded-md border border-grey-4 bg-grey-5 px-2 py-1 text-[10px] font-bold">
-                            Org: {humanizeIdentifier(member.organizationRoleName ?? member.roleName ?? (member.id === currentUser?.userId ? currentUser.role : null) ?? "member")}
-                          </span>
-                          {(member.branchRoles ?? []).map((assignment) => (
+                          {organizationRole.name && <span className="rounded-md border border-grey-4 bg-grey-5 px-2 py-1 text-[10px] font-bold">
+                            Org: {humanizeIdentifier(organizationRole.name)}
+                          </span>}
+                          {[...branchAssignments, ...managerAssignments].map((assignment) => (
                             <span key={`${assignment.branchId}-${assignment.roleId}`} className="rounded-md border border-primary-1/15 bg-primary-1/5 px-2 py-1 text-[10px] font-bold text-primary-1">
                               {branchNames.get(assignment.branchId) ?? "Branch"}: {humanizeIdentifier(assignment.roleName)}
                             </span>
                           ))}
                         </div>
-                      )}
+                    );
+                  })()}
                     </td>
                     <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.status)}</td>
                   </tr>;
@@ -347,14 +420,27 @@ export default function TeamsPage() {
                     onValueChange={(roleId) => setMemberChanges({ ...memberChanges, roleId })}
                     options={[
                       { value: "", label: "Select role" },
-                      ...manageRoles.filter((role) => canAssignRole || role.id === selectedMemberRoleId).map((role) => ({ value: role.id, label: humanizeIdentifier(role.name) })),
-                      ...(canRevokeRole && selectedMemberRoleName !== "member" ? [{ value: REVOKE_ROLE_OPTION, label: "Revoke role (return to Member)" }] : []),
+                      ...manageRoles
+                        .filter((role) => canAssignRole || role.id === selectedMemberRoleId)
+                        .filter((role) => !(
+                          scope.type === "branch" &&
+                          normalizeRoleName(role.name) === BRANCH_MANAGER_ROLE &&
+                          occupiedBranchManagerId &&
+                          occupiedBranchManagerId !== selectedMember.id
+                        ))
+                        .map((role) => ({ value: role.id, label: humanizeIdentifier(role.name) })),
+                      ...(canRevokeRole && selectedMemberRoleName && selectedMemberRoleName !== "member" ? [{ value: REVOKE_ROLE_OPTION, label: "Revoke role (return to Member)" }] : []),
                     ]}
                     buttonClassName="h-12 w-full font-normal" menuClassName="max-h-36 w-full"
                   />
+                  {scope.type === "branch" && occupiedBranchManagerId && occupiedBranchManagerId !== selectedMember.id && (
+                    <p className="mt-2 text-xs text-grey-2">
+                      Branch Manager is already assigned to {occupiedBranchManagerName}. Change or revoke that assignment before choosing a new manager.
+                    </p>
+                  )}
                 </div>
                 <div className="mt-[80px]">
-                  <Button type="button" disabled={isUpdatingMember || (isRevokingRole ? !canRevokeRole || selectedMemberRoleName === "member" : !canAssignRole || !memberChanges.roleId || memberChanges.roleId === selectedMemberRoleId)} onClick={() => setPendingChange(isRevokingRole ? "revoke_role" : "role")} className={`h-12 w-full ${isRevokingRole ? "bg-red-600 hover:bg-red-700" : ""}`}>
+                  <Button type="button" disabled={isUpdatingMember || (isRevokingRole ? !canRevokeRole || !selectedMemberRoleName || selectedMemberRoleName === "member" : !canAssignRole || !memberChanges.roleId || memberChanges.roleId === selectedMemberRoleId)} onClick={() => setPendingChange(isRevokingRole ? "revoke_role" : "role")} className={`h-12 w-full ${isRevokingRole ? "bg-red-600 hover:bg-red-700" : ""}`}>
                     {isUpdatingMember ? "Updating role..." : isRevokingRole ? "Revoke role" : "Change role"}
                   </Button>
                 </div>

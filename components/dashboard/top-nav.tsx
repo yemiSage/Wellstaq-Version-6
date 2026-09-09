@@ -169,15 +169,17 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
       return;
     }
 
-    const branch = await addBranch(name);
-    toast.success("Branch added successfully!");
-    setCreatedBranch(branch);
-    if (organizationId) {
-      const response = await api.organization.getMembers(organizationId, { limit: 200 });
-      setManagerCandidates(response.items.filter((member) =>
-        member.status === "active" && member.roleName?.toLowerCase() !== "super_admin"
-      ));
-    }
+      const branch = await addBranch(name);
+      toast.success("Branch added successfully!");
+      setCreatedBranch(branch);
+      if (organizationId) {
+        const response = await api.organization.getMembers(organizationId, { limit: 200 });
+        setManagerCandidates(response.items.filter((member) =>
+          member.status === "active" &&
+          ![member.organizationRoleName, member.roleName].some((role) => role?.trim().toLowerCase().replaceAll(" ", "_") === "super_admin") &&
+          !(member.id === currentUser?.userId && currentUser.role?.trim().toLowerCase().replaceAll(" ", "_") === "super_admin")
+        ));
+      }
   };
 
   const handleAssignManager = async () => {
