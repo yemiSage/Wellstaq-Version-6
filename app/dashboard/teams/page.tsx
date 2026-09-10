@@ -20,8 +20,9 @@ import { humanizeIdentifier } from "@/lib/format";
 
 import { AnimatePresence } from "motion/react";
 import { DrawerLayer } from "@/components/ui/drawer";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-type ManagementTab = "role" | "department" | "branch";
+type ManagementTab = "role" | "department" | "branch" | "audit";
 const REVOKE_ROLE_OPTION = "__revoke_role__";
 const SUPER_ADMIN_ROLE = "super_admin";
 const BRANCH_MANAGER_ROLE = "branch_manager";
@@ -81,6 +82,7 @@ export default function TeamsPage() {
   const [memberChanges, setMemberChanges] = useState({ roleId: "", departmentId: "", branchId: "", branchDepartmentId: "" });
   const [pendingChange, setPendingChange] = useState<"role" | "revoke_role" | "department" | "branch" | null>(null);
   const [isUpdatingMember, setIsUpdatingMember] = useState(false);
+  const [accountAction, setAccountAction] = useState<"suspend" | "delete" | null>(null);
   const canInvite = currentUser ? hasPermission(currentUser.permissions, "member.invite", scope.type === "branch" ? scope.branchId : undefined) : false;
   const permissionBranchId = scope.type === "branch" ? scope.branchId : undefined;
   const canAssignRole = currentUser ? hasPermission(currentUser.permissions, "member.role.assign", permissionBranchId) : false;
@@ -88,9 +90,10 @@ export default function TeamsPage() {
   const canAssignDepartment = currentUser ? hasPermission(currentUser.permissions, "member.department.assign", permissionBranchId) : false;
   const canAssignBranch = currentUser ? hasPermission(currentUser.permissions, "member.branch.assign", permissionBranchId) : false;
   const managementTabs: { value: ManagementTab; label: string }[] = [
-    ...(canAssignRole || canRevokeRole ? [{ value: "role" as const, label: "Change role" }] : []),
-    ...(canAssignDepartment ? [{ value: "department" as const, label: "Move department" }] : []),
-    ...(canAssignBranch ? [{ value: "branch" as const, label: "Move branch" }] : []),
+    ...(canAssignRole || canRevokeRole ? [{ value: "role" as const, label: "Role" }] : []),
+    ...(canAssignDepartment ? [{ value: "department" as const, label: "Department" }] : []),
+    ...(canAssignBranch ? [{ value: "branch" as const, label: "Branch" }] : []),
+    { value: "audit", label: "Audit log" },
   ];
   const activeManagementTab = managementTabs.find((tab) => tab.value === managementTab)?.value ?? managementTabs[0]?.value;
   const isRevokingRole = memberChanges.roleId === REVOKE_ROLE_OPTION;
@@ -110,6 +113,7 @@ export default function TeamsPage() {
   useEffect(() => {
     setSelectedMember(null);
     setPendingChange(null);
+    setAccountAction(null);
     setManageRoles([]);
     setManageDepartments([]);
     setMemberChanges({ roleId: "", departmentId: "", branchId: "", branchDepartmentId: "" });
@@ -300,7 +304,7 @@ export default function TeamsPage() {
       <section className="rounded-xl border border-grey-4 bg-white p-6">
         <div className="relative mb-5 w-full sm:w-[320px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-grey-3" />
-          <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search members..." className="h-10 w-full rounded-lg border border-grey-4 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary-1" />
+          <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} aria-label="Search members" name="member-search" placeholder="Search members…" className="h-10 w-full rounded-lg border border-grey-4 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary-1" />
         </div>
         {isLoading ? <p className="py-10 text-center text-sm text-grey-3">Loading team members...</p> : (
           <div className="overflow-x-auto">
@@ -338,7 +342,7 @@ export default function TeamsPage() {
                     );
                   })()}
                     </td>
-                    <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.status)}</td>
+                    <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.status)}{(canAssignRole || canRevokeRole || canAssignDepartment || canAssignBranch) && <button type="button" className="ml-3 text-primary-1 hover:underline" onClick={(event) => { event.stopPropagation(); void openMemberManagement(member); }} aria-label={`Manage ${name}`}>Manage</button>}</td>
                   </tr>;
                 })}
                 {filteredMembers.length === 0 && <tr><td colSpan={6} className="py-10 text-center text-sm text-grey-3">No team members found.</td></tr>}
@@ -348,7 +352,7 @@ export default function TeamsPage() {
         )}
       </section>
 
-      <AnimatePresence>{selectedMember && <DrawerLayer onClose={() => { if (!isUpdatingMember && !pendingChange) setSelectedMember(null); }} label="Manage team" inert={pendingChange !== null || undefined}>
+      <AnimatePresence>{selectedMember && <DrawerLayer onClose={() => { if (!isUpdatingMember && !pendingChange && !accountAction) setSelectedMember(null); }} label="Team member details" inert={pendingChange !== null || accountAction !== null || undefined}>
         <div
           ref={managementDialogRef}
           tabIndex={-1}
@@ -358,12 +362,12 @@ export default function TeamsPage() {
           className="flex h-full w-full flex-col overflow-hidden bg-white"
           onMouseDown={(event) => event.stopPropagation()}
           onKeyDown={(event) => {
-            if (pendingChange) return;
+            if (pendingChange || accountAction) return;
             if (event.key === "Escape" && !isUpdatingMember) {
               event.stopPropagation();
               setSelectedMember(null);
             } else if (event.key === "Tab") {
-              const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled):not([tabindex="-1"]), [tabindex="0"]:not(:disabled)'));
+              const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled):not([tabindex="-1"]), [tabindex="0"]:not(:disabled)')).filter((element) => element.getClientRects().length > 0);
               const first = focusable[0];
               const last = focusable[focusable.length - 1];
               if (!first) {
@@ -381,13 +385,29 @@ export default function TeamsPage() {
         >
           <div className="shrink-0 border-b border-grey-4 p-6 flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 id="manage-team-title" className="text-xl font-semibold text-grey-1">Manage {selectedMember.firstName} {selectedMember.lastName}</h2>
-              <p id="manage-team-description" className="mt-1 text-sm text-grey-2">Update one assignment at a time. You&apos;ll confirm before saving.</p>
+              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-grey-2">Team member</p>
+              <div className="flex items-center gap-3">
+                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-5 text-lg font-semibold text-primary-1">
+                  {selectedMember.avatarUrl ? <Image src={selectedMember.avatarUrl} alt="" fill className="object-cover" /> : (selectedMember.firstName || selectedMember.email || "?").slice(0, 1).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <h2 id="manage-team-title" className="break-words font-display text-xl font-semibold text-grey-1">{`${selectedMember.firstName ?? ""} ${selectedMember.lastName ?? ""}`.trim() || selectedMember.email}</h2>
+                  <p className="mt-1 break-all text-xs text-grey-2">{selectedMember.email}</p>
+                </div>
+              </div>
+              <p id="manage-team-description" className="mt-4 text-sm text-grey-2">Member details and access in {scopeBranchId ? branchNames.get(scopeBranchId) ?? "this branch" : "the organization"}.</p>
             </div>
             <button type="button" aria-label="Close team management" disabled={isUpdatingMember} onClick={() => setSelectedMember(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-grey-2 hover:bg-grey-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1 disabled:opacity-40">
               <X className="h-5 w-5" />
             </button>
           </div>
+          <ScrollArea className="flex-1">
+          <dl className="mx-6 mt-5 grid grid-cols-2 gap-4 rounded-xl border border-grey-4 bg-grey-5 p-4 text-sm">
+            <div><dt className="text-xs text-grey-2">Status</dt><dd className="mt-1 font-medium text-grey-1">{humanizeIdentifier(selectedMember.status) || "Unknown"}</dd></div>
+            <div><dt className="text-xs text-grey-2">Role in this view</dt><dd className="mt-1 font-medium text-grey-1">{selectedMemberRoleName ? humanizeIdentifier(selectedMemberRoleName) : "—"}</dd></div>
+            <div><dt className="text-xs text-grey-2">Home branch</dt><dd className="mt-1 font-medium text-grey-1">{selectedMember.branchId ? branchNames.get(selectedMember.branchId) ?? "Assigned branch" : "Unassigned"}</dd></div>
+            <div><dt className="text-xs text-grey-2">Department</dt><dd className="mt-1 font-medium text-grey-1">{selectedMember.departmentId ? departmentNames.get(selectedMember.departmentId) ?? manageDepartments.find((item) => item.id === selectedMember.departmentId)?.name ?? "Assigned department" : "Unassigned"}</dd></div>
+          </dl>
           <div
             role="tablist"
             aria-label="Team management options"
@@ -408,7 +428,13 @@ export default function TeamsPage() {
               </SelectablePill>
             ))}
           </div>
-          <div id="manage-team-panel" className="min-h-0 flex-1 overflow-y-auto px-6 pb-6" role="tabpanel" aria-labelledby={`manage-team-tab-${activeManagementTab}`}>
+          <div id="manage-team-panel" className="px-6 pb-6" role="tabpanel" aria-labelledby={`manage-team-tab-${activeManagementTab}`}>
+            {activeManagementTab === "audit" && <div className="rounded-xl border border-grey-4 p-5">
+              <Activity className="mb-3 h-5 w-5 text-grey-2" aria-hidden="true" />
+              <h3 className="font-semibold text-grey-1">Audit history unavailable</h3>
+              <p className="mt-2 text-sm leading-relaxed text-grey-2">Member audit records aren&apos;t available from the service yet. Changes, timestamps, and who made them will appear here once audit history is connected.</p>
+              <p className="mt-3 text-xs text-grey-2">This does not mean this member has no activity.</p>
+            </div>}
             {activeManagementTab === "role" && (
               <>
                 <p className="mb-4 text-sm text-grey-2">Choose a new {scope.type === "branch" ? "branch" : "organization"} role for this team member. The other scope remains unchanged.</p>
@@ -419,7 +445,7 @@ export default function TeamsPage() {
                     value={memberChanges.roleId}
                     onValueChange={(roleId) => setMemberChanges({ ...memberChanges, roleId })}
                     options={[
-                      { value: "", label: "Select role" },
+                      { value: "", label: selectedMemberRoleName ? "Select role" : "No role in this scope" },
                       ...manageRoles
                         .filter((role) => canAssignRole || role.id === selectedMemberRoleId)
                         .filter((role) => !(
@@ -439,7 +465,7 @@ export default function TeamsPage() {
                     </p>
                   )}
                 </div>
-                <div className="mt-[80px]">
+                <div className="mt-6">
                   <Button type="button" disabled={isUpdatingMember || (isRevokingRole ? !canRevokeRole || !selectedMemberRoleName || selectedMemberRoleName === "member" : !canAssignRole || !memberChanges.roleId || memberChanges.roleId === selectedMemberRoleId)} onClick={() => setPendingChange(isRevokingRole ? "revoke_role" : "role")} className={`h-12 w-full ${isRevokingRole ? "bg-red-600 hover:bg-red-700" : ""}`}>
                     {isUpdatingMember ? "Updating role..." : isRevokingRole ? "Revoke role" : "Change role"}
                   </Button>
@@ -459,7 +485,7 @@ export default function TeamsPage() {
                     buttonClassName="h-12 w-full font-normal" menuClassName="max-h-36 w-full"
                   />
                 </div>
-                <div className="mt-[80px]">
+                <div className="mt-6">
                   <Button type="button" disabled={isUpdatingMember || !memberChanges.departmentId || memberChanges.departmentId === selectedMember.departmentId} onClick={() => setPendingChange("department")} className="h-12 w-full">
                     {isUpdatingMember ? "Moving department..." : "Move department"}
                   </Button>
@@ -491,7 +517,7 @@ export default function TeamsPage() {
                     />
                   </div>
                 </div>
-                <div className="mt-[80px]">
+                <div className="mt-6">
                   <Button type="button" disabled={isUpdatingMember || !memberChanges.branchId || !memberChanges.branchDepartmentId || memberChanges.branchId === selectedMember.branchId} onClick={() => setPendingChange("branch")} className="h-12 w-full">
                     {isUpdatingMember ? "Moving branch..." : "Move branch"}
                   </Button>
@@ -499,8 +525,19 @@ export default function TeamsPage() {
               </>
             )}
           </div>
+          <section className="mx-6 mb-6 border-t border-grey-4 pt-5" aria-labelledby="member-account-actions">
+            <h3 id="member-account-actions" className="text-sm font-semibold text-grey-1">Member access</h3>
+            <p className="mt-2 text-xs leading-relaxed text-grey-2">Suspension and deletion are not available from the service yet. No account changes can be made here.</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button type="button" disabled={isUpdatingMember} onClick={() => setAccountAction("suspend")} className="min-h-10 rounded-lg border border-grey-4 px-4 text-sm font-medium text-grey-2 hover:bg-grey-5">Suspend member…</button>
+              <button type="button" disabled={isUpdatingMember} onClick={() => setAccountAction("delete")} className="min-h-10 rounded-lg border border-error-4 px-4 text-sm font-medium text-error-1 hover:bg-error-5">Delete member…</button>
+            </div>
+          </section>
+          </ScrollArea>
         </div>
       </DrawerLayer>}</AnimatePresence>
+
+      <ConfirmModal isOpen={accountAction !== null} onClose={() => setAccountAction(null)} onConfirm={() => {}} title={accountAction === "suspend" ? "Suspend this member?" : "Delete this member?"} description={`This action is currently unavailable because the service does not provide member ${accountAction === "suspend" ? "suspension" : "deletion"}. No changes have been made. Confirmation will be required when this action is available.`} confirmText={accountAction === "suspend" ? "Confirm suspension" : "Confirm deletion"} cancelText="Close" confirmDisabled isDestructive />
 
       <ConfirmModal isOpen={pendingChange !== null} onClose={() => setPendingChange(null)} onConfirm={() => void confirmMemberChange()} title={pendingChange === "role" ? "Change user role?" : pendingChange === "revoke_role" ? "Revoke user role?" : pendingChange === "department" ? "Move user to another department?" : "Move user to another branch?"} description={pendingChange === "role" ? "This will replace the user's current role and its role-based access." : pendingChange === "revoke_role" ? "The current role will be removed and the user will return to the zero-permission Member role." : pendingChange === "department" ? "This will replace the user's current department assignment." : "This will change both the user's home branch and department."} confirmText={isUpdatingMember ? "Updating..." : "Confirm change"} isDestructive={pendingChange === "revoke_role"} />
 

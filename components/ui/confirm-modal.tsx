@@ -11,6 +11,7 @@ interface ConfirmModalProps {
   confirmText?: string;
   cancelText?: string;
   isDestructive?: boolean;
+  confirmDisabled?: boolean;
 }
 
 export function ConfirmModal({
@@ -22,6 +23,7 @@ export function ConfirmModal({
   confirmText = "Confirm",
   cancelText = "Cancel",
   isDestructive = true,
+  confirmDisabled = false,
 }: ConfirmModalProps) {
   return (
     <Modal
@@ -38,11 +40,12 @@ export function ConfirmModal({
             {cancelText}
           </button>
           <button
+            disabled={confirmDisabled}
             onClick={() => {
               onConfirm();
               onClose();
             }}
-            className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors ${
+            className={`px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
               isDestructive
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-primary-1 hover:bg-primary-1/90"

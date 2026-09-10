@@ -8,6 +8,7 @@ import { TopNav } from "@/components/dashboard/top-nav";
 import { DashboardDataProvider, useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { getSwitchableScopes } from "@/lib/permissions";
 import { clearAuthTokens } from "@/services/auth-token";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function AccessGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -80,8 +81,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <div className="flex-1 flex flex-col overflow-hidden w-full">
               <TopNav onMenuClick={() => setIsSidebarOpen(true)} />
-              <main className={`flex-1 min-h-0 min-w-0 no-scrollbar [&>div]:!mx-0 [&>div]:!w-full [&>div]:!max-w-none ${isSpacePage ? "overflow-hidden p-0" : "overflow-y-auto px-3 py-3"}`}>
-                {children}
+              <main className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+                {isSpacePage ? children : <ScrollArea className="flex-1"><div className="px-3 py-3 [&>div]:!mx-0 [&>div]:!w-full [&>div]:!max-w-none">{children}</div></ScrollArea>}
               </main>
             </div>
           </div>

@@ -195,7 +195,7 @@ function ClubChatView({
   canModerateChat: boolean;
   chatInput: string;
   onChatInputChange: (v: string) => void;
-  onSendMessage: (mediaUrl?: string, mediaType?: string) => void;
+  onSendMessage: (mediaUrl?: string, mediaType?: string) => Promise<void>;
   onSendAttachment: (file: File) => void;
   onDeleteMessage: (messageId: string) => void;
   onTogglePin: (message: MessageResponse) => void;
@@ -203,6 +203,14 @@ function ClubChatView({
   onJoin: () => void;
 }) {
   const chatFileInputRef = useRef<HTMLInputElement>(null);
+  const sendingRef = useRef(false);
+  const [sending, setSending] = useState(false);
+  const send = async () => {
+    if (sendingRef.current || !chatInput.trim()) return;
+    sendingRef.current = true;
+    setSending(true);
+    try { await onSendMessage(); } finally { sendingRef.current = false; setSending(false); }
+  };
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -255,12 +263,12 @@ function ClubChatView({
                         </div>
                         <div className="flex items-center gap-1">
                           {canModerateChat && (
-                            <button onClick={() => onTogglePin(msg)} className="p-1 text-grey-3 hover:text-primary-1 transition-colors" title={msg.isPinned ? "Unpin" : "Pin"}>
+                            <button type="button" aria-label={msg.isPinned ? "Unpin message" : "Pin message"} onClick={() => onTogglePin(msg)} className="p-1 text-grey-3 hover:text-primary-1 transition-colors" title={msg.isPinned ? "Unpin" : "Pin"}>
                               {msg.isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
                             </button>
                           )}
                           {canDeleteThis && (
-                            <button onClick={() => onDeleteMessage(msg.id)} className="p-1 text-grey-3 hover:text-red-500 transition-colors">
+                            <button type="button" aria-label="Delete message" onClick={() => onDeleteMessage(msg.id)} className="p-1 text-grey-3 hover:text-red-500 transition-colors">
                               <Trash2 className="w-3 h-3" />
                             </button>
                           )}
@@ -287,7 +295,7 @@ function ClubChatView({
             <div className="sticky bottom-0 z-10 bg-white border-t border-grey-4 p-4 flex items-center gap-3">
               <input type="file" ref={chatFileInputRef} className="hidden" accept="image/*,video/*" onChange={handleChatFileUpload} />
               <div ref={emojiPickerRef} className="relative">
-                <button onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)} className={`w-10 h-10 rounded-xl border border-grey-4 flex items-center justify-center transition-colors shrink-0 ${isEmojiPickerOpen ? "bg-primary-1/10 text-primary-1 border-primary-1" : "text-grey-3 hover:bg-grey-5"}`}>
+                <button type="button" aria-label="Choose emoji" aria-expanded={isEmojiPickerOpen} onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)} className={`w-10 h-10 rounded-xl border border-grey-4 flex items-center justify-center transition-colors shrink-0 ${isEmojiPickerOpen ? "bg-primary-1/10 text-primary-1 border-primary-1" : "text-grey-3 hover:bg-grey-5"}`}>
                   <Sticker className="w-5 h-5" />
                 </button>
                 <AnimatePresence>
@@ -309,7 +317,7 @@ function ClubChatView({
                 </AnimatePresence>
               </div>
               <div className="relative flex items-center">
-                <button onClick={() => setShowAttachmentMenu(!showAttachmentMenu)} className="w-10 h-10 rounded-xl border border-grey-4 flex items-center justify-center text-grey-3 hover:bg-grey-5 transition-colors shrink-0">
+                <button type="button" aria-label="Add attachment" aria-expanded={showAttachmentMenu} onClick={() => setShowAttachmentMenu(!showAttachmentMenu)} className="w-10 h-10 rounded-xl border border-grey-4 flex items-center justify-center text-grey-3 hover:bg-grey-5 transition-colors shrink-0">
                   <Plus className="w-5 h-5" />
                 </button>
                 {showAttachmentMenu && (
@@ -329,17 +337,17 @@ function ClubChatView({
               <div className="flex-1">
                 <input
                   type="text"
-                  placeholder="Type a message..."
+                  aria-label="Message" name="message" placeholder="Type a message…"
                   value={chatInput}
                   onChange={(e) => onChatInputChange(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") onSendMessage(); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); void send(); } }}
                   className="w-full h-10 px-4 bg-white border border-grey-4 rounded-full text-sm focus:outline-none focus:border-primary-1 focus:ring-1 focus:ring-primary-1"
                 />
               </div>
               <button
-                disabled={!chatInput.trim()}
+                aria-label={sending ? "Sending message" : "Send message"} disabled={sending || !chatInput.trim()}
                 className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all shrink-0 ${chatInput.trim() ? "bg-primary-1 text-white shadow-lg shadow-primary-1/20" : "bg-grey-5 text-grey-3 cursor-not-allowed"}`}
-                onClick={() => onSendMessage()}
+                onClick={() => void send()}
               >
                 <Send className="w-4 h-4 ml-1" />
               </button>

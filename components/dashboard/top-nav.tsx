@@ -18,6 +18,8 @@ import { useClickOutside } from "@/hooks/use-click-outside";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { getUserErrorMessage } from "@/lib/errors";
+import { useDashboardScope } from "@/lib/scope";
+import { humanizeIdentifier } from "@/lib/format";
 import type { Branch, NotificationItem, OrganizationMemberInfo, UserSearchResult } from "@/types/api";
 
 
@@ -55,7 +57,34 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const routeKey = `${pathname}?${searchParams.toString()}`;
-  const { user: userData, currentUser, activeBranch, addBranch, organizationId } = useDashboardData();
+  const { user: userData, currentUser, activeBranch, addBranch, organizationId, branches } = useDashboardData();
+  const { scope } = useDashboardScope();
+  const [roleMember, setRoleMember] = useState<OrganizationMemberInfo | null>(null);
+  useEffect(() => {
+    if (!organizationId || !currentUser?.userId) return;
+    let cancelled = false;
+    setRoleMember(null);
+    const loadRole = async () => {
+      let offset = 0;
+      while (!cancelled) {
+        const result = await api.organization.getMembers(organizationId, { limit: 200, offset });
+        if (cancelled) return;
+        const member = result.items.find((item) => item.id === currentUser.userId);
+        if (member) { setRoleMember(member); return; }
+        offset += result.items.length;
+        if (!result.items.length || offset >= result.total) return;
+      }
+    };
+    void loadRole().catch(() => { if (!cancelled) setRoleMember(null); });
+    return () => { cancelled = true; };
+  }, [organizationId, currentUser?.userId, currentUser?.permissions]);
+  const profileRole = currentUser?.role === "super_admin" ? "super_admin"
+    : scope.type === "branch"
+      ? branches.find((branch) => branch.id === scope.branchId)?.managerId === currentUser?.userId
+        ? "branch_manager"
+        : roleMember?.branchRoles?.find((role) => role.branchId === scope.branchId)?.roleName
+      : roleMember?.organizationRoleName;
+  const profileRoleLabel = profileRole ? humanizeIdentifier(profileRole) : "";
   const signedInUserName = `${userData.firstName} ${userData.lastName}`.trim();
   const profileImage = userData.profileImage ?? currentUser?.avatarUrl;
 
@@ -223,7 +252,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
             <input
               type="text"
-              placeholder="Search..."
+              aria-label="Search pages and people" name="global-search" placeholder="Search…"
               value={globalSearch}
               onChange={(event) => setGlobalSearch(event.target.value)}
               onKeyDown={(event) => {
@@ -299,7 +328,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
           </button>
 
           <div className="relative" ref={profileRef}>
-            <div
+            <button type="button" aria-label="Open profile menu" aria-expanded={isProfileOpen}
               className="flex items-center gap-2 lg:gap-3 ml-1 lg:ml-2 cursor-pointer"
               onClick={() => setIsProfileOpen(!isProfileOpen)}
             >
@@ -316,12 +345,12 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                 <p className="text-sm font-medium text-grey-1 leading-tight" title={signedInUserName}>
                   {truncateProfileText(signedInUserName)}
                 </p>
-                <p className="text-xs text-grey-3" title={userData.email}>
-                  {truncateProfileText(userData.email)}
+                <p className="text-xs text-grey-3 text-left" title={profileRoleLabel}>
+                  {profileRoleLabel}
                 </p>
               </div>
               <ChevronDown className="w-3 h-3 lg:w-4 lg:h-4 text-grey-3" />
-            </div>
+            </button>
 
             <AnimatePresence>
               {isProfileOpen && (
@@ -420,7 +449,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                 {showHistory ? (
                   <div className="w-full space-y-4">
                     {chatHistory.map((item) => (
-                      <button key={item.id} onClick={() => setShowHistory(false)} className="w-full text-left p-4 rounded-xl border border-grey-4 hover:border-primary-1 hover:bg-grey-5 transition-all group">
+                      <button key={item.id} onClick={() => setShowHistory(false)} className="w-full text-left p-4 rounded-xl border border-grey-4 hover:border-primary-1 hover:bg-grey-5 transition-colors group">
                         <h4 className="font-medium text-grey-1 text-sm mb-1 group-hover:text-primary-1">{item.title}</h4>
                         <p className="text-xs text-grey-3">{item.date}</p>
                       </button>
@@ -474,7 +503,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
 
               {/* Chat Input */}
               <div className="p-6 bg-white">
-                <div className="border-b border-grey-4 p-3 shadow-none focus-within:border-primary-1 transition-all flex items-center gap-2">
+                <div className="border-b border-grey-4 p-3 shadow-none focus-within:border-primary-1 transition-colors flex items-center gap-2">
                   <input
                     type="text"
                     value={chatInput}
@@ -484,7 +513,7 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
                         handleSendMessage(chatInput);
                       }
                     }}
-                    placeholder="Ask anything..."
+                    aria-label="Ask ws-AI" name="ai-message" placeholder="Ask anything…"
                     className="w-full bg-transparent text-sm focus:outline-none text-grey-1 placeholder:text-grey-3"
                   />
                   <button

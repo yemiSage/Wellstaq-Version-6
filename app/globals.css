@@ -52,7 +52,35 @@
   --color-info-5: #FFFAF5;
 }
 
+.scroll-area-viewport { scrollbar-width: none; }
+.scroll-area-viewport::-webkit-scrollbar { display: none; }
+
 @layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-grey-3) transparent;
+  }
+
+  @supports selector(::-webkit-scrollbar) {
+    * { scrollbar-width: auto; scrollbar-color: auto; }
+    *::-webkit-scrollbar { width: 3px; height: 3px; }
+    *::-webkit-scrollbar-track { background: transparent; }
+    *::-webkit-scrollbar-thumb { background: var(--color-grey-3); border-radius: 3px; }
+    *::-webkit-scrollbar-thumb:hover { background: var(--color-grey-2); }
+  }
+  :where(button, a, [role="button"]):focus-visible {
+    outline: 2px solid var(--color-primary-1);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
   :root {
     --spacing-xs: 0.25rem;
     --spacing-sm: 0.5rem;
@@ -171,11 +199,11 @@
 
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
-    display: none;
+    width: 3px;
+    height: 0;
   }
   .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    scrollbar-width: thin;
   }
 
   .thin-scrollbar {
@@ -185,6 +213,7 @@
 
   /* Use an exact 3px track where supported; Firefox keeps its thin fallback. */
   @supports selector(::-webkit-scrollbar) {
+    .no-scrollbar { scrollbar-width: auto; }
     .thin-scrollbar {
       scrollbar-width: auto;
       scrollbar-color: auto;

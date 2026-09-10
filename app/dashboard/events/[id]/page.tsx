@@ -29,6 +29,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [isLoading, setIsLoading] = useState(true);
 
   const [message, setMessage] = useState("");
+  const sendingRef = useRef(false);
+  const [sending, setSending] = useState(false);
   const [messages, setMessages] = useState<MessageResponse[]>([]);
   const [chatLoading, setChatLoading] = useState(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -111,7 +113,9 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || !organizationId || !id) return;
+    if (!message.trim() || !organizationId || !id || sendingRef.current) return;
+    sendingRef.current = true;
+    setSending(true);
 
     try {
       const created = await api.chat.sendMessage(organizationId, "event", id, {
@@ -122,6 +126,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     } catch {
       toast.error("We couldn't send the message. Try again.");
+    } finally { sendingRef.current = false; setSending(false);
     }
   };
 
@@ -339,12 +344,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   type="text"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Type a message..."
+                  aria-label="Event message" name="message" placeholder="Type a message…"
                   className="flex-1 h-11 px-4 rounded-xl border border-grey-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-1 bg-grey-5/30"
                 />
                 <button
                   type="submit"
-                  disabled={!message.trim()}
+                  disabled={sending || !message.trim()}
                   className="w-11 h-11 bg-primary-1 text-white rounded-xl flex items-center justify-center hover:bg-primary-2 transition-colors disabled:opacity-50"
                 >
                   <Send className="w-5 h-5" />

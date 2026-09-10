@@ -315,8 +315,10 @@ export default function DepartmentsPage() {
               filteredDepartments.map((department) => (
                 <div
                   key={department.id}
+                  role="button" tabIndex={0}
+                  onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedDepartment(department); } }}
                   onClick={() => setSelectedDepartment(department)}
-                  className={`p-[12px] rounded-[12px] cursor-pointer transition-all border-[1.5px] ${selectedDepartment?.id === department.id ? 'bg-white border-[#EA6A05] shadow-sm' : 'bg-white border-[#E6E6E6] hover:bg-grey-5'}`}
+                  className={`p-[12px] rounded-[12px] cursor-pointer transition-colors border-[1.5px] ${selectedDepartment?.id === department.id ? 'bg-white border-[#EA6A05] shadow-sm' : 'bg-white border-[#E6E6E6] hover:bg-grey-5'}`}
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">

@@ -93,7 +93,7 @@ export function Sidebar({ onClose }: { onClose?: () => void }) {
 
   return (
     <div 
-      className={`h-dvh flex-shrink-0 border-r border-grey-4 flex flex-col bg-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-[227px]'}`}
+      className={`h-dvh flex-shrink-0 border-r border-grey-4 flex flex-col bg-white transition-[width] duration-300 ${isCollapsed ? 'w-16' : 'w-[227px]'}`}
     >
       {/* Logo & Collapse Toggle */}
       <div className={`px-3 pt-8 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
