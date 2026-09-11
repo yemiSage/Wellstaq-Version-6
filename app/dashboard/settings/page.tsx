@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   User,
   Shield,
@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { DeleteRoleModal } from "@/components/ui/delete-role-modal";
 import { api } from "@/services/api";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
 import { useTheme } from "@/components/providers/theme-provider";
@@ -84,12 +85,30 @@ export default function SettingsPage() {
   const selectedBranchId = scope.type === "branch" ? scope.branchId : undefined;
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState("profile");
+  const requestedTab = useSearchParams().get("tab");
+  useEffect(() => {
+    if (requestedTab && NAV_ITEMS.some((item) => item.id === requestedTab)) setActiveTab(requestedTab);
+  }, [requestedTab]);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isEditPermissionsModalOpen, setIsEditPermissionsModalOpen] = useState(false);
   const [isAddRoleModalOpen, setIsAddRoleModalOpen] = useState(false);
   const [selectedRoleForEdit, setSelectedRoleForEdit] = useState<RoleItem | null>(null);
+  const [roleToDelete, setRoleToDelete] = useState<RoleItem | null>(null);
+  const [roleDeleting, setRoleDeleting] = useState(false);
+  const [roleDeleteError, setRoleDeleteError] = useState("");
   const [newRoleData, setNewRoleData] = useState({ role: "", description: "" });
   const [profileImage, setProfileImage] = useState("");
+  const [profilePhone, setProfilePhone] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentUser?.userId) return;
+    let cancelled = false;
+    setProfilePhone(null);
+    void api.auth.me().then((profile) => {
+      if (!cancelled) setProfilePhone(profile.phoneNumber ?? "");
+    }).catch(() => { if (!cancelled) setProfilePhone(null); });
+    return () => { cancelled = true; };
+  }, [currentUser?.userId]);
   const [plans, setPlans] = useState<SubscriptionPlanItem[]>([]);
   const [subscription, setSubscription] = useState<OrganizationSubscriptionInfo | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
@@ -141,6 +160,7 @@ export default function SettingsPage() {
     setIsAddRoleModalOpen(false);
     setPlanPickerOpen(false);
     setSelectedRoleForEdit(null);
+    setRoleToDelete(null);
     setExpandedRoleIds(new Set());
   }, [activeTab, selectedBranchId]);
 
@@ -172,25 +192,30 @@ export default function SettingsPage() {
   });
 
   useEffect(() => {
-    setFormData({
-      firstName: user.firstName,
-      lastName: user.lastName,
-      email: user.email,
-      country: "",
-      state: user.location ?? "",
-    });
+    setFormData((current) => ({
+      ...current,
+      firstName: current.firstName || user.firstName || currentUser?.firstName || "",
+      lastName: current.lastName || user.lastName || currentUser?.lastName || "",
+      email: user.email || currentUser?.email || current.email,
+    }));
+  }, [user.firstName, user.lastName, user.email, currentUser?.firstName, currentUser?.lastName, currentUser?.email]);
+
+  useEffect(() => {
     if (user.profileImage) setProfileImage(user.profileImage);
-  }, [user]);
+  }, [user.profileImage]);
 
   useEffect(() => {
     if (activeTab !== "profile") return;
+    let cancelled = false;
     void api.profile.get().then((profile) => {
+      if (cancelled) return;
       setFormData({ firstName: profile.firstName, lastName: profile.lastName, email: profile.email, country: profile.country ?? "", state: profile.state ?? "" });
       if (profile.avatarUrl) {
         setProfileImage(profile.avatarUrl);
         updateUser({ profileImage: profile.avatarUrl });
       }
-    }).catch((error) => toast.error(getUserErrorMessage(error, "We couldn't load your profile. Try again.")));
+    }).catch((error) => { if (!cancelled) toast.error(getUserErrorMessage(error, "We couldn't load your profile. Try again.")); });
+    return () => { cancelled = true; };
   }, [activeTab, updateUser]);
 
   useEffect(() => {
@@ -291,10 +316,19 @@ export default function SettingsPage() {
   };
 
   const handleDeleteRole = async (role: RoleItem) => {
-    if (!organizationId || role.isSystem || role.isDefault) return;
-    await api.roles.delete(organizationId, role.id);
-    setRolesList(rolesList.filter((item) => item.id !== role.id));
-    toast.success(`${role.name} role deleted successfully.`);
+    if (!organizationId || role.isSystem || role.isDefault || !canRevokeRoles || roleDeleting) return;
+    setRoleDeleting(true);
+    setRoleDeleteError("");
+    try {
+      await api.roles.delete(organizationId, role.id);
+      setRolesList((roles) => roles.filter((item) => item.id !== role.id));
+      setRoleToDelete(null);
+      toast.success(`${humanizeIdentifier(role.name)} role deleted successfully.`);
+    } catch (error) {
+      setRoleDeleteError(getUserErrorMessage(error));
+    } finally {
+      setRoleDeleting(false);
+    }
   };
 
   const toggleRolePermission = (permissionName: string) => {
@@ -486,7 +520,7 @@ export default function SettingsPage() {
               }`}
             >
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center border-[1.5px] ${
-                activeTab === item.id ? "bg-[#F7F7F7] border-[#272625] text-[#272625]" : "bg-grey-5 border-transparent text-grey-2"
+                activeTab === item.id ? "bg-[#F7F7F7] border-[#272625] text-[#272625]" : "bg-grey-5 border-transparent text-grey-3"
               }`}>
                 {item.icon}
               </div>
@@ -543,7 +577,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <div className="text-[16px] font-bold text-grey-1">{formData.firstName} {formData.lastName}</div>
-                  <div className="text-sm text-grey-2 mb-2">Community Manager</div>
+                  <div className="text-sm text-grey-2 mb-2 break-all">{formData.email || currentUser?.email || user.email}</div>
                   <button
                     onClick={() => {
                       const input = document.createElement('input');
@@ -580,10 +614,13 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-2 mb-6">
-                <label className="text-sm font-medium text-grey-1">Email Address</label>
+                <label htmlFor="profile-phone" className="text-sm font-medium text-grey-1">Phone Number</label>
                 <Input
-                  type="email"
-                  value={formData.email}
+                  id="profile-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={profilePhone ?? currentUser?.phoneNumber ?? user.phone ?? ""}
+                  placeholder={profilePhone === null && !currentUser?.phoneNumber && !user.phone ? "Phone number unavailable" : "No phone number provided"}
                   readOnly
                   className="bg-grey-5"
                 />
@@ -596,7 +633,7 @@ export default function SettingsPage() {
                     id="profile-country"
                     value={formData.country}
                     onChange={(event) => setFormData({ ...formData, country: event.target.value, state: "" })}
-                    className="h-11 w-full border border-grey-4 bg-white text-sm"
+                    className="h-12 w-full border border-grey-4 bg-white py-3 text-sm"
                   >
                     <option value="">Select country</option>
                     {formData.country && !COUNTRY_OPTIONS.includes(formData.country) && <option value={formData.country}>{formData.country}</option>}
@@ -610,7 +647,7 @@ export default function SettingsPage() {
                     value={formData.state}
                     disabled={!formData.country}
                     onChange={(event) => setFormData({ ...formData, state: event.target.value })}
-                    className="h-11 w-full border border-grey-4 bg-white text-sm disabled:bg-grey-5 disabled:text-grey-3"
+                    className="h-12 w-full border border-grey-4 bg-white py-3 text-sm disabled:bg-grey-5 disabled:text-grey-3"
                   >
                     <option value="">{formData.country ? "Select state" : "Select country first"}</option>
                     {formData.state && !NIGERIA_STATES.includes(formData.state) && <option value={formData.state}>{formData.state}</option>}
@@ -628,8 +665,13 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div className="space-y-4 rounded-xl border border-grey-4 p-4">
                   <div><div className="text-sm font-bold text-grey-1">Change Password</div><div className="text-xs text-grey-2">Use your current password to set a new one.</div></div>
-                  <div className="grid gap-3 md:grid-cols-3"><Input type="password" placeholder="Current password" value={passwordForm.current} onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})} /><Input type="password" placeholder="New password" value={passwordForm.next} onChange={(e) => setPasswordForm({...passwordForm, next: e.target.value})} /><Input type="password" placeholder="Confirm new password" value={passwordForm.confirm} onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})} /></div>
-                  <Button disabled={securitySaving || !passwordForm.current || !passwordForm.next} onClick={() => void changePassword()}>Update Password</Button>
+                  <form id="change-password-form" autoComplete="on" className="space-y-4" onSubmit={(event) => { event.preventDefault(); if (!securitySaving) void changePassword(); }}>
+                    <input type="text" name="username" autoComplete="username" value={formData.email || currentUser?.email || user.email} readOnly hidden />
+                    <div className="space-y-2"><label htmlFor="current-password" className="text-sm font-medium text-grey-1">Current Password</label><Input id="current-password" type="password" autoComplete="current-password" placeholder="Enter current password" required value={passwordForm.current} onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})} /></div>
+                    <div className="space-y-2"><label htmlFor="new-password" className="text-sm font-medium text-grey-1">New Password</label><Input id="new-password" type="password" autoComplete="new-password" placeholder="Enter new password" required value={passwordForm.next} onChange={(e) => setPasswordForm({...passwordForm, next: e.target.value})} /></div>
+                    <div className="space-y-2"><label htmlFor="confirm-password" className="text-sm font-medium text-grey-1">Confirm New Password</label><Input id="confirm-password" type="password" autoComplete="new-password" placeholder="Confirm new password" required value={passwordForm.confirm} onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})} /></div>
+                  </form>
+                  <Button type="submit" form="change-password-form" disabled={securitySaving || !passwordForm.current || !passwordForm.next || !passwordForm.confirm}>Update Password</Button>
                 </div>
                 <div className="space-y-4 rounded-xl border border-grey-4 p-4">
                   <div className="flex items-center justify-between"><div><div className="text-sm font-bold text-grey-1">Two-Factor Authentication</div><div className="text-xs text-grey-2">{securityUser.twoFaEnabled ? `Enabled using ${securityUser.twoFaMethod}.` : "Add an extra layer of security."}</div></div><span className={`rounded-full px-2 py-1 text-xs font-medium ${securityUser.twoFaEnabled ? "bg-green-50 text-green-700" : "bg-grey-5 text-grey-2"}`}>{securityUser.twoFaEnabled ? "Enabled" : "Disabled"}</span></div>
@@ -788,7 +830,7 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-grey-4/50">
                           <button
                             disabled={role.isSystem || role.isDefault || !canRevokeRoles}
-                            onClick={() => void handleDeleteRole(role)}
+                            onClick={() => { setRoleDeleteError(""); setRoleToDelete(role); }}
                             className={`text-xs font-bold ${role.isSystem || role.isDefault || !canRevokeRoles ? "text-grey-4 cursor-not-allowed" : "text-red-500 hover:text-red-600"}`}
                           >
                             Delete Role
@@ -864,6 +906,14 @@ export default function SettingsPage() {
         confirmText="Sign Out"
         isDestructive={true}
       />
+
+      {roleToDelete && <DeleteRoleModal
+        roleName={humanizeIdentifier(roleToDelete.name)}
+        busy={roleDeleting}
+        error={roleDeleteError}
+        onClose={() => { if (!roleDeleting) setRoleToDelete(null); }}
+        onConfirm={() => void handleDeleteRole(roleToDelete)}
+      />}
 
       {/* Edit Permissions Modal */}
       <AnimatePresence>

@@ -147,7 +147,7 @@ export default function IntegrationsPage() {
           <h1 className="page-title">Integrations</h1>
           <p className="page-description">Connect your favorite tools to streamline your wellness journey.</p>
         </div>
-        <button className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg hover:bg-[#C45700]/90 transition-colors flex items-center gap-2">
+        <button disabled className="px-4 py-2 bg-[#C45700] text-white font-medium text-sm rounded-lg transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
           <Plus className="w-4 h-4" />
           Add Integration
         </button>
@@ -207,8 +207,9 @@ export default function IntegrationsPage() {
                 {/* Toggle Switch (only show if connected) */}
                 {integration.status === "connected" && (
                   <button 
+                    disabled
                     onClick={() => handleToggle(integration.id)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-1 focus:ring-offset-2 ${
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary-1 focus:ring-offset-2 ${
                       integration.enabled ? 'bg-primary-1' : 'bg-grey-4'
                     }`}
                   >
@@ -228,8 +229,9 @@ export default function IntegrationsPage() {
               
               <div className="mt-auto pt-4 border-t border-grey-4 flex items-center justify-end">
                 <button 
+                  disabled
                   onClick={() => handleConnect(integration.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${
                     integration.status === "connected" 
                       ? "bg-white border border-grey-4 text-grey-1 hover:bg-grey-5 hover:text-red-600" 
                       : "bg-primary-1 text-white hover:bg-primary-1/90"

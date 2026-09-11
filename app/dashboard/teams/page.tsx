@@ -1,8 +1,9 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Activity, Building2, Mail, Network, Plus, Search, UserCheck, UserRound, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/services/api";
@@ -59,6 +60,9 @@ function getBranchRole(
 }
 
 export default function TeamsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedMemberId = searchParams.get("memberId");
   const { organizationId, branches, currentUser, refresh } = useDashboardData();
   const { scope } = useDashboardScope();
   const scopeBranchId = scope.type === "branch" ? scope.branchId : undefined;
@@ -77,6 +81,7 @@ export default function TeamsPage() {
   const [selectedMember, setSelectedMember] = useState<OrganizationMemberInfo | null>(null);
   const [managementTab, setManagementTab] = useState<ManagementTab>("role");
   const managementDialogRef = useRef<HTMLDivElement>(null);
+  const openedMemberIdRef = useRef<string | null>(null);
   const [manageRoles, setManageRoles] = useState<RoleItem[]>([]);
   const [manageDepartments, setManageDepartments] = useState<DepartmentItem[]>([]);
   const [memberChanges, setMemberChanges] = useState({ roleId: "", departmentId: "", branchId: "", branchDepartmentId: "" });
@@ -200,7 +205,7 @@ export default function TeamsPage() {
     setIsInviteOpen(true);
   };
 
-  const openMemberManagement = async (member: OrganizationMemberInfo) => {
+  const openMemberManagement = useCallback(async (member: OrganizationMemberInfo) => {
     if (!organizationId || (!canAssignRole && !canRevokeRole && !canAssignDepartment && !canAssignBranch)) return;
     const scopedRole = scope.type === "branch"
       ? getBranchRole(member, scope.branchId, branchManagers, superAdminUserId)
@@ -219,6 +224,27 @@ export default function TeamsPage() {
     ]);
     setManageRoles(roleResponse.items.filter((role) => role.name !== "super_admin"));
     setManageDepartments(departmentResponse.items);
+  }, [branchManagers, canAssignBranch, canAssignDepartment, canAssignRole, canRevokeRole, organizationId, permissionBranchId, scope, superAdminUserId]);
+
+  useEffect(() => {
+    if (!requestedMemberId) {
+      openedMemberIdRef.current = null;
+      return;
+    }
+    if (isLoading || openedMemberIdRef.current === requestedMemberId) return;
+    const member = members.find((item) => item.id === requestedMemberId);
+    if (!member) return;
+    openedMemberIdRef.current = requestedMemberId;
+    void openMemberManagement(member);
+  }, [isLoading, members, requestedMemberId, openMemberManagement]);
+
+  const closeMemberManagement = () => {
+    setSelectedMember(null);
+    if (!requestedMemberId) return;
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("memberId");
+    const query = nextParams.toString();
+    router.replace(`/dashboard/teams${query ? `?${query}` : ""}`, { scroll: false });
   };
 
   const confirmMemberChange = async () => {
@@ -268,7 +294,7 @@ export default function TeamsPage() {
           refresh(),
         ]);
         setMembers(refreshed.items);
-        setSelectedMember(null);
+        closeMemberManagement();
       }
       setPendingChange(null);
     } finally { setIsUpdatingMember(false); }
@@ -342,7 +368,7 @@ export default function TeamsPage() {
                     );
                   })()}
                     </td>
-                    <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.status)}{(canAssignRole || canRevokeRole || canAssignDepartment || canAssignBranch) && <button type="button" className="ml-3 text-primary-1 hover:underline" onClick={(event) => { event.stopPropagation(); void openMemberManagement(member); }} aria-label={`Manage ${name}`}>Manage</button>}</td>
+                    <td className="px-4 py-3 text-sm text-grey-2">{humanizeIdentifier(member.status)}</td>
                   </tr>;
                 })}
                 {filteredMembers.length === 0 && <tr><td colSpan={6} className="py-10 text-center text-sm text-grey-3">No team members found.</td></tr>}
@@ -352,7 +378,7 @@ export default function TeamsPage() {
         )}
       </section>
 
-      <AnimatePresence>{selectedMember && <DrawerLayer onClose={() => { if (!isUpdatingMember && !pendingChange && !accountAction) setSelectedMember(null); }} label="Team member details" inert={pendingChange !== null || accountAction !== null || undefined}>
+      <AnimatePresence>{selectedMember && <DrawerLayer onClose={() => { if (!isUpdatingMember && !pendingChange && !accountAction) closeMemberManagement(); }} label="Team member details" inert={pendingChange !== null || accountAction !== null || undefined}>
         <div
           ref={managementDialogRef}
           tabIndex={-1}
@@ -365,7 +391,7 @@ export default function TeamsPage() {
             if (pendingChange || accountAction) return;
             if (event.key === "Escape" && !isUpdatingMember) {
               event.stopPropagation();
-              setSelectedMember(null);
+              closeMemberManagement();
             } else if (event.key === "Tab") {
               const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled):not([tabindex="-1"]), [tabindex="0"]:not(:disabled)')).filter((element) => element.getClientRects().length > 0);
               const first = focusable[0];
@@ -397,7 +423,7 @@ export default function TeamsPage() {
               </div>
               <p id="manage-team-description" className="mt-4 text-sm text-grey-2">Member details and access in {scopeBranchId ? branchNames.get(scopeBranchId) ?? "this branch" : "the organization"}.</p>
             </div>
-            <button type="button" aria-label="Close team management" disabled={isUpdatingMember} onClick={() => setSelectedMember(null)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-grey-2 hover:bg-grey-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1 disabled:opacity-40">
+            <button type="button" aria-label="Close team management" disabled={isUpdatingMember} onClick={closeMemberManagement} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-grey-2 hover:bg-grey-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-1 disabled:opacity-40">
               <X className="h-5 w-5" />
             </button>
           </div>

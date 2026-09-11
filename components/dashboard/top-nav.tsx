@@ -20,7 +20,15 @@ import { useDashboardData } from "@/components/providers/dashboard-data-provider
 import { getUserErrorMessage } from "@/lib/errors";
 import { useDashboardScope } from "@/lib/scope";
 import { humanizeIdentifier } from "@/lib/format";
-import type { Branch, NotificationItem, OrganizationMemberInfo, UserSearchResult } from "@/types/api";
+import type { Branch, NotificationItem, OrganizationMemberInfo } from "@/types/api";
+
+type SearchEntry = { label: string; href: string; detail: string; keywords: string };
+const normalizeSearch = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const matchesSearch = (entry: SearchEntry, query: string) => {
+  const words = normalizeSearch(query).trim().split(/\s+/);
+  const searchableText = normalizeSearch(`${entry.label} ${entry.detail} ${entry.keywords}`);
+  return words.every((word) => searchableText.includes(word));
+};
 
 
 function truncateProfileText(value: string) {
@@ -39,7 +47,13 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const [selectedManagerId, setSelectedManagerId] = useState("");
   const [isAssigningManager, setIsAssigningManager] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
-  const [globalUserMatches, setGlobalUserMatches] = useState<UserSearchResult[]>([]);
+  const [searchEntries, setSearchEntries] = useState<SearchEntry[]>([]);
+  const [searchLoadedScope, setSearchLoadedScope] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [activeSearchIndex, setActiveSearchIndex] = useState(-1);
+  const searchRef = useRef<HTMLFormElement>(null);
   const [showHistory, setShowHistory] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
   const [chatInput, setChatInput] = useState("");
@@ -59,6 +73,8 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
   const routeKey = `${pathname}?${searchParams.toString()}`;
   const { user: userData, currentUser, activeBranch, addBranch, organizationId, branches } = useDashboardData();
   const { scope } = useDashboardScope();
+  const searchBranchId = scope.type === "branch" ? scope.branchId : undefined;
+  const searchScopeKey = `${organizationId ?? ""}:${searchBranchId ?? "all"}`;
   const [roleMember, setRoleMember] = useState<OrganizationMemberInfo | null>(null);
   useEffect(() => {
     if (!organizationId || !currentUser?.userId) return;
@@ -94,23 +110,87 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
     setIsNotificationsOpen(false);
     setIsAddBranchModalOpen(false);
     setIsLogoutModalOpen(false);
+    setGlobalSearch("");
+    setSearchOpen(false);
+    setSearchLoadedScope("");
   }, [routeKey]);
-  const navigationItems = [
-    ["Overview", "/dashboard"], ["Teams", "/dashboard/teams"], ["Departments", "/dashboard/departments"],
-    ["Events", "/dashboard/events"], ["Challenges", "/dashboard/challenges"], ["Clubs", "/dashboard/clubs"],
-    ["Integrations", "/dashboard/integrations"], ["Settings", "/dashboard/settings"], ["Contact Support", "/dashboard/contact"],
-  ] as const;
-  const globalNavigationMatches = globalSearch.trim().length < 2 ? [] : navigationItems.filter(([label]) => label.toLowerCase().includes(globalSearch.trim().toLowerCase()));
+  const navigationItems: SearchEntry[] = [
+    { label: "Dashboard / Overview", href: "/dashboard", detail: "Page", keywords: "home summary" },
+    { label: "Team members", href: "/dashboard/teams", detail: "Page", keywords: "team people teammates employees staff" },
+    { label: "Departments", href: "/dashboard/departments", detail: "Page", keywords: "department groups" },
+    { label: "Events", href: "/dashboard/events", detail: "Page", keywords: "event calendar activities" },
+    { label: "Challenges", href: "/dashboard/challenges", detail: "Page", keywords: "challenge wellness goals" },
+    { label: "Clubs", href: "/dashboard/clubs", detail: "Page", keywords: "club communities" },
+    { label: "Integrations", href: "/dashboard/integrations", detail: "Page", keywords: "apps connections" },
+    { label: "Settings", href: "/dashboard/settings", detail: "Page", keywords: "preferences account configuration" },
+    { label: "Contact Support", href: "/dashboard/contact", detail: "Page", keywords: "help support" },
+    { label: "Insights", href: "/dashboard/insights", detail: "Page", keywords: "analytics reports" },
+    { label: "Space", href: "/dashboard/space", detail: "Page", keywords: "community feed posts" },
+    { label: "Pending Invites", href: "/dashboard/invites", detail: "Page", keywords: "invitations team members" },
+    { label: "Notifications", href: "/dashboard/notifications", detail: "Page", keywords: "alerts updates" },
+    { label: "Messages", href: "/dashboard/messages", detail: "Page", keywords: "chat conversations" },
+    { label: "Profile settings", href: "/dashboard/settings?tab=profile", detail: "Settings", keywords: "personal information profile photo" },
+    { label: "Account security / Password", href: "/dashboard/settings?tab=account", detail: "Settings", keywords: "login password two factor sessions" },
+    { label: "Notification settings", href: "/dashboard/settings?tab=notifications", detail: "Settings", keywords: "alerts reminders email push" },
+    { label: "Privacy settings", href: "/dashboard/settings?tab=privacy", detail: "Settings", keywords: "visibility data activity" },
+    { label: "Appearance / Theme", href: "/dashboard/settings?tab=appearance", detail: "Settings", keywords: "display dark light mode" },
+    { label: "Roles & Permissions", href: "/dashboard/settings?tab=roles", detail: "Settings", keywords: "access roles permissions" },
+    { label: "Billing settings", href: "/dashboard/settings?tab=billing", detail: "Settings", keywords: "plan subscription payment" },
+  ];
+  const globalNavigationMatches = globalSearch.trim().length < 2
+    ? []
+    : navigationItems.filter((entry) => matchesSearch(entry, globalSearch));
+  const searchResults = [
+    ...globalNavigationMatches,
+    ...(searchLoadedScope === searchScopeKey ? searchEntries : []).filter((entry) => globalSearch.trim().length >= 2 && matchesSearch(entry, globalSearch)).sort((a, b) => Number(normalizeSearch(b.label).startsWith(normalizeSearch(globalSearch).trim())) - Number(normalizeSearch(a.label).startsWith(normalizeSearch(globalSearch).trim()))).slice(0, 30),
+  ];
+  const getScopedSearchHref = (href: string) => scope.type === "branch"
+    ? `${href}${href.includes("?") ? "&" : "?"}branchId=${encodeURIComponent(scope.branchId)}`
+    : href;
+  const openSearchResult = (href: string) => {
+    router.push(getScopedSearchHref(href));
+    setSearchOpen(false);
+    setGlobalSearch("");
+  };
+  useClickOutside(searchRef, () => setSearchOpen(false));
 
   useEffect(() => {
-    const query = globalSearch.trim();
-    if (query.length < 2) return setGlobalUserMatches([]);
+    if (!searchOpen || !organizationId || searchLoadedScope === searchScopeKey) return;
+    setSearchError("");
+    setActiveSearchIndex(-1);
+    setSearchLoading(true);
     let cancelled = false;
-    const timer = setTimeout(() => void api.users.search(query).then((matches) => {
-      if (!cancelled) setGlobalUserMatches(matches.slice(0, 5));
-    }).catch(() => { if (!cancelled) setGlobalUserMatches([]); }), 200);
+    async function collect<T>(fetchPage: (offset: number) => Promise<{ items: T[]; total: number }>, map: (item: T) => SearchEntry) {
+      const entries: SearchEntry[] = [];
+      let offset = 0;
+      while (!cancelled) {
+        const page = await fetchPage(offset);
+        entries.push(...page.items.map(map));
+        offset += page.items.length;
+        if (!page.items.length || offset >= page.total) break;
+      }
+      return entries;
+    }
+    // The challenge API rejects a 100-item page. Fifty is supported by all
+    // searched resources, and collect() continues paging until each is complete.
+    const params = { branchId: searchBranchId, limit: 50 };
+    const timer = setTimeout(() => {
+      void Promise.allSettled([
+        collect((offset) => api.organization.getMembers(organizationId, { ...params, offset }), (member) => ({ label: `${member.firstName} ${member.lastName}`.trim(), detail: `Teammate · ${member.email}`, keywords: "people team teammate teammates member members staff employee employees", href: `/dashboard/teams?memberId=${encodeURIComponent(member.id)}` })),
+        collect((offset) => api.club.getClubs(organizationId, { ...params, offset }), (club) => ({ label: club.name, detail: "Club", keywords: club.description ?? "", href: `/dashboard/clubs?clubId=${encodeURIComponent(club.id)}` })),
+        collect((offset) => api.organization.getChallenges(organizationId, { ...params, offset, scope: "all" }), (challenge) => ({ label: challenge.name, detail: "Challenge", keywords: challenge.description, href: `/dashboard/challenges/${encodeURIComponent(challenge.id)}` })),
+        collect((offset) => api.organization.getEvents(organizationId, { ...params, offset }), (event) => ({ label: event.title, detail: "Event", keywords: event.description ?? "", href: `/dashboard/events/${encodeURIComponent(event.id)}` })),
+      ]).then((results) => {
+        if (cancelled) return;
+        setSearchEntries(results.flatMap((result) => result.status === "fulfilled" ? result.value : []));
+        const failed = results.flatMap((result, index) => result.status === "rejected" ? [["teammates", "clubs", "challenges", "events"][index]] : []);
+        setSearchError(failed.length ? `Couldn't load ${failed.join(", ")}. Other results are available.` : "");
+        setSearchLoadedScope(searchScopeKey);
+        setSearchLoading(false);
+      });
+    }, 200);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [globalSearch]);
+  }, [searchOpen, organizationId, searchBranchId, searchScopeKey, searchLoadedScope]);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -248,26 +328,38 @@ export function TopNav({ onMenuClick }: { onMenuClick?: () => void }) {
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="relative hidden sm:block sm:flex-1 sm:max-w-[460px] lg:w-[460px] lg:flex-none">
+          <form ref={searchRef} role="search" autoComplete="off" onSubmit={(event) => { event.preventDefault(); const result = searchResults[activeSearchIndex < 0 ? 0 : activeSearchIndex]; if (result) openSearchResult(result.href); }} className="relative hidden sm:block sm:flex-1 sm:max-w-[460px] lg:w-[460px] lg:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-grey-3" />
             <input
-              type="text"
-              aria-label="Search pages and people" name="global-search" placeholder="Search…"
+              type="search" autoComplete="off" autoCapitalize="none" spellCheck={false}
+              data-1p-ignore="true" data-lpignore="true"
+              role="combobox" aria-autocomplete="list" aria-expanded={searchOpen && globalSearch.trim().length >= 2}
+              aria-controls="global-search-results" aria-activedescendant={searchOpen && activeSearchIndex >= 0 ? `global-search-result-${activeSearchIndex}` : undefined}
+              aria-label="Search teammates, clubs, challenges, events and settings" name="page-people-query" placeholder="Search teammates, clubs, events…"
               value={globalSearch}
-              onChange={(event) => setGlobalSearch(event.target.value)}
+              onFocus={() => setSearchOpen(true)}
+              onChange={(event) => { setGlobalSearch(event.target.value); setActiveSearchIndex(-1); setSearchOpen(true); }}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && globalNavigationMatches[0]) {
-                  router.push(globalNavigationMatches[0][1]);
-                  setGlobalSearch("");
+                if (event.key === "Escape") { setSearchOpen(false); event.preventDefault(); }
+                if ((event.key === "ArrowDown" || event.key === "ArrowUp") && searchResults.length) {
+                  event.preventDefault();
+                  setSearchOpen(true);
+                  setActiveSearchIndex((index) => event.key === "ArrowDown" ? (index + 1) % searchResults.length : (index <= 0 ? searchResults.length - 1 : index - 1));
                 }
               }}
               className="h-11 w-full rounded-[8px] border border-grey-4 bg-white pl-10 pr-4 text-sm focus:border-primary-1 focus:outline-none focus:ring-2 focus:ring-primary-1/20"
             />
-            {globalSearch.trim().length >= 2 && (globalNavigationMatches.length > 0 || globalUserMatches.length > 0) && <div className="absolute left-0 right-0 top-12 z-50 max-h-80 overflow-y-auto rounded-xl border border-grey-4 bg-white p-2 shadow-xl">
-              {globalNavigationMatches.map(([label, href]) => <button key={href} onClick={() => { router.push(href); setGlobalSearch(""); }} className="block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-grey-5">{label}</button>)}
-              {globalUserMatches.map((match) => <button key={match.id} onClick={() => { router.push(`/dashboard/profile/${match.id}`); setGlobalSearch(""); }} className="block w-full rounded-lg px-3 py-2 text-left hover:bg-grey-5"><div className="text-sm font-medium text-grey-1">{match.name}</div><div className="text-xs text-grey-3">{match.email}</div></button>)}
+            {searchOpen && globalSearch.trim().length >= 2 && <div className="absolute left-0 right-0 top-12 z-50 max-h-80 overflow-y-auto rounded-xl border border-grey-4 bg-white p-2 shadow-xl">
+              <div id="global-search-results" role="listbox" aria-label="Search results">
+                {searchResults.map((result, index) => <Link role="option" aria-selected={index === activeSearchIndex} id={`global-search-result-${index}`} key={result.href} href={getScopedSearchHref(result.href)} onClick={() => { setSearchOpen(false); setGlobalSearch(""); }} className={`block w-full rounded-lg px-3 py-2 text-left hover:bg-grey-5 ${index === activeSearchIndex ? "bg-grey-5" : ""}`}><div className="text-sm font-medium text-grey-1">{result.label}</div><div className="text-xs text-grey-3">{result.detail}</div></Link>)}
+              </div>
+              <div role="status" className="text-sm text-grey-3">
+                {searchLoading && <p className="px-3 py-2">Searching teammates, clubs, challenges and events…</p>}
+                {searchError && <p className="px-3 py-2">{searchError} <button type="button" className="text-primary-1 underline" onClick={() => setSearchLoadedScope("")}>Retry</button></p>}
+                {!searchLoading && !searchResults.length && <p className="px-3 py-2">No matching results.</p>}
+              </div>
             </div>}
-          </div>
+          </form>
 
         </div>
 

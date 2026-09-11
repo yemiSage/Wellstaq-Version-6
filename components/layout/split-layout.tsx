@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { Pause, Play } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 
 const IMAGES = [
@@ -56,7 +57,7 @@ export function SplitLayout({ children, lockContentScroll = false }: { children:
           </motion.div>
         </AnimatePresence>
         <div className="absolute inset-0 bg-black/30 z-10" suppressHydrationWarning />
-        {!reducedMotion && <button type="button" onClick={() => setPaused((value) => !value)} aria-pressed={paused} className="absolute bottom-6 right-6 z-20 rounded-lg border border-white/50 bg-black/40 px-3 py-2 text-sm text-white hover:bg-black/60">{paused ? "Resume slideshow" : "Pause slideshow"}</button>}
+        {!reducedMotion && <button type="button" onClick={() => setPaused((value) => !value)} aria-label={paused ? "Play slideshow" : "Pause slideshow"} title={paused ? "Play slideshow" : "Pause slideshow"} className="absolute bottom-6 right-6 z-20 flex h-11 w-11 items-center justify-center rounded-lg border border-white/50 bg-black/40 text-white hover:bg-black/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">{paused ? <Play className="h-5 w-5" aria-hidden="true" /> : <Pause className="h-5 w-5" aria-hidden="true" />}</button>}
       </div>
       {/* Right Pane - Content */}
       <div className={`relative z-20 flex min-h-0 w-full flex-col overflow-y-auto overscroll-contain xl:w-[40%] ${lockContentScroll ? "md:overflow-y-hidden [@media(max-height:640px)]:overflow-y-auto" : ""}`}>

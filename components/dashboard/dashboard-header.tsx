@@ -33,7 +33,7 @@ export function DashboardHeader({
   onCustomStartChange,
   onCustomEndChange,
 }: DashboardHeaderProps) {
-  const { currentUser } = useDashboardData();
+  const { currentUser, user } = useDashboardData();
   const [greeting, setGreeting] = useState("Good morning");
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export function DashboardHeader({
         <h1 className="page-title">
           {greeting}{currentUser ? `, ${currentUser.firstName}` : ""}
         </h1>
-        <p className="page-description">Here is how your team is doing today.</p>
+        <p className="page-description">Here is how {user.businessName?.trim() || "[Business name]"} is doing today.</p>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">

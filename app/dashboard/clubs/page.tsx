@@ -7,6 +7,7 @@ import { DrawerLayer } from "@/components/ui/drawer";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { Globe2, Lock, Plus, Search, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { useDashboardData } from "@/components/providers/dashboard-data-provider";
@@ -29,6 +30,7 @@ export default function ClubsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
+  const requestedClubId = useSearchParams().get("clubId");
   const [clubMembers, setClubMembers] = useState<ClubMemberInfo[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -57,6 +59,15 @@ export default function ClubsPage() {
   }, [branchId, organizationId]);
 
   useEffect(() => { void loadClubs(); }, [loadClubs]);
+
+  useEffect(() => {
+    if (!requestedClubId || !organizationId || isLoading) return;
+    let cancelled = false;
+    void api.club.getClub(organizationId, requestedClubId).then((club) => {
+      if (!cancelled) setSelectedClub(club);
+    }).catch(() => { if (!cancelled) toast.error("We couldn't open this club. It may no longer be available."); });
+    return () => { cancelled = true; };
+  }, [requestedClubId, organizationId, isLoading]);
 
   useEffect(() => {
     if (!organizationId || !selectedClub) {

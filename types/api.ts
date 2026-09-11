@@ -195,6 +195,7 @@ export interface PermissionGrant {
 
 export interface CurrentUserResponse {
   userId: string;
+  phoneNumber?: string | null;
   email: string;
   firstName: string;
   lastName: string;
